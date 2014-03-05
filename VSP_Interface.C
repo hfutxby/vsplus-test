@@ -51,8 +51,8 @@
 /*~A*/
 /*~+:include*/
 /*~T*/
-#include "basis626.inc"
-#include "vsp626ste.inc"
+#include "basis626.h"
+//#include "vsp626ste.inc"
 /*~E*/
 /*~A*/
 /*~+:Timer*/
