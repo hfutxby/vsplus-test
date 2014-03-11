@@ -1,3 +1,6 @@
+/*
+ * 控制器为VSPLUS接口的实际实现部分
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -6,21 +9,12 @@
 #include <sys/time.h>
 #include <limits.h>
 
-#define MAXTIMER 5
-#define MAXCOUNT 32767<<1
+#include "tsc.h"
+#include "driver.h"
+
 int g_timer[MAXTIMER];//最低位做开关标志
 int g_exit = 0;
 pthread_t g_tid_timer;
-
-#define d_printf(fmt, args...)	printf("\033[40;33m(%s:%d)\033[0m"fmt, __func__, __LINE__, ##args);
-//level=1,track; level=2,watch;
-#if DEBUG
-#define debug(level, fmt, args...) \
-if(DEBUG==level) \
-printf("\033[40;33m(%s:%d)\033[0m"fmt, __func__, __LINE__, ##args);
-#else
-#define debug(level, fmt, args...)	
-#endif
 
 void time_go(void)
 {
@@ -59,29 +53,7 @@ int thr_timer(void* arg)
 	}
 }
 
-int init_timers(void)
-{
-	debug(1, "==>\n");
-	int i;
-	for(i = 0; i < MAXTIMER; i++)
-		g_timer[i] = 0;
-	pthread_create(&g_tid_timer, NULL, thr_timer, NULL);
-
-	debug(1, "<==\n");
-	return 0;
-}
-
-int deinit_timers(void)
-{
-	debug(1, "==>\n");
-	g_exit = 1;
-	pthread_join(g_tid_timer, NULL);
-
-	debug(1, "<==\n");
-	return 0;
-}
-
-int timer(int func, int index, int count)
+int _timer(int func, int index, int count)
 {
 	debug(1, "==>\n");
 	int ret = 0;
@@ -123,39 +95,49 @@ void pr_info(void)
 	printf("index 0~%d\n", MAXTIMER-1);
 	printf("count 0~32767\n");
 }
-int test_timer(void)
+
+int init_timers(void)
 {
-	init_timers();
-	int func, index, count, ret;
-	while(1){
-		pr_info();
-		scanf("%d %d %d", &func, &index, &count);
-		if(func == 1){
-			ret = timer(func, index, count);
-			printf("timer[%d],count=%d\n", index, ret);
-		}
-		else{
-			ret = timer(func, index, count);
-		}
-	}
+	debug(1, "==>\n");
+	int i;
+	for(i = 0; i < MAXTIMER; i++)
+		g_timer[i] = 0;
+	pthread_create(&g_tid_timer, NULL, thr_timer, NULL);
+
+	debug(1, "<==\n");
+	return 0;
 }
 
-int main(void)
+int deinit_timers(void)
 {
-	test_timer();
+	debug(1, "==>\n");
+	g_exit = 1;
+	pthread_join(g_tid_timer, NULL);
 
-#if 0
-	init_timers();
+	debug(1, "<==\n");
+	return 0;
+}
 
-	timer(6, 0, 0);
-	timer(2, 0, 0);
-	sleep(2);
-	timer(6, 0, 0);
-	usleep(300000);
-	printf("read timer0 %d\n", timer(1, 0, 0));
+int program_actual(void)
+{
+	return drive_program_actual();
+}
 
+int program_selected(void)
+{
+	return drive_program_selected();
+}
+
+int init(void)
+{
+	init_timers(); 
+
+	return 0;
+}
+
+int deinit(void)
+{
 	deinit_timers();
-#endif
 
 	return 0;
 }
