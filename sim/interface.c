@@ -1,7 +1,10 @@
 /*
- * 提供VSPLUS需要的接口。
+ * VSPLUS需要的接口。
+ * 实际实现在tsc.c中，此处主要封装保持接口一致
  */
 #include "tsc.h"
+#include "sim_vsplus.h"
+#include "interface.h"
 
 short timer(short funktion, short timer)
 {

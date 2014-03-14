@@ -5,12 +5,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include "tsc.h"
+
+#include "sim_signal.h"
+#include "sim_vsplus.h"
 
 #define PRPENDLEN 6
 pthread_t g_tid_program;
 int g_program_list[PRPENDLEN];//方案列表，[0]为当前方案号，-1表示无方案号
-extern g_exit;
+int g_exit;
 
 void print_list(void)
 {
@@ -19,39 +21,29 @@ void print_list(void)
 		printf("[%d]=%3d\n", i, g_program_list[i]);
 }
 
-int thr_drive_program(void* arg)
+/* 随机加入program */
+int thr_signal_program(void* arg)
 {
 	int t, i;
 	while(!g_exit){
 		srandom(time(NULL));
-		t = random()%10+1;
-		printf("t=>%d\n", t);
-		print_list();
-		sleep(t);
 		for(i = 1; i < PRPENDLEN; i++){
 			if(g_program_list[i] == -1){
 				g_program_list[i] = random()%255;
 				break;
 			}
 		}
+		printf("append a new program:\n");
+		print_list();
+		t = random()%10+1;
+		printf("next waiting %ds\n", t);
+		sleep(t);
 	}
+
 	printf("g_exit\n");
 }
 
-int drive_program(void)
-{
-	int i = 0;
-	for(i = 0; i < PRPENDLEN; i++){
-		g_program_list[i] = -1;
-	}
-	g_program_list[0] = 0;
-
-	pthread_create(&g_tid_program, NULL, thr_drive_program, NULL);
-
-	return 0;
-}
-
-int drive_program_actual(void)
+int signal_program_actual(void)
 {
 	return g_program_list[0];
 }
@@ -64,7 +56,7 @@ void lshift_program_list(void)
 	g_program_list[PRPENDLEN-1] = -1;
 }
 
-int drive_program_selected(void)
+int signal_program_selected(void)
 {
 	if(g_program_list[1] != -1)
 		lshift_program_list();
@@ -72,12 +64,22 @@ int drive_program_selected(void)
 	return g_program_list[0];
 }
 
-int init_driver(void)
+int init_signal(void)
 {
-	drive_program();
+	g_exit = 0;
+	int i = 0;
+	for(i = 0; i < PRPENDLEN; i++){
+		g_program_list[i] = -1;
+	}
+	g_program_list[0] = 0;
+
+	pthread_create(&g_tid_program, NULL, thr_signal_program, NULL);
+
+	return 0;
 }
 
-int deinit_driver(void)
+int deinit_signal(void)
 {
+	g_exit = 1;
 	pthread_join(g_tid_program, NULL);
 }

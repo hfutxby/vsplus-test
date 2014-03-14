@@ -8,18 +8,12 @@ CC = gcc
 target = x86
 endif
 
-#CFLAGS += -D_EMULATOR_ -D_VSPLUS_SIM_ -D_PROZESSOR_INTEL_ -D_HELPER_MACROS_
-CFLAGS += -D_EMULATOR_ -D_VSPLUS_SIM_ -D_PROZESSOR_INTEL_ -D_HELPER_MACROS_
-SRCS := timer.c tsc.c
-OBJS := $(basename $(SRCS))
+#CFLAGS += -D_EMULATOR_ -D_VSPLUS_SIM_ -D_PROZESSOR_INTEL_ -D_HELPER_MACROS_ -D_ADVANCED_MEMORY_
+CFLAGS += -D_VSPLUS_SIM_ -D_PROZESSOR_INTEL_ -D_HELPER_MACROS_ -D_ADVANCED_MEMORY_
 
 test:
-#	$(CC) timer.c -pthread -DDEBUG=2 -o timer.$(target)
-#	$(CC) -c tsc.c -pthread -DDEBUG=2
-	$(CC) -c tsc.c
-	$(CC) -c interface.c
-	$(CC) -c driver.c
-	$(CC) $(CFLAGS) main.c tsc.o interface.o driver.o -pthread -o main.$(target)
+	#$(CC) $(CFLAGS) test.c VSP_Interface.C vsp_core.lib -ldl -o test.$(target)
+	$(CC) $(CFLAGS) test.c VSP_Interface.C -o test.$(target)
 
 clean:
 	$(RM) *.x86 *.arm *.o

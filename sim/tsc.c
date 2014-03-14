@@ -1,5 +1,5 @@
 /*
- * 控制器为VSPLUS接口的实际实现部分
+ * 控制器为VSPLUS提供接口的实现部分
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -10,7 +10,8 @@
 #include <limits.h>
 
 #include "tsc.h"
-#include "driver.h"
+#include "sim_signal.h"
+#include "sim_vsplus.h"
 
 int g_timer[MAXTIMER];//最低位做开关标志
 int g_exit = 0;
@@ -120,22 +121,22 @@ int deinit_timers(void)
 
 int program_actual(void)
 {
-	return drive_program_actual();
+	return signal_program_actual();
 }
 
 int program_selected(void)
 {
-	return drive_program_selected();
+	return signal_program_selected();
 }
 
-int init(void)
+int init_tsc(void)
 {
 	init_timers(); 
 
 	return 0;
 }
 
-int deinit(void)
+int deinit_tsc(void)
 {
 	deinit_timers();
 
