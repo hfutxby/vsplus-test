@@ -2,42 +2,64 @@
 //#include "vsp626ste.inc"
 //#include "if626max.inc"
 #include <stdio.h>
+#include "tsc.h" //debug()
 
+/* funktion:1=read;3=clear;4=stop and clear;5=stop
+ * timer: timer index
+ */
 short int timer(short int funktion, short int timer)
 {
-	printf("%s(%d)\n", __func__, __LINE__);
-	return 0;
+	debug(3, "==>\n");
+	return _timer(funktion, timer, 0);
 }
 
+/* load and start a timer
+ * funktion=2;
+ * timer: timer index
+ * wert: initial counts
+ */
 short int timer_2(short int funktion, short int timer, short int wert)
 {
-printf("%s(%d)\n", __func__, __LINE__);
-return 0;
+	debug(3, "==>\n");
+	return _timer(funktion, timer, wert);
 }
 
+/* VS-PLUS is told the actual program number
+ * return value:   Actual program number 0 – 255
+ */
 short int ProgrammAktuell(void)
 {
-printf("%s(%d)\n", __func__, __LINE__);
-return 0;
-   }
+	debug(3, "==>\n");
+	return tsc_prog_actual();
+}
 
+/* VS-PLUS is told a program change request. If there is no 
+ * change request pending, the actual program is contained 
+ * in the return value
+ * return value:  Number of the new, not yet activated program 0 – 255
+ */
 short int ProgrammWahl(void)
 {
-printf("%s(%d)\n", __func__, __LINE__);
-return 0;
-   }
+	debug(3, "==>\n");
+	return tsc_prog_select();
+}
 
+/* The current cycle second within the active signal program
+ * return value:  Current cycle second in units of 100ms, rounded to seconds
+ */
 short int Zykluszeit(void)
 {
-printf("%s(%d)\n", __func__, __LINE__);
-return 0;
- }
+	debug(3, "==>\n");
+	return tsc_prog_tx();
+}
 
+/* The cycle time of the active signal program (in units of 100ms)
+ * return value:  Cycle time in units of 100ms
+ */
 short int Umlaufzeit(void)
 {
-printf("%s(%d)\n", __func__, __LINE__);
-return 0;
-
+	debug(3, "==>\n");
+	return tsc_prog_tu();
 }
 
 int ProgrammWahlZentrale(void)
@@ -321,40 +343,70 @@ printf("%s(%d)\n", __func__, __LINE__);
    return 0;
 }
 
+/* requests memory from the controller in order to 
+ * save the VS-PLUS parameters
+ *
+ * return value: pointer to memory area
+ * _sizeof: size of memory to be allocated
+ * id: memory area identification (1 – 3)
+ */
 void* Allozieren_VSP_Speicher(int _sizeof, int id)
 {
-printf("%s(%d)\n", __func__, __LINE__);
-return NULL ;
+	debug(3, "==>\n");
+	return tsc_alloc_mem(_sizeof, id) ;
 }
 
+/* returns the pointer to the memory area
+ * return value:  pointer to memory area
+ * id:  memory area identification (1 – 3)
+ */
 void* Gib_VSP_Zeiger(int id)
 {
-printf("%s(%d)\n", __func__, __LINE__);
-return NULL;
+	debug(3, "==>\n");
+	return tsc_get_mem(id);
 }
 
+/* frees memory that has been requested from the controller
+ * return value:  none
+ * id: memory area identification(1-3)
+ */
 void Freigeben_VSP_Speicher(int id)
 {
-printf("%s(%d)\n", __func__, __LINE__);
-return ;
+	debug(3, "==>\n");
+	tsc_free_mem(id);
+	return;
 }
 
+/* opens the VCB file that has been sent to the controller
+ * return value: 1 = supply file was opened successfully, 
+ *				 0 = not opened
+ */
 int Oeffnen_VSP_Parameter(void)
 {
-printf("%s(%d)\n", __func__, __LINE__);
-return 0;
+	debug(3, "==>\n");
+	return tsc_open_vcb();
 }
 
+/* Data is read sequentially from the formerly opened VCB 
+ * file. This function corresponds to a "fread” in C. 
+ * return value:  size of data read; -1 = error
+ * data:  data read
+ * sizeof:  size of data to be read 
+ */
 int Read_VSP_Parameter(char* data, int _sizeof)
 {
-printf("%s(%d)\n", __func__, __LINE__);
-return 0;
+	debug(3, "==>\n");
+	return tsc_read_vcb(data, _sizeof);
 }
 
+/* closes the supply file
+ * return value:  none
+ */
 void Schliessen_VSP_Parameter(void)
 {
-printf("%s(%d)\n", __func__, __LINE__);
-return;
+	debug(3, "==>\n");
+	tsc_close_vcb();
+	return;
 }
 
 int Oeffnen_Sichern_Parameter(void)

@@ -29,45 +29,35 @@
 /*~+:*/
 /*~I*/
 #ifndef _if626max
-/*~T*/
 #define _if626max
-/*~A*/
-/*~+:Wertdefinitionen*/
-/*~T*/
-#define NUL         0                   /* Wert Null                    */
-#define MaxInt      32767               /* grösster INT Wert            */
 
-/*~I*/
+#define SGMAX 64u
+
+/* ¿¿¿ */
+#define NUL         0     
+#define MaxInt      32767 
+
 #ifdef _VSPLUS_SIM_
-/*~T*/
-#define zeit_fak       10  /* Zeitfaktor    (1/10s)   */
+
+#define zeit_fak       10  /* ¿¿¿¿    (1/10s)   */
 #define l_vsp_serien() 1   /* Aufrufe pro Sekunde     */
 #define t_ea_kont()    1   /* Zeit seit letztem Schalten */
 #define geraete_fak    1   /* Geraetekonstante        */
 
-/*~O*/
-/*~-*/
 #else
-/*~T*/
 #define zeit_fak       10  /* Zeitfaktor    (1/10s)   */
 #define l_vsp_serien() 1   /* Aufrufe pro Sekunde     */
 #define t_ea_kont()    1   /* Zeit seit letztem Schalten */
 #define geraete_fak    1   /* Geraetekonstante        */
 
-/*~-*/
 #endif
-/*~E*/
-/*~E*/
-/*~A*/
-/*~+:Programme*/
-/*~K*/
-/*~+:Anzahl definierte Programme*/
-/*~T*/
+
+/* ¿¿¿ */
 #define PRG_MAX           33
 
 /*~E*/
 /*~A*/
-/*~+:Datensätze*/
+/*~+:Datensätze¿¿*/
 /*~K*/
 /*~+:Definitionen der Satzdimensionen*/
 /*~+:*/
@@ -77,13 +67,11 @@
 #define MAXSAETZE             41 
 #define MAXPARAMETR           80 
 
-/*~K*/
 /*~+:Anzahl Detektorparameters„tze*/
-/*~T*/
+/*¿¿¿¿*/
 #define DP_MAX                 4
-/*~K*/
 /*~+:Anzahl Verkehrsstromparameter*/
-/*~T*/
+/*¿¿¿¿¿*/
 #define VP_MAX                 8
 /*~K*/
 /*~+:Anzahl Datens„tze Bildparameter rangabh„ngig*/
