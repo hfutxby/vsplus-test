@@ -37,6 +37,7 @@ int tsc_prog_actual(void);
 int tsc_prog_select(void);
 int tsc_prog_tx(void);
 int tsc_prog_tu(void);
+void tsc_stream_waiting(int index, int time);
 
 #define MAXCOUNT (32767<<1)
 

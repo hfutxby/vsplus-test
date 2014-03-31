@@ -6,12 +6,15 @@
 #include "if626bas.h"
 #include "if626max.h"
 
-void* g_mem[3];
-FILE* g_vcb_file = NULL;
-#define VCB_FILE "para.vcb"
+void* g_mem[3]; //VSPLUS内部分配用于存储参数
+FILE* g_vcb_file = NULL; //配置参数vcb文件
+FILE* g_vcb_back = NULL; //备份参数vcb文件
+#define VCB_FILE "para.vcb" //配置参数vcb文件
+#define VCB_BACK "para_bak.vcb" //备份参数vcb文件
+#define _SIM_TEST_
 
 int g_timer[MAXTIMER];//最低位做开关标志
-int g_exit = 0;
+static int g_exit = 0;
 pthread_t g_tid_timer;
 
 /* 分配存储区  */
@@ -77,7 +80,7 @@ int tsc_open_vcb(void)
 		return 1;
 	}
 	else{
-		g_vcb_file = fopen(VCB_FILE, "r+");
+		g_vcb_file = fopen(VCB_FILE, "rb");
 		if(g_vcb_file == NULL){
 			debug(1, "%s\n", strerror(errno));
 			return 0;
@@ -108,6 +111,7 @@ int tsc_read_vcb(char *data, int size)
 		debug(1, "vcb file not opened\n");
 		return -1;
 	}
+	memset(data, 0, size);
 	return fread(data, 1, size, g_vcb_file);
 
 }
@@ -126,7 +130,7 @@ void time_go(void)
 	}
 }
 
-int ms_sleep(long us)
+int us_sleep(long us)
 {
 	struct timeval tv;
 	tv.tv_sec = 0;
@@ -144,11 +148,12 @@ int thr_timer(void* arg)
 		gettimeofday(&tv2, NULL);
 		diff = (tv2.tv_sec-tv1.tv_sec)*1000000+(tv2.tv_usec-tv1.tv_usec);
 		//printf("time_go:%dus\n", diff);
-		ms_sleep(us-diff);
+		us_sleep(us-diff);
 	}
 }
 
-int _timer(int func, int index, int count)
+/* 定时器 */
+int tsc_timer(int func, int index, int count)
 {
 	debug(3, "==>\n");
 	int ret = 0;
@@ -204,34 +209,229 @@ int deinit_timers(void)
 	return 0;
 }
 
-/* FIXME:sim */
+/* FIXME
+ * 当前执行的配时方案 */
 int tsc_prog_actual(void)
 {
+#ifdef _SIM_TEST_
 	return sim_prog_actual();
+#else
+
+#endif
 }
 
-/* FIXME:sim */
+/* FIXME
+ * 选择新的配时方案 */
 int tsc_prog_select(void)
 {
+#ifdef _SIM_TEST_
 	return sim_prog_select();
+#else
+
+#endif
 }
 
-/* FIXME:sim */
+/* FIXME
+ * 当前配时方案，运行处于方案内的时间点
+ */
 int tsc_prog_tx(void)
 {
+#ifdef _SIM_TEST_
 	return sim_prog_tx();	
+#else
+
+#endif
 }
 
-/* FIXME:sim */
+/* FIXME
+ * 当前配时方案，总的时长
+ */
 int tsc_prog_tu(void)
 {
+#ifdef _SIM_TEST_
 	return sim_prog_tu();
+#else
+
+#endif
+}
+
+/* FIXME
+ * VSPLUS告知控制器某条交通流已等待很长时间，
+ * 控制器判断是否切回定时配时方案
+ */
+void tsc_stream_waiting(int index, int time)
+{
+	debug(2, "stream:%d, waiting:%d\n", index, time);
+}
+
+/* FIXME
+ * 读取检测器上升沿计数
+ */
+int tsc_sum_rising(int index)
+{
+#ifdef _SIM_TEST_
+	return sim_sum_rising(index);
+#else
+
+#endif
+}
+
+/* FIXME
+ * 清空检测器上升沿计数
+ */
+void tsc_clr_rising(int index)
+{
+#ifdef _SIM_TEST_
+	sim_clr_rising(index);
+#else
+
+#endif
+}
+
+/* FIXME
+ * 读取检测器下降沿计数
+ */
+int tsc_sum_falling(int index)
+{
+#ifdef _SIM_TEST_
+	return sim_sum_falling(index);
+#else
+
+#endif
+}
+
+/* FIXME
+ * 清空检测器下降沿计数
+ */
+void tsc_clr_falling(int index)
+{
+#ifdef _SIM_TEST_
+	sim_clr_falling(index);
+#else
+
+#endif
+}
+
+/* FIXME
+ * 检测器占用率，单位是percent
+ */
+int tsc_cur_hold(int index)
+{
+#ifdef _SIM_TEST_
+	return sim_cur_hold(index);
+#else
+
+#endif
+}
+
+/* FIXME
+ * 平滑处理后的检测器占用率，单位是percent
+ */
+int tsc_sm_hold(int index)
+{
+#ifdef _SIM_TEST_
+	return sim_sm_hold(index);
+#else
+
+#endif
+}
+
+/* FIXME
+ * 检测器当前占用状态
+ */
+int tsc_hold_state(int index)
+{
+#ifdef _SIM_TEST_
+	return sim_hold_state(index);
+#else
+
+#endif
+}
+
+/* FIXME
+ * 检测器当前已占用时间
+ */
+int tsc_hold_time(int index)
+{
+#ifdef _SIM_TEST_
+	return sim_hold_time(index);
+#else
+
+#endif
+}
+
+/* FIXME
+ * 测试指定的signal group是否存在
+ */
+int tsc_sg_exist(int index)
+{
+	if(index < 4)
+		return 1;
+	else
+		return 1;//0;
+}
+
+/* FIXME
+ * 检测指定的检测器是否存在
+ */
+int tsc_det_exist(int index)
+{
+	return 1;
+}
+
+/* 打开备份vcb文件 */
+int tsc_open_back(void)
+{
+	g_vcb_back = fopen(VCB_BACK, "wb+");
+	if(!g_vcb_back){
+		debug(1, "open backup vcb file error\n");
+		return 0;
+	}
+
+	return 1;
+}
+
+/* 写入备份vcb文件 */
+int tsc_write_back(char* data, int size)
+{
+	if(!g_vcb_back){
+		debug(1, "backup vcb file not opened yet!\n");
+		return;
+	}
+	return fwrite(data, 1, size, g_vcb_back);
+}
+
+/* 关闭备份文件 */
+void tsc_close_back(void)
+{
+	if(!g_vcb_back){
+		debug(2, "backup vcb file not opened yet!\n");
+	}
+	fclose(g_vcb_back);
+	g_vcb_back = 0;
+}
+
+/* FIXME
+ * 判断当前是否处于vsplus动态控制中。
+ * 返回0表示处于定时配时控制中
+ */
+int tsc_ctl_active(void)
+{
+	return 1;
+}
+
+/* 返回当前时间 */
+int tsc_get_time(int* hour, int* min, int* sec)
+{
+
 }
 
 int tsc_init()
 {
 	init_timers();	
-	sim_init();
+#ifdef _SIM_TEST_
+	sim_init(); //在sim.c中实现部分测试数据的产生
+#endif
 
 	return 0;
 }
@@ -239,7 +439,9 @@ int tsc_init()
 int tsc_deinit()
 {
 	deinit_timers();
+#ifdef _SIM_TEST_
 	sim_deinit();
+#endif
 
 	return 0;
 }

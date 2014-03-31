@@ -10,7 +10,7 @@
 short int timer(short int funktion, short int timer)
 {
 	debug(3, "==>\n");
-	return _timer(funktion, timer, 0);
+	return tsc_timer(funktion, timer, 0);
 }
 
 /* load and start a timer
@@ -21,7 +21,7 @@ short int timer(short int funktion, short int timer)
 short int timer_2(short int funktion, short int timer, short int wert)
 {
 	debug(3, "==>\n");
-	return _timer(funktion, timer, wert);
+	return tsc_timer(funktion, timer, wert);
 }
 
 /* VS-PLUS is told the actual program number
@@ -69,25 +69,35 @@ return 0;
   
 }
 
+/* Number of rising slopes counted by the controller, until clearing by VS-PLUS
+ * return value:  number of rising slopes since last clear
+ * det:  detector channel number
+ */ 
 short int d_imp(short int det)
 {
-printf("%s(%d)\n", __func__, __LINE__);
-return 0;
-   
+	debug(3, "==>\n");
+	return tsc_sum_rising(det);
 }
 
+/* The rising slope counter is cleared by VS-PLUS
+ * return value:  none
+ * det:  detector channel number
+ */
 void d_limp(short int det)
 {
-printf("%s(%d)\n", __func__, __LINE__);
-return ;
-   
+	debug(3, "==>\n");
+	tsc_clr_rising(det);
 }
 
+/* The occupancy degree (in percent) indicates how long a 
+ * detector has been occupied during the last second. (0 – 100%)
+ * return value:  detector occupancy degree during the last second, in percent 
+ * det:  detector channel number
+ */
 short int d_belga(short int det)
 {
-printf("%s(%d)\n", __func__, __LINE__);
-return 0;
-   
+	debug(3, "==>\n");
+	return tsc_cur_hold(det);
 }
 
 short int d_stoer(short int det)
@@ -97,18 +107,24 @@ return 0;
   
 }
 
+/* The  smoothened  occupancy  degree  is  calculated  over  a  defined  interval.
+ * return value:  smoothened occupancy degree, in percent (0 – 100%)
+ * det:  detector channel number
+ */
 short int d_belgg(short int det)
 {
-printf("%s(%d)\n", __func__, __LINE__);
-return 0;
-   
+	debug(3, "==>\n");
+	return tsc_sm_hold(det);
 }
 
+/* Actual occupancy state of the detector
+ * return value:  0: not occupied; >0: occupied
+ * det:  detector channel number
+ */
 short int d_blg(short int det)
 {
-printf("%s(%d)\n", __func__, __LINE__);
-return 0;
-   
+	debug(3, "==>\n");
+	return tsc_hold_state(det);
 }
 
 short int d_ztlkn(short int det)
@@ -124,16 +140,29 @@ printf("%s(%d)\n", __func__, __LINE__);
 return 0;
 }
 
+/* Actual occupancy time of the detector
+ * return value:  detector occupancy time in units of 100ms
+ * det:  detector channel number
+ */
 short int d_blgzt(short int det)
 {
-printf("%s(%d)\n", __func__, __LINE__);
-return 0;
+	debug(3, "==>\n");
+	return tsc_hold_time(det);
 }
 
+/* Number of falling slopes counted by the controller, until clearing by VS-PLUS
+ * return value:  Number of falling slopes since last clear
+ * type:  1: read counter (number of falling slopes)
+ *		  2: clear counter
+ * det:  detector channel number
+ */
 short int d_impab(short int type, short int det)
 {
-printf("%s(%d)\n", __func__, __LINE__);
-return 0;
+	debug(3, "==>\n");
+	if(type == 1)
+		return tsc_sum_falling(det);
+	else
+		return tsc_clr_falling(det);
 }
 
 short int d_kvalue(short int det)
@@ -315,8 +344,9 @@ printf("%s(%d)\n", __func__, __LINE__);
 
 void Meldung(short int degree, short int nr, short int par1, short int par2, short int par3, short int par4)
 {
-printf("%s(%d)\n", __func__, __LINE__);
-return ;
+	debug(3, "==>\n");
+	debug(3, "degree:%d, nr:%d, par1-4:%d,%d,%d,%d\n", degree, nr, par1, par2, par3, par4);
+	return ;
 }
 
 void  MeldungNET(short int degree, unsigned char nr, unsigned short Anr, unsigned char par1, unsigned char par2, unsigned char par3, unsigned char par4, unsigned char par5)
@@ -327,8 +357,8 @@ return ;
 
 void U_Kontrolle(short int vs, short int zeit)
 {
-printf("%s(%d)\n", __func__, __LINE__);
-return ;
+	debug(3, "==>\n");
+	tsc_stream_waiting(vs, zeit);
 }
 
 short TelegrammVomGeraet(void* oev_tele_poi)
@@ -337,10 +367,15 @@ printf("%s(%d)\n", __func__, __LINE__);
 return 0;
 }
 
+/* returns  0 as long as a fixed time signal  plan
+ * is being processed. When off or during switch on
+ * or switch off, this function returns 1
+ * return value:  1 = Off or switching on or off; 0 = signal program active
+ */
 unsigned short int s_SteuerungNichtAktiv(void)
 {
-printf("%s(%d)\n", __func__, __LINE__);
-   return 0;
+	debug(3, "==>\n");
+	return tsc_ctl_active();
 }
 
 /* requests memory from the controller in order to 
@@ -387,6 +422,7 @@ int Oeffnen_VSP_Parameter(void)
 	return tsc_open_vcb();
 }
 
+#include <string.h>
 /* Data is read sequentially from the formerly opened VCB 
  * file. This function corresponds to a "fread” in C. 
  * return value:  size of data read; -1 = error
@@ -396,7 +432,15 @@ int Oeffnen_VSP_Parameter(void)
 int Read_VSP_Parameter(char* data, int _sizeof)
 {
 	debug(3, "==>\n");
-	return tsc_read_vcb(data, _sizeof);
+	int ret = tsc_read_vcb(data, _sizeof);
+	//debug(3, "size=%d,ret=%d\n", _sizeof, ret);
+//	int i;
+//	for(i = 0; i < ret; i++){
+//		printf("%x ", *(data+i)&0xff);
+//	}
+//	printf("\n");
+	return ret;
+	//return tsc_read_vcb(data, _sizeof);
 }
 
 /* closes the supply file
@@ -409,22 +453,29 @@ void Schliessen_VSP_Parameter(void)
 	return;
 }
 
+/* open the backup supply file that is stored on the controller
+ * return value:  1 = supply file was opened successfully, 0 = not opened
+ */
 int Oeffnen_Sichern_Parameter(void)
 {
-printf("%s(%d)\n", __func__, __LINE__);
-return 0;
+	debug(3, "==>\n");
+	return tsc_open_back();
 }
 
+/* write backup supply file
+ */
 void Schreiben_Sichern_Parameter(char* data, int _sizeof)
 {
-printf("%s(%d)\n", __func__, __LINE__);
-return ;
+	debug(3, "==>\n");
+	tsc_write_back(data, _sizeof);
 }
 
+/* close the backup supply file
+ */
 void Schliessen_Sichern_Parameter(void)
 {
-printf("%s(%d)\n", __func__, __LINE__);
-return;
+	debug(3, "==>\n");
+	tsc_close_back();
 }
 
 int Oeffnen_VSP_Befehle(void)
@@ -457,16 +508,24 @@ printf("%s(%d)\n", __func__, __LINE__);
 return 0;
 }
 
+/* Function to check if a detector with a certain channel number is defined in the controller
+ * return value:  1 = detector is defined in the controller; 0 = not defined
+ * KanalNummer:   detector channel number
+ */
 int Det_Aktiv(int KanalNummer)
 {
-printf("%s(%d)\n", __func__, __LINE__);
-return 0;
+	debug(3, "==>\n");
+	return tsc_det_exist(KanalNummer);
 }
 
+/* Function to check if a signal group with a certain channel number is defined in the controller
+ * return value:  1 = signal group is defined in the controller; 0 = not defined
+ *  KanalNummer:   signal group channel number
+ */
 int Sg_Aktiv(int KanalNummer)
 {
-printf("%s(%d)\n", __func__, __LINE__);
-return 0;
+	debug(3, "==>\n");
+	return tsc_sg_exist(KanalNummer);
 }
 
 int AktuelleZeit(int* Stunde, int* Minute, int* Sekunde)
@@ -483,8 +542,10 @@ printf("%s(%d)\n", __func__, __LINE__);
 
 int Get_OCITOutstationId(int* ZNr, int* FNr, int* Realknoten)
 {
-printf("%s(%d)\n", __func__, __LINE__);
-   return 0;
+	debug(3, "==>\n");
+	*ZNr = 0; *FNr = 0; *Realknoten = 0;
+	debug(3, "ZNr:%d, FNr:%d, Realknoten:%d\n", *ZNr, *FNr, *Realknoten);
+	return 1;
 }
 
 int Wunsch_VSPLUS(int Wunsch, int Teiknoten)
