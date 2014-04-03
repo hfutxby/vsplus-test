@@ -41,4 +41,15 @@ void tsc_stream_waiting(int index, int time);
 
 #define MAXCOUNT (32767<<1)
 
+typedef struct{
+	int MP;// (call point);
+	int Linie;// (line);
+	int Kurs;// (course);
+	int Route;// (route);
+	int Prioritaet;// (priority);
+	int Laenge;// (vehicle length);
+	int RichtungVonHand;// (direction by hand);
+	int FahrplanAbweichnung;// (difference to schedule);
+}PTMSG;
+
 #endif /*__TSC_H*/

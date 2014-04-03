@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <time.h>
 #include "tsc.h"
 #include "if626bas.h"
 #include "if626max.h"
@@ -155,7 +156,7 @@ int thr_timer(void* arg)
 /* 定时器 */
 int tsc_timer(int func, int index, int count)
 {
-	debug(3, "==>\n");
+	//debug(3, "==>\n");
 	int ret = 0;
 	int i = 0;
 	if((index >= 0) && (index <= MAXTIMER)){
@@ -423,7 +424,66 @@ int tsc_ctl_active(void)
 /* 返回当前时间 */
 int tsc_get_time(int* hour, int* min, int* sec)
 {
+	time_t tt = time(NULL);
+	struct tm *t = localtime(&tt);
+	*hour = t->tm_hour;
+	*min = t->tm_min;
+	*sec = t->tm_sec;
+	debug(3, "%04d-%02d-%02d %02d:%02d:%02d\n", t->tm_year+1900,
+		t->tm_mon+1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);
 
+	return 1;
+}
+
+/* 返回当前日期 */
+int tsc_get_date(int* year, int* month, int* mday, int* wday)
+{
+	time_t tt = time(NULL);
+	struct tm *t = localtime(&tt);
+	*year = t->tm_year+1900;
+	*month = t->tm_mon+1;
+	*mday = t->tm_mday;
+	*wday = t->tm_wday;
+
+	return 1;
+}
+
+/* FIXME
+ * 检查灯组是否处于红灯状态 */
+int tsc_chk_red(int sg)
+{
+	return 1;
+}
+
+/* FIXME
+ * 检查灯组是否处于最小红灯状态 */
+int tsc_chk_min_red(int sg)
+{
+	return 1;
+}
+
+/* FIXME
+ * 返回红灯亮起时间 */
+int tsc_red_time(int sg)
+{
+	return random()%5;
+}
+
+/* FIXME
+ * 读取PT信息？*/
+int tsc_read_pt(void* arg)
+{
+	PTMSG* ptr = (PTMSG*)arg;
+	debug(3, "call point:%d\n", ptr->MP);
+	debug(3, "line:%d\n", ptr->Linie);
+	debug(3, "course:%d\n", ptr->Kurs);
+	debug(3, "route:%d\n", ptr->Route);
+	debug(3, "priority:%d\n", ptr->Prioritaet);
+	debug(3, "vehicle length:%d\n", ptr->Laenge);
+	debug(3, "direction by hand:%d\n", ptr->RichtungVonHand);
+	debug(3, "difference to schedule:%d\n", ptr->FahrplanAbweichnung);
+
+	return 0;
 }
 
 int tsc_init()

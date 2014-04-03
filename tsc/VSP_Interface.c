@@ -9,7 +9,7 @@
  */
 short int timer(short int funktion, short int timer)
 {
-	debug(3, "==>\n");
+	//debug(3, "==>\n");
 	return tsc_timer(funktion, timer, 0);
 }
 
@@ -30,6 +30,13 @@ short int timer_2(short int funktion, short int timer, short int wert)
 short int ProgrammAktuell(void)
 {
 	debug(3, "==>\n");
+	int i, ret = 0;
+//	printf("pg_num:type ");
+//	for(i = 0; i <= 255; i++){
+//		if((ret = l_Prog_VSP(i)) > 0)
+//			printf("%d:%d ", i, ret);
+//	}
+//	printf("\n");
 	return tsc_prog_actual();
 }
 
@@ -230,10 +237,16 @@ printf("%s(%d)\n", __func__, __LINE__);
    return;
 }
 
+/* This function enables VS-PLUS to check if a signal 
+ * group shows red. The return value is 1 if this is 
+ * the case. All other cases result in a return value of 0.
+ * return value:  1 = signal group shows red; 0 = not red
+ * sg:   signal group channel number
+ */
 short int s_rot(short int sg)
 {
-printf("%s(%d)\n", __func__, __LINE__);
-return 0;
+	debug(3, "==>\n");
+	return tsc_chk_red(sg);
 }
 
 short int s_sr_aus(short int re)
@@ -247,10 +260,17 @@ printf("%s(%d)\n", __func__, __LINE__);
    return 0;
 }
 
+/* This function enables VS-PLUS to check if a signal 
+ * group shows red and the elapsed red time is still 
+ * within the minimum red time.
+ * return value:  1 = signal group red and min red not reached;
+ *				  0 = not red or min red elapsed
+ *  sg:   signal group channel number
+ */
 short int s_min_rot(short int sg)
 {
-printf("%s(%d)\n", __func__, __LINE__);
-return 0;
+	debug(3, "==>\n");
+	return tsc_chk_min_red(sg);
 }
 
 short int s_gelb(short int sg)
@@ -294,10 +314,14 @@ printf("%s(%d)\n", __func__, __LINE__);
 return 0;
 }
 
+/* Tells how long the signal group is already red.
+ * return value:  current red time in units of 100ms
+ * sg:   signal group channel number
+ */
 unsigned short s_t_rot(short int sg)
 {
-printf("%s(%d)\n", __func__, __LINE__);
-return 0;
+	debug(3, "==>\n");
+	return tsc_red_time(sg);
 }
 
 unsigned short int s_t_gelb(short int sg)
@@ -361,10 +385,14 @@ void U_Kontrolle(short int vs, short int zeit)
 	tsc_stream_waiting(vs, zeit);
 }
 
+/* VS-PLUS reads the serial PT telegrams that have been
+ * received by the controller.
+ * oev_tele_poi:   pointe on a telegram
+ */
 short TelegrammVomGeraet(void* oev_tele_poi)
 {
-printf("%s(%d)\n", __func__, __LINE__);
-return 0;
+	debug(3, "==>\n");
+	return tsc_read_pt(oev_tele_poi);
 }
 
 /* returns  0 as long as a fixed time signal  plan
@@ -528,16 +556,30 @@ int Sg_Aktiv(int KanalNummer)
 	return tsc_sg_exist(KanalNummer);
 }
 
+/* Read current time
+ * return value:  1 = time is set; 0 = not set
+ * Stunde:   current hour (0 … 23)
+ * Minute:  current minute (0 … 59)
+ * Sekunde:  current second (0 … 59)
+ */
 int AktuelleZeit(int* Stunde, int* Minute, int* Sekunde)
 {
-printf("%s(%d)\n", __func__, __LINE__);
-return 0;
+	debug(3, "==>\n");
+	return tsc_get_time(Stunde, Minute, Sekunde);
 }
 
+/* Read current date
+ * return value:  1 = date is set; 0 = not set
+ * Jahr:   current year (1970 .. 2999)
+ * Monat:  current month (1 .. 12)
+ * Tag:  current day (1 .. 31)
+ * Wochentag:  current weekday (1 = Monday; 2 = Tuesday; 3  = Wednesday; 4 
+= Thursday; 5 = Friday; 6 = Saturday; 7 = Sunday)
+ */
 int AktuellesDatum(int* Jahr, int* Monat, int* Tag, int* Wochentag)
 {
-printf("%s(%d)\n", __func__, __LINE__);
-   return 0;
+	debug(3, "==>\n");
+	return tsc_get_date(Jahr, Monat, Tag, Wochentag);
 }
 
 int Get_OCITOutstationId(int* ZNr, int* FNr, int* Realknoten)
