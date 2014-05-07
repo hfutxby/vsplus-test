@@ -1,0 +1,10 @@
+*.x86
+*.vcb
+tags
+*.a
+*.lib
+*.o
+.*
+build/
+
+!.gitignore

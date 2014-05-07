@@ -30,14 +30,8 @@ short int timer_2(short int funktion, short int timer, short int wert)
 short int ProgrammAktuell(void)
 {
 	debug(3, "==>\n");
-	int i, ret = 0;
-//	printf("pg_num:type ");
-//	for(i = 0; i <= 255; i++){
-//		if((ret = l_Prog_VSP(i)) > 0)
-//			printf("%d:%d ", i, ret);
-//	}
-//	printf("\n");
-	return tsc_prog_actual();
+	return 179;
+	//return tsc_prog_actual();
 }
 
 /* VS-PLUS is told a program change request. If there is no 
@@ -379,6 +373,12 @@ printf("%s(%d)\n", __func__, __LINE__);
 return ;
 }
 
+/* VS-PLUS tells the controller the number of the traffic 
+ * stream with the largest waiting time. 
+ * return value:  none
+ * vs:  number of traffic stream with largest waiting time 0 – VSMAX
+ * zeit:  waiting time in units of 100ms
+ */
 void U_Kontrolle(short int vs, short int zeit)
 {
 	debug(3, "==>\n");
@@ -582,6 +582,12 @@ int AktuellesDatum(int* Jahr, int* Monat, int* Tag, int* Wochentag)
 	return tsc_get_date(Jahr, Monat, Tag, Wochentag);
 }
 
+/* Returns the OCIT Outstations node identification
+ * return value:  1 = id is set; 0 = not set
+ *  ZNr:   area number
+ * FNr:  controller number
+ * Relknoten:  relative node number
+ */
 int Get_OCITOutstationId(int* ZNr, int* FNr, int* Realknoten)
 {
 	debug(3, "==>\n");

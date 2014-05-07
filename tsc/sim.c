@@ -90,9 +90,9 @@ int sim_prog_actual(void)
 		}
 	}
 
-	debug(3,"\ncur_prg:%0d,cycle_time:%0d,cur_time:%0d\nnext_prg:%0d,cycle_time:%0d\n", g_prog_list[0].index,
-			g_prog_list[0].cycle_time, (g_prog_list[0].cur_time/10)*10, g_prog_list[1].index,
-			g_prog_list[1].cycle_time);
+//	debug(3,"\ncur_prg:%0d,cycle_time:%0d,cur_time:%0d\nnext_prg:%0d,cycle_time:%0d\n", g_prog_list[0].index,
+//			g_prog_list[0].cycle_time, (g_prog_list[0].cur_time/10)*10, g_prog_list[1].index,
+//			g_prog_list[1].cycle_time);
 
 	return g_prog_list[0].index;
 }
