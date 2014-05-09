@@ -101,11 +101,13 @@ short int d_belga(short int det)
 	return tsc_cur_hold(det);
 }
 
+/* Detector fault
+ * return: 0:no fault; >0:fault
+ * det: detctor channel number
+ */
 short int d_stoer(short int det)
 {
-printf("%s(%d)\n", __func__, __LINE__);
-return 0;
-  
+	return tsc_det_fault(det);
 }
 
 /* The  smoothened  occupancy  degree  is  calculated  over  a  defined  interval.
@@ -172,16 +174,22 @@ printf("%s(%d)\n", __func__, __LINE__);
 return 0;
 }
 
+/* The minimum read time defined in the controller.
+ * return value: minimum red time in units of 100ms.
+ * sg: signal group channel number
+ */
 short int min_rot(short int sg)
 {
-printf("%s(%d)\n", __func__, __LINE__);
-return 0;
+	debug(3, "==>\n");
+	return tsc_min_red(sg);
 }
 
+/* preparation time
+ */
 short int u_rot_gelb(short int sg)
 {
-printf("%s(%d)\n", __func__, __LINE__);
-return 0;
+	debug(3, "==>\n");
+	return tsc_prep(sg);
 }
 
 short int min_gruen(short int sg)
@@ -196,16 +204,24 @@ printf("%s(%d)\n", __func__, __LINE__);
 return 0;
 }
 
+/* switch signal group to open
+ * sg: signal group channel number
+ */
 void SG_ein(short int sg)
 {
-printf("%s(%d)\n", __func__, __LINE__);
-return;
+	debug(3, "==>\n");
+	printf("%s(%d):================\n", __func__, __LINE__);
+	ts_sg_open(sg);
+	return;
 }
 
+/* switch signal group to closed
+ */
 void SG_aus(short int sg)
 {
-printf("%s(%d)\n", __func__, __LINE__);
-return;
+	debug(3, "==>\n");
+	ts_sg_close(sg);
+	return;
 }
 
 void Relais_ein(short int sg)
@@ -330,10 +346,14 @@ printf("%s(%d)\n", __func__, __LINE__);
 return 0;
 }
 
+/* current singal group green time
+ * return: current green time in units of 100ms
+ * sg: signal group channel number
+ */
 unsigned short int s_t_grun(short int sg)
 {
-printf("%s(%d)\n", __func__, __LINE__);
-return 0;
+	debug(3, "==>\n");
+	return tsc_green_time(sg);
 }
 
 unsigned short int s_t_vor(short int sg)
@@ -348,10 +368,14 @@ printf("%s(%d)\n", __func__, __LINE__);
 return 0;
 }
 
+/* enable for vsplus
+ * return: 1 = sg is enabled; 0 = not enabled
+ * sg:
+ */
 unsigned short int s_HW_VspFreigegeben(short int sg)
 {
-printf("%s(%d)\n", __func__, __LINE__);
-return 0;
+	debug(3, "==>\n");
+	return tsc_sg_enabled(sg);
 }
 
 short s_zwi_zeit(short sgR, short sgE)

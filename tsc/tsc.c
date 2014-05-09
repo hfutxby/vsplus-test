@@ -3,7 +3,14 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <time.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <termios.h>
+
 #include "tsc.h"
+#include "sim.h"
 #include "if626bas.h"
 #include "if626max.h"
 
@@ -17,6 +24,10 @@ FILE* g_vcb_back = NULL; //备份参数vcb文件
 int g_timer[MAXTIMER];//最低位做开关标志
 static int g_exit = 0;
 pthread_t g_tid_timer;
+pthread_t g_tid_watchdog; //独立线程喂狗
+
+int g_fd_serial;
+extern sg_node* g_sg;
 
 /* 分配存储区  */
 void* tsc_alloc_mem(int size, int id)
@@ -265,6 +276,7 @@ void tsc_stream_waiting(int index, int time)
 	debug(2, "stream:%d, waiting:%d\n", index, time);
 }
 
+/*************检测器函数************************/
 /* FIXME
  * 读取检测器上升沿计数
  */
@@ -362,6 +374,30 @@ int tsc_hold_time(int index)
 }
 
 /* FIXME
+ * 检测器是否出现故障 */
+int tsc_det_fault(int index)
+{
+#ifdef _SIM_TEST_
+	return sim_det_fault(index);
+#else 
+
+#endif
+}
+
+/* FIXME
+ * 检测指定的检测器是否存在
+ */
+int tsc_det_exist(int index)
+{
+#ifdef _SIM_TEST_
+	return sim_det_exist(index);
+#else
+
+#endif
+}
+
+/********************信号控制函数*****************/
+/* FIXME
  * 测试指定的signal group是否存在
  */
 int tsc_sg_exist(int index)
@@ -373,11 +409,14 @@ int tsc_sg_exist(int index)
 }
 
 /* FIXME
- * 检测指定的检测器是否存在
+ * 测试sg是否处于vsplus控制
  */
-int tsc_det_exist(int index)
+int tsc_sg_enabled(int sg)
 {
-	return 1;
+	if(sg<15)
+		return 1;
+	else
+		return 0;
 }
 
 /* 打开备份vcb文件 */
@@ -449,24 +488,100 @@ int tsc_get_date(int* year, int* month, int* mday, int* wday)
 }
 
 /* FIXME
+ * 打开信号灯，红->绿 */
+int ts_sg_open(int sg)
+{
+	g_sg[sg].ext = 1;
+	char buf[4];
+	buf[0] = 0x96;
+	buf[1] = (sg/4)<<4 | (sg%4);
+	buf[2] = 0x02;//黄
+	buf[3] = 0x69;
+	write(g_fd_serial, buf, sizeof(buf));
+	sleep(g_sg[sg].prep);
+	buf[2] = 0x04;//绿
+	write(g_fd_serial, buf, sizeof(buf));
+
+	return;
+}
+
+/* FIXME
+ * 关闭信号灯，绿->红 */
+int ts_sg_close(int sg)
+{
+	g_sg[sg].ext = 2;
+	char buf[4];
+	buf[0] = 0x96;
+	buf[1] = (sg/4)<<4 | (sg%4);
+	buf[2] = 0x02;//黄
+	buf[3] = 0x69;
+	write(g_fd_serial, buf, sizeof(buf));
+	sleep(g_sg[sg].amber);
+	buf[2] = 0x01;//红
+	write(g_fd_serial, buf, sizeof(buf));
+
+return;
+}
+
+/* FIXME
  * 检查灯组是否处于红灯状态 */
 int tsc_chk_red(int sg)
 {
-	return 1;
+	if((g_sg[sg].stat == 2) || (g_sg[sg].stat == 3))
+		return 1;
+	else
+		return 0;
 }
 
 /* FIXME
  * 检查灯组是否处于最小红灯状态 */
 int tsc_chk_min_red(int sg)
 {
-	return 1;
+	if(g_sg[sg].stat == 2)
+		return 1;
+	else
+		return 0;
 }
 
 /* FIXME
  * 返回红灯亮起时间 */
 int tsc_red_time(int sg)
 {
-	return random()%5;
+	if(g_sg[sg].stat == 2)
+		return g_sg[sg].time;
+	else if(g_sg[sg].stat == 3)
+		return g_sg[sg].time + g_sg[sg].red_min;
+}
+
+/* FIXME
+ * 返回最小红灯时间 */
+int tsc_min_red(int sg)
+{
+	return g_sg[sg].red_min;
+}
+
+/* FIXME
+ * 返回红绿过度时间 */
+int tsc_prep(int sg)
+{
+	return g_sg[sg].prep;
+}
+
+/* FIXME
+ * 返回最小绿灯时间 */
+int tsc_min_green(int sg)
+{
+	return g_sg[sg].green_min;
+}
+
+/* FIXME
+ * 返回绿灯时间 */
+int tsc_green_time(int sg)
+{
+	if(g_sg[sg].stat == 5)
+		return g_sg[sg].time;
+	if(g_sg[sg].stat == 6)
+		return g_sg[sg].time + g_sg[sg].green_min;
 }
 
 /* FIXME
@@ -486,8 +601,145 @@ int tsc_read_pt(void* arg)
 	return 0;
 }
 
+int set_opt(int fd, int speed, int bits, char event, int stop)
+{
+	struct termios newtio, oldtio;
+	if(tcgetattr(fd, &oldtio) != 0){
+		perror("tcgetattr fail");
+		return -1;
+	}
+	bzero(&newtio, sizeof(newtio));
+	newtio.c_cflag |= CLOCAL|CREAD;
+
+	newtio.c_cflag &= ~CSIZE;
+	switch(bits){//数据位数
+		case 7:
+			newtio.c_cflag |= CS7;
+			break;
+		case 8:
+			newtio.c_cflag |= CS8;
+			break;
+	}
+
+	switch(event){
+		case 'O'://奇校验
+			newtio.c_cflag |= PARENB;
+			newtio.c_cflag |= PARODD;
+			newtio.c_iflag |= INPCK;
+			break;
+		case 'E'://偶校验
+			newtio.c_iflag |= INPCK;
+			newtio.c_iflag |= PARENB;
+			newtio.c_iflag &= ~PARODD;
+			break;
+		case 'N':
+			newtio.c_cflag &= ~PARENB;
+			break;
+	}
+
+	switch(speed){
+		case 2400:
+			cfsetispeed(&newtio, B2400);
+			cfsetospeed(&newtio, B2400);
+			break;
+		case 4800:
+			cfsetispeed(&newtio, B4800);
+			cfsetospeed(&newtio, B4800);
+			break;
+		case 9600:
+			cfsetispeed(&newtio, B9600);
+			cfsetospeed(&newtio, B9600);
+			break;
+		case 19200:
+			cfsetispeed(&newtio, B19200);
+			cfsetospeed(&newtio, B19200);
+			break;
+		case 115200:
+			cfsetispeed(&newtio, B115200);
+			cfsetospeed(&newtio, B115200);
+			break;
+		default:
+			cfsetispeed(&newtio, B9600);
+			cfsetospeed(&newtio, B9600);
+			break;
+	}
+
+	if(stop == 1){
+		newtio.c_cflag &= ~CSTOPB;
+	}
+	else if(stop == 2){
+		newtio.c_cflag |= CSTOPB;
+	}
+
+	newtio.c_cc[VTIME] = 0;
+	newtio.c_cc[VMIN] = 0;
+
+	tcflush(fd, TCIFLUSH);
+
+	if((tcsetattr(fd, TCSANOW, &newtio)) != 0){
+		perror("set error");
+		return -1;
+	}
+
+	printf("set done\n");
+	return 0;
+}
+
+int open_port(int port)
+{
+	char portname[20];
+	int fd;
+	sprintf(portname, "/dev/ttyS%d", port);
+	fd = open(portname, O_RDWR|O_NOCTTY|O_NONBLOCK);//|O_NDELAY);
+	if(fd == -1){
+		debug(1, "cannot open %s\n", portname);
+		return -1;
+	}
+
+	printf("open %s sucess\n", portname);
+
+	return fd;
+}
+
+int thr_watchdog(void* para)
+{
+	int fd = *(int*)(para);
+	char buf[3];
+	buf[0] = 0xC1;
+	buf[1] = 0xAB;
+	buf[2] = 0x5C;
+	int ret;
+	while(!g_exit){
+		ret = write(fd, buf, sizeof(buf));
+		//printf("feed watchdog, ret=%d\n", ret);
+		sleep(2);
+	}
+	return 0;
+}
+
+int init_serial(void)
+{
+	debug(3, "==>\n");
+	int fd = open_port(1);//ttyS1
+	g_fd_serial = fd;
+	set_opt(fd, 19200, 8, 'N', 1);
+	pthread_create(&g_tid_watchdog, NULL, thr_watchdog, &fd);
+	debug(3, "<==\n");
+	return 0;
+}
+
+void deinit_serial(void)
+{
+	debug(3, "==>\n");
+	g_exit = 1;
+	pthread_join(g_tid_timer, NULL);
+	close(g_fd_serial);
+	debug(3, "<==\n");
+}
+
 int tsc_init()
 {
+	init_serial();
 	init_timers();	
 #ifdef _SIM_TEST_
 	sim_init(); //在sim.c中实现部分测试数据的产生
@@ -498,6 +750,7 @@ int tsc_init()
 
 int tsc_deinit()
 {
+	deinit_serial();
 	deinit_timers();
 #ifdef _SIM_TEST_
 	sim_deinit();

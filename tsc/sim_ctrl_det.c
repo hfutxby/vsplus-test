@@ -1,3 +1,4 @@
+/* 模拟产生检测器信号 */
 #include <stdio.h>
 #include <stdlib.h>
 #include <fcntl.h>
@@ -9,6 +10,28 @@
 #include "sim.h"
 #include "tsc.h"
 
+//typedef struct {
+//	int sum_rising; //上升沿计数
+//	int sum_falling; //下降沿计数
+//	int state; //计时状态，<100:占用中，>100:空闲中
+//	int hold; //总占用计时
+//	int free; //总空闲计时
+//	int fault; //故障
+//	int occ1;//占用率
+//	int occ2;//平滑占用率
+//}det_node;
+/* 模拟规则
+ * 当计时状态=0或=100时随机产生一次计时，更新状态值
+ * 100ms内要对所有检测器完成一次扫描
+ * 1、state计时-1，相对应的hold或free+1
+ * 2、当hold+free=10时计算一次占用率occ1，同时更新平滑占用率occ2
+ * occ1 = hold/(hold+free); 
+ * if(occ1>occ2) occ2 = occ2 + f1*(occ1-occ2)
+ * if(occ1<occ2) occ2 = occ2 + f2*(occ1-occ2)
+ */
+
+double g_f1 = 0.2;
+double g_f2 = 0.2;
 det_node* g_det = NULL;
 int g_det_fd = 0;
 static int g_exit = 0;
@@ -45,39 +68,54 @@ void close_det(void)
 	close(g_det_fd);
 }
 
-int thr_det(void *arg)
+int thr_det(void* arg)
 {
-	int step = 0, index = 0;
+	int i;
+	struct timeval tv_start, tv_end;
 	struct timeval tv;
+	int step;
+	int us;
 	while(!g_exit){
-		index = random()%DETMAX;//检测器编号
-		//检测到车辆到来
-		gettimeofday(&tv, NULL);
-		srandom(tv.tv_sec + tv.tv_usec);
-		step = random()%9+1;
-		g_det[index].state = 1;//车辆到来
-		g_det[index].sum_rising++;//产生上升沿
-		g_det[index].hold += step;//过车占用时间（1-10)*100ms
-		if((g_det[index].hold + g_det[index].free) > 10){ //只记录最近1s
-			g_det[index].free = 10 - g_det[index].hold;
+		gettimeofday(&tv_start, NULL);//较精确的将循环限制在100ms内
+		for(i = 0; i < DETMAX; i++){
+			if((g_det[i].state == 0) || (g_det[i].state == 100)){//随机产生一次事件
+				gettimeofday(&tv, NULL);
+				srandom(tv.tv_sec + tv.tv_usec);
+				//step = random()%9+1;//随机事件时长1-10，<=5为占用事件，>5为空闲事件
+				step = random()%20+1;//随机事件时长1-10，<=5为占用事件，>5为空闲事件
+				if(step <= 5){
+					g_det[i].state = step;
+					g_det[i].sum_rising++;
+				}
+				else{
+					g_det[i].state = step - 5 + 100;
+					g_det[i].sum_falling++;
+				}
+			}
+			//修改状态计时
+			if(g_det[i].state < 100)
+				g_det[i].hold++;
+			else
+				g_det[i].free++;
+			g_det[i].state--;
+			//修改占用率计算
+			if((g_det[i].hold + g_det[i].free) >= 10){
+				g_det[i].occ1 = (double)(g_det[i].hold*100)/(g_det[i].hold + g_det[i].free);
+				if(g_det[i].occ1 > g_det[i].occ2)
+					g_det[i].occ2 = g_det[i].occ2 + g_f1*(g_det[i].occ1 - g_det[i].occ2);
+				else
+					g_det[i].occ2 = g_det[i].occ2 + g_f2*(g_det[i].occ1 - g_det[i].occ2);
+			}
+			printf("ID:%3d, state:%3d, occ1:%3d, occ2:%3d, sum_rising:%4d, sum_falling:%4d\n", i, g_det[i].state, g_det[i].occ1, g_det[i].occ2, g_det[i].sum_rising, g_det[i].sum_falling);
 		}
-		us_sleep(100000/DETMAX);
+		gettimeofday(&tv_end, NULL);
+		us = (tv_end.tv_sec - tv_start.tv_sec)*1000000 + (tv_end.tv_usec - tv_start.tv_usec);
+		us_sleep(100000-us);
+		//printf("time use: %dus\n", (tv_end.tv_sec - tv_start.tv_sec)*1000000 + (tv_end.tv_usec - tv_start.tv_usec));
 
-		//检测到车辆离开
-		gettimeofday(&tv, NULL);
-		srandom(tv.tv_sec + tv.tv_usec);
-		step = random()%9+1;
-		g_det[index].state = 0;//车辆离开
-		g_det[index].sum_falling++;//产生下降沿
-		g_det[index].free += step;//空闲时间
-		if((g_det[index].hold + g_det[index].free) > 10){ //只记录最近1s
-			g_det[index].hold = 10 - g_det[index].free;
-		}
-		us_sleep(100000/DETMAX);
-
-//		printf("index:%d, sum_rising:%d, sum_falling:%d\n", index, g_det[index].sum_rising, g_det[index].sum_falling);
 	}
 }
+
 
 int set_fault(void)
 {

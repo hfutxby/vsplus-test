@@ -122,9 +122,21 @@ int test_sch(void)
 	}
 }
 
+int test_double(void)
+{
+	int hold = 4, free = 6;
+	int occ1 = 0, occ2 = 0;
+	double f1 = 0.2, f2 = 0.2;
+	occ1 = (double)(hold*100)/(hold+free);
+	occ2 = occ2 + f1*(occ1-occ2);
+	printf("%d, %d\n", occ1, occ2);
+
+	return 0;
+}
+
 int main(void)
 {
-	test_sch();	
+	test_double();	
 
 	return 0;
 }
