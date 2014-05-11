@@ -20,8 +20,9 @@ main: main.c tsc.c VSP_Interface.c
 test: test.c tsc.c
 	$(CC) $(CFLAGS) test.c tsc.c sim.c -pthread -o test.x86
 
-sim_ctrl: sim_ctrl_det.c
+sim_ctrl: sim_ctrl_det.c sim_ctrl_sg.c
 	$(CC) sim_ctrl_det.c -pthread -o sim_ctrl_det
+	$(CC) sim_ctrl_sg.c -pthread -o sim_ctrl_sg
 
 clean:
 	$(RM) *.x86 *.arm *.o *.out

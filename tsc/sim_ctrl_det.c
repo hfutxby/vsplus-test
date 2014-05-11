@@ -78,18 +78,23 @@ int thr_det(void* arg)
 	while(!g_exit){
 		gettimeofday(&tv_start, NULL);//较精确的将循环限制在100ms内
 		for(i = 0; i < DETMAX; i++){
+			if(g_det[i].fault){
+				us_sleep(10);
+				continue;
+			}
 			if((g_det[i].state == 0) || (g_det[i].state == 100)){//随机产生一次事件
+				if(g_det[i].state == 0)//表示占用事件结束，产生一次下降沿
+					g_det[i].sum_falling++;
 				gettimeofday(&tv, NULL);
 				srandom(tv.tv_sec + tv.tv_usec);
 				//step = random()%9+1;//随机事件时长1-10，<=5为占用事件，>5为空闲事件
-				step = random()%20+1;//随机事件时长1-10，<=5为占用事件，>5为空闲事件
+				step = random()%19+1;//随机事件时长1-20，<=5为占用事件，>5为空闲事件
 				if(step <= 5){
-					g_det[i].state = step;
 					g_det[i].sum_rising++;
+					g_det[i].state = step;
 				}
 				else{
 					g_det[i].state = step - 5 + 100;
-					g_det[i].sum_falling++;
 				}
 			}
 			//修改状态计时
@@ -99,7 +104,7 @@ int thr_det(void* arg)
 				g_det[i].free++;
 			g_det[i].state--;
 			//修改占用率计算
-			if((g_det[i].hold + g_det[i].free) >= 10){
+			if((g_det[i].hold + g_det[i].free) >= 10){//累计1s（10次100ms）
 				g_det[i].occ1 = (double)(g_det[i].hold*100)/(g_det[i].hold + g_det[i].free);
 				if(g_det[i].occ1 > g_det[i].occ2)
 					g_det[i].occ2 = g_det[i].occ2 + g_f1*(g_det[i].occ1 - g_det[i].occ2);
@@ -116,10 +121,15 @@ int thr_det(void* arg)
 	}
 }
 
-
+/* 设置检测器失效 */
 int set_fault(void)
 {
 	int i, s = 0, n = 0;
+
+	for(i = 0; i < DETMAX; i++){
+		g_det[i].fault = 1;
+	}
+
 	while(1){
 		printf("fault det: ");
 		for(i = 0; i < DETMAX; i++){
@@ -149,13 +159,37 @@ int set_fault(void)
 	}
 }
 
+/* 使能检测器并立即产生一个上升沿  */
+int set_rising(void)
+{
+	int s;
+
+	int i;
+	for(i = 0; i < DETMAX; i++){
+		g_det[i].fault = 1;
+	}
+
+	while(1){
+		printf("which detector set a rising:\n");
+		scanf("%d", &s);
+		if(s > DETMAX)
+			printf("wrong det index\n");
+		else{
+			g_det[s].fault = 0;
+			g_det[s].sum_rising++;
+			g_det[s].state = 5;
+		}
+	}
+}
+
 int main(void)
 {
 	open_det();
 	pthread_t g_tid_det;
 	pthread_create(&g_tid_det, NULL, thr_det, NULL);
 
-	set_fault();
+//	set_fault();
+	set_rising();
 //	while(1){
 //		sleep(1);
 //	}

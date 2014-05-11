@@ -21,8 +21,6 @@ int g_det_fd = 0;
 int g_sg_fd = 0;
 
 extern us_sleep(long us);
-int g_min_red[15] = {40,40,40,40,40,40,80,80,80,80,40,40,40,40,60};
-int g_min_green[15] = {20,20,20,20,20,20,20,20,20,20,20,20,20,20,20};
 
 /* 产生方案队列 */
 int thr_prog(void* arg)
@@ -121,6 +119,7 @@ int sim_prog_tu(void)
 	return ((g_prog_list[0]).cycle_time/10)*10;
 }
 
+/***************检测器模拟**********************/
 int sim_sum_rising(int index)
 {
 	return g_det[index].sum_rising;
@@ -169,6 +168,7 @@ int sim_det_fault(int index)
 	return g_det[index].fault;
 }
 
+//FIXME:和配置文件中的定义有关
 int sim_det_exist(int index)
 {
 	return 1;	
@@ -199,6 +199,7 @@ void close_det(void)
 }
 
 
+/*****************灯组模拟***********************/
 //打开灯组运行信息文件
 void open_sg(void)
 {
@@ -219,13 +220,15 @@ void open_sg(void)
 
 	//FIXME:实际需要从XML文件中解析初始化数据
 	memset(g_sg, 0, sizeof(sg_node)*SGMAX);
+	int min_red[15] = {40,40,40,40,40,40,80,80,80,80,40,40,40,40,60};
+	int min_green[15] = {20,20,20,20,20,20,20,20,20,20,20,20,20,20,20};
 	int i;
 	for(i = 0; i < 15; i++){
 		g_sg[i].stat = 2;
-		g_sg[i].red_min = g_min_red[i];
-		g_sg[i].green_min = g_min_green[i];
-		g_sg[i].prep = 3;
-		g_sg[i].amber = 3;
+		g_sg[i].red_min = min_red[i];
+		g_sg[i].green_min = min_green[i];
+		g_sg[i].prep = 30;
+		g_sg[i].amber = 30;
 		g_sg[i].time = 0;
 		g_sg[i].ext = 0;
 	}
@@ -258,7 +261,7 @@ int thr_sg(void* arg)
 					}
 					break;
 				case 3://b00状态未变，b01进行红绿切换，b10进行绿红切换
-					if(g_sg[i].ext == 1){
+					if(1){//g_sg[i].ext == 1){//扩展红绿灯时间不固定，根据ext判断是否结束。ext由vsplus调用的open signal函数设置。
 						g_sg[i].ext = 0;
 						g_sg[i].stat++;
 						g_sg[i].time = 0;
@@ -277,7 +280,7 @@ int thr_sg(void* arg)
 					}
 					break;
 				case 6:
-					if(g_sg[i].ext == 2){
+					if(1){//g_sg[i].ext == 2){
 						g_sg[i].ext = 0;
 						g_sg[i].stat = 1;
 						g_sg[i].time = 0;
@@ -290,6 +293,7 @@ int thr_sg(void* arg)
 	}
 }
 
+/*********************************************************/
 int sim_init(void)
 {
 	int i;

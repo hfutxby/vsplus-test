@@ -396,29 +396,7 @@ int tsc_det_exist(int index)
 #endif
 }
 
-/********************信号控制函数*****************/
-/* FIXME
- * 测试指定的signal group是否存在
- */
-int tsc_sg_exist(int index)
-{
-	if(index < 4)
-		return 1;
-	else
-		return 1;//0;
-}
-
-/* FIXME
- * 测试sg是否处于vsplus控制
- */
-int tsc_sg_enabled(int sg)
-{
-	if(sg<15)
-		return 1;
-	else
-		return 0;
-}
-
+/******************************************************/
 /* 打开备份vcb文件 */
 int tsc_open_back(void)
 {
@@ -485,6 +463,29 @@ int tsc_get_date(int* year, int* month, int* mday, int* wday)
 	*wday = t->tm_wday;
 
 	return 1;
+}
+
+/********************信号控制函数*****************/
+/* FIXME
+ * 测试指定的signal group是否存在
+ */
+int tsc_sg_exist(int index)
+{
+	if(index < 15)
+		return 1;
+	else
+		return 0;
+}
+
+/* FIXME
+ * 测试sg是否处于vsplus控制
+ */
+int tsc_sg_enabled(int sg)
+{
+	if(sg<15)
+		return 1;
+	else
+		return 0;
 }
 
 /* FIXME

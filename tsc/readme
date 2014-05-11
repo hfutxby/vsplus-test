@@ -2,3 +2,12 @@ if626max.h:一些常量定义
 if626bas.h:基本接口定义
 VSP_Interface.c:基本接口实现
 tsc.c:主控实现函数，部分接口函数的实现
+sim.c:模拟数据产生
+sim_ctrl_det.c:对检测器模拟数据
+
+tsc.c
+依赖模拟数据的实现使用_SIM_TEST_宏管理
+
+sim.c
+
+

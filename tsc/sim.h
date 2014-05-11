@@ -11,15 +11,6 @@ typedef struct{
 	int cur_time;
 }prog;
 
-//typedef struct {
-//	int sum_rising; //上升沿计数
-//	int sum_falling;
-//	int state; //占用状态
-//	int hold; //占用计时
-//	int free; //总计时
-//	int fault; //故障
-//}det_node;
-
 typedef struct {
 	int sum_rising; //上升沿计数
 	int sum_falling; //下降沿计数
