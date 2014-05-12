@@ -471,10 +471,11 @@ int tsc_get_date(int* year, int* month, int* mday, int* wday)
  */
 int tsc_sg_exist(int index)
 {
-	if(index < 15)
-		return 1;
-	else
-		return 0;
+	return 1;
+//	if(index < 15)
+//		return 1;
+//	else
+//		return 0;
 }
 
 /* FIXME

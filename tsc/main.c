@@ -38,16 +38,22 @@ int main(void)
 	//初始化参数存储区
 	ret = Initial_VSP_Parameter();
 	printf("%s(%d):Initial_VSP_Parameter ret=%d\n", __func__, __LINE__, ret);
+	if(ret < 0)
+		return -1;
 #endif
 #if 10
 	//检查参数配置文件（vcb文件）
 	ret = Pruefen_VSP_Parameter();
 	printf("%s(%d):Pruefen_VSP_Parameter ret=%d\n", __func__, __LINE__, ret);
+	if(ret < 0)
+		return -1;
 #endif
 #if 10
 	//读参数配置文件（vcb文件）
 	ret = Lesen_VSP_Parameter();
 	printf("%s(%d):Lesen_VSP_Parameter ret=%d\n", __func__, __LINE__, ret);
+	if(ret < 0)
+		return -1;
 #endif
 #if 10
 	//初始化VSPLUS

@@ -12,6 +12,14 @@
 int g_sg_fd;
 sg_node* g_sg = NULL;
 
+int us_sleep(long us)
+{
+	struct timeval tv;
+	tv.tv_sec = 0;
+	tv.tv_usec = us;
+	return select(0, NULL, NULL, NULL, &tv);
+}
+
 void open_sg(void)
 {
 	int ret;
@@ -65,12 +73,12 @@ int main(void)
 	int i;
 	while(1){
 		//printf("\033[2J");
-		//printf("\033[0;0H");
+		//printf("\033[1;1H");
 		for(i = 0; i < SGMAX; i++){
 			print_signal(g_sg[i].stat, g_sg[i].time);
 		}
-		printf("\n\n");
-		//sleep(1);
+		printf("\033[0m\r");
+		us_sleep(100);
 	}
 
 	close_sg();
