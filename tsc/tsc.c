@@ -5,6 +5,7 @@
 #include <time.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/mman.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <termios.h>
@@ -21,13 +22,17 @@ FILE* g_vcb_back = NULL; //备份参数vcb文件
 #define VCB_BACK "para_bak.vcb" //备份参数vcb文件
 #define _SIM_TEST_
 
+static int g_exit = 0;//退出线程标志
+
 int g_timer[MAXTIMER];//最低位做开关标志
-static int g_exit = 0;
 pthread_t g_tid_timer;
+
+int g_fd_serial;//控制串口
 pthread_t g_tid_watchdog; //独立线程喂狗
 
-int g_fd_serial;
-extern sg_node* g_sg;
+int g_fd_sg; //记录信号灯状态
+sg_node* g_sg;
+pthread_t g_tid_sg;
 
 /* 分配存储区  */
 void* tsc_alloc_mem(int size, int id)
@@ -226,7 +231,10 @@ int deinit_timers(void)
 int tsc_prog_actual(void)
 {
 #ifdef _SIM_TEST_
-	return sim_prog_actual();
+	int ret = sim_prog_actual();
+	//printf("actual prog:%d\n", ret);
+	return ret;
+	//return sim_prog_actual();
 #else
 
 #endif
@@ -237,7 +245,10 @@ int tsc_prog_actual(void)
 int tsc_prog_select(void)
 {
 #ifdef _SIM_TEST_
-	return sim_prog_select();
+	int ret = sim_prog_select();
+	//printf("select prog:%d\n", ret);
+	return ret;
+	//return sim_prog_select();
 #else
 
 #endif
@@ -249,7 +260,10 @@ int tsc_prog_select(void)
 int tsc_prog_tx(void)
 {
 #ifdef _SIM_TEST_
-	return sim_prog_tx();	
+	int ret = sim_prog_tx();
+	//printf("tx:%d\n", ret);
+	return ret;
+	//return sim_prog_tx();	
 #else
 
 #endif
@@ -261,7 +275,10 @@ int tsc_prog_tx(void)
 int tsc_prog_tu(void)
 {
 #ifdef _SIM_TEST_
-	return sim_prog_tu();
+	int ret = sim_prog_tu();
+	//printf("tu:%d\n", ret);
+	return ret;
+	//return sim_prog_tu();
 #else
 
 #endif
@@ -466,6 +483,146 @@ int tsc_get_date(int* year, int* month, int* mday, int* wday)
 }
 
 /********************信号控制函数*****************/
+//打开灯组运行信息文件
+void open_sg(void)
+{
+	int ret;
+	g_fd_sg = open("sg_nodes.dat", O_RDWR|O_CREAT, 0644);
+	if(g_fd_sg < 0){
+		printf("%s\n", strerror(errno));
+		return;
+	}
+	if(ret = ftruncate(g_fd_sg, sizeof(sg_node)*SGMAX) < 0){
+		printf("%s\n", strerror(errno));
+	}
+	g_sg = mmap(NULL, sizeof(sg_node)*SGMAX, PROT_READ|PROT_WRITE, MAP_SHARED, g_fd_sg, 0);
+	if(g_sg == MAP_FAILED){
+		printf("%s\n", strerror(errno));
+	}
+	//printf("sg:sizeof:%d\n", sizeof(sg_node)*SGMAX);
+
+	//FIXME:实际需要从XML文件中解析初始化数据
+	memset(g_sg, 0, sizeof(sg_node)*SGMAX);
+	int min_red[15] = {40,40,40,40,40,40,80,80,80,80,40,40,40,40,60};
+	int min_green[15] = {20,20,20,20,20,20,20,20,20,20,20,20,20,20,20};
+	int i;
+	for(i = 0; i < 15; i++){
+		g_sg[i].stat = 2;
+		g_sg[i].red_min = min_red[i];
+		g_sg[i].green_min = min_green[i];
+		g_sg[i].prep = 30;
+		g_sg[i].amber = 30;
+		g_sg[i].time = 0;
+		g_sg[i].ext = 0;
+	}
+}
+
+void close_sg(void)
+{
+	close(g_fd_sg);
+	g_fd_sg = 0;
+}
+
+#define _TEST_SG_
+int thr_sg(void* arg)
+{
+	int i;
+#ifdef _TEST_SG_
+	char buf[4];
+    buf[0] = 0x96;
+    buf[1] = 0;//(sg/4)<<4 | (sg%4);
+    buf[2] = 0x03;//灭
+    buf[3] = 0x69;
+#endif
+	while(!g_exit){
+		for(i = 0; i < SGMAX; i++){
+			g_sg[i].time++;
+			switch(g_sg[i].stat){
+				case 1://1-amber;2-min_red;3-ex_red;4-prep;5-min_green;6-ex_green
+					if(g_sg[i].time > g_sg[i].amber){
+						g_sg[i].stat++;
+						g_sg[i].time = 0;
+#ifdef _TEST_SG_
+						buf[1] = (i/4) << 4 | (i%4);
+						buf[2] = 0x01;//红
+    					write(g_fd_serial, buf, sizeof(buf));
+#endif
+					}
+					break;
+				case 2:
+					if(g_sg[i].time > g_sg[i].red_min){
+						g_sg[i].stat++;
+						g_sg[i].time = 0;
+#ifdef _TEST_SG_
+						buf[1] = (i/4) << 4 | (i%4);
+						buf[2] = 0x01;//红
+    					write(g_fd_serial, buf, sizeof(buf));
+#endif
+					}
+					break;
+				case 3://b00状态未变，b01进行红绿切换，b10进行绿红切换
+					if(1){ //g_sg[i].ext == 1){//扩展红绿灯时间不固定，根据ext判断是否结束。ext由vsplus调用的open signal函数设置。
+						g_sg[i].ext = 0;
+						g_sg[i].stat++;
+						g_sg[i].time = 0;
+#ifdef _TEST_SG_
+						buf[1] = (i/4) << 4 | (i%4);
+						buf[2] = 0x02;//黄
+    					write(g_fd_serial, buf, sizeof(buf));
+#endif
+					}
+					break;
+				case 4:
+					if(g_sg[i].time > g_sg[i].prep){
+						g_sg[i].stat++;
+						g_sg[i].time = 0;
+#ifdef _TEST_SG_
+                        buf[1] = (i/4) << 4 | (i%4);
+                        buf[2] = 0x04;//绿
+                        write(g_fd_serial, buf, sizeof(buf));
+#endif
+					}
+					break;
+				case 5:
+					if(g_sg[i].time > g_sg[i].green_min){
+						g_sg[i].stat++;
+						g_sg[i].time = 0;
+#ifdef _TEST_SG_
+                        buf[1] = (i/4) << 4 | (i%4);
+                        buf[2] = 0x04;//绿
+                        write(g_fd_serial, buf, sizeof(buf));
+#endif
+					}
+					break;
+				case 6:
+					if(1){//g_sg[i].ext == 2){
+						g_sg[i].ext = 0;
+						g_sg[i].stat = 1;
+						g_sg[i].time = 0;
+#ifdef _TEST_SG_
+                        buf[1] = (i/4) << 4 | (i%4);
+                        buf[2] = 0x02;//黄
+                        write(g_fd_serial, buf, sizeof(buf));
+#endif
+					}
+					break;
+			}
+		}
+		us_sleep(100000);
+	}
+}
+
+void init_sg(void)
+{
+	open_sg();
+	pthread_create(&g_tid_sg, NULL, thr_sg, NULL);
+}
+
+void deinit_sg(void)
+{
+	pthread_join(g_tid_sg, NULL);
+	close_sg();
+}
 /* FIXME
  * 测试指定的signal group是否存在
  */
@@ -739,10 +896,12 @@ void deinit_serial(void)
 	debug(3, "<==\n");
 }
 
+
 int tsc_init()
 {
 	init_serial();
 	init_timers();	
+	init_sg();
 #ifdef _SIM_TEST_
 	sim_init(); //在sim.c中实现部分测试数据的产生
 #endif
@@ -754,6 +913,7 @@ int tsc_deinit()
 {
 	deinit_serial();
 	deinit_timers();
+	deinit_sg();
 #ifdef _SIM_TEST_
 	sim_deinit();
 #endif

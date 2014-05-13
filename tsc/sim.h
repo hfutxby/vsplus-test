@@ -11,6 +11,11 @@ typedef struct{
 	int cur_time;
 }prog;
 
+typedef struct{
+    int prg_cur;//当前运行的配时方案
+    int prg_next;//等待切换运行的配时方案
+}ctrl_data;
+
 typedef struct {
 	int sum_rising; //上升沿计数
 	int sum_falling; //下降沿计数

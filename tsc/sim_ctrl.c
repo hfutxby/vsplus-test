@@ -9,9 +9,15 @@
 #include "sim.h"
 #include "tsc.h"
 
-det_node* g_det = NULL;
-int g_det_fd = 0;
 static int g_exit = 0;
+int g_fd_ctrl;//对vsplus运行进行部分控制测试
+
+//struct ctrl_data{
+//	int prg_cur;//当前运行的配时方案
+//	int prg_next;//等待切换运行的配时方案
+//}ctrl_data;
+
+ctrl_data *g_ctrl;
 
 int us_sleep(long us)
 {
@@ -21,77 +27,82 @@ int us_sleep(long us)
 	return select(0, NULL, NULL, NULL, &tv);
 }
 
-void open_det(void)
+void open_ctrl(void)
 {
 	int ret;
-	g_det_fd = open("det_nodes.dat", O_RDWR|O_CREAT, 0644);
-	if(g_det_fd < 0){
+	g_fd_ctrl = open("ctrl.dat", O_RDWR|O_CREAT, 0644);
+	if(g_fd_ctrl < 0){
 		printf("%s\n", strerror(errno));
 		return;
 	}
-	//g_det = (det_node*)malloc(sizeof(det_node)*DETMAX);
-	if(ret = ftruncate(g_det_fd, sizeof(det_node)*DETMAX) < 0){
+	if(ret = ftruncate(g_fd_ctrl, sizeof(ctrl_data)) < 0){
 		printf("%s\n", strerror(errno));
 	}
-	g_det = mmap(NULL, sizeof(det_node)*DETMAX,  PROT_READ|PROT_WRITE, MAP_SHARED, g_det_fd, 0);
-	if(g_det ==  MAP_FAILED){
+	g_ctrl = mmap(NULL, sizeof(ctrl_data),  PROT_READ|PROT_WRITE, MAP_SHARED, g_fd_ctrl, 0);
+	if(g_ctrl ==  MAP_FAILED){
 		printf("%s\n", strerror(errno));
 	}
-	memset(g_det, 0, sizeof(det_node)*DETMAX);
-	printf("sizeof:%d\n",sizeof(det_node)*DETMAX);
+	memset(g_ctrl, 0, sizeof(ctrl_data));
+	printf("sizeof:%d\n",sizeof(ctrl_data));
+	g_ctrl->prg_cur = 0;
+	g_ctrl->prg_next = -1;
 }
 
-void close_det(void)
+void close_ctrl(void)
 {
-	close(g_det_fd);
+	close(g_fd_ctrl);
 }
 
-int thr_det(void *arg)
+int test_menu(void)
 {
-	int step = 0, index = 0;
-	struct timeval tv;
-	while(!g_exit){
-		index = random()%DETMAX;
-		//检测到车辆到来
-		//srandom(time(NULL));
-		gettimeofday(&tv, NULL);
-		srandom(tv.tv_sec + tv.tv_usec);
-		step = random()%9+1;
-		g_det[index].state = 1;
-		g_det[index].sum_rising++;
-		g_det[index].hold += step;
-		//g_det[index].free += step;
-		if((g_det[index].hold + g_det[index].free) > 10){ //只记录最近1s
-			g_det[index].free = 10 - g_det[index].hold;
-		}
-		us_sleep(10000);
+	int s;
+	printf("select test item\n");
+	printf("1:set next prg\n");
+	printf("2:test show\n");
+	printf("input item:");
+	scanf("%d", &s);
+	if((s >= 1) && (s <= 2))
+		return s;
+	else{
+		printf("wrong select\n");
+		return -1;
+	}
+}
 
-		//检测到车辆离开
-		//srandom(time(NULL));
-		gettimeofday(&tv, NULL);
-		srandom(tv.tv_sec + tv.tv_usec);
-		step = random()%9+1;
-		g_det[index].state = 0;
-		g_det[index].sum_falling++;
-		g_det[index].free += step;
-		if((g_det[index].hold + g_det[index].free) > 10){ //只记录最近1s
-			g_det[index].hold = 10 - g_det[index].free;
-		}
-		us_sleep(10000);
+void test_1(void)
+{
+	int s1;
+	printf("current prg:%d, next prg:%d, set next prg:", g_ctrl->prg_cur, g_ctrl->prg_next);
+	scanf("%d", &s1);
+	if((s1 >= 0) && (s1 <= 255)){
+		g_ctrl->prg_next = s1;
+		printf("set successed! current prg:%d, next prg:%d, set next prg:\n", g_ctrl->prg_cur, g_ctrl->prg_next);
+	}
+	else
+		printf("wrong prg num\n");
+}
 
-		printf("index:%d, sum_rising:%d, sum_falling:%d\n", index, g_det[index].sum_rising, g_det[index].sum_falling);
+void test(void)
+{
+	int item = 0;
+	while(1){
+		item = test_menu();
+		switch(item){
+		case 1:
+			test_1();
+			break;
+		default:
+			continue;
+		}
 	}
 }
 
 int main(void)
 {
-	open_det();
-	pthread_t g_tid_det;
-	pthread_create(&g_tid_det, NULL, thr_det, NULL);
+	open_ctrl();
 
-	while(1){
-		sleep(1);
-	}
-	close_det();
+	test();
+
+	close_ctrl();
 	return 0;
 }

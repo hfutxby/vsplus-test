@@ -16,12 +16,89 @@ pthread_t g_tid_prog_tx;
 pthread_t g_tid_sg;
 static int g_exit = 0;
 det_node* g_det = NULL;
-sg_node* g_sg = NULL;
+//sg_node* g_sg = NULL;
 int g_det_fd = 0;
-int g_sg_fd = 0;
+//int g_sg_fd = 0;
 
 extern us_sleep(long us);
 
+/**************配时方案调度模拟*****************************/
+typedef struct{
+	int tu;//方案总时长
+	int tx;//已运行时长
+}prg;
+
+#define PRGMAX 6 //方案数
+prg g_prg[PRGMAX];
+pthread_t g_tid_prg;
+
+ctrl_data *g_ctrl;
+int g_fd_ctrl;
+
+void open_ctrl(void)
+{
+    int ret;
+    g_fd_ctrl = open("ctrl.dat", O_RDWR|O_CREAT, 0644);
+    if(g_fd_ctrl < 0){
+        printf("%s\n", strerror(errno));
+        return;
+    }
+    if(ret = ftruncate(g_fd_ctrl, sizeof(ctrl_data)) < 0){
+        printf("%s\n", strerror(errno));
+    }
+    g_ctrl = mmap(NULL, sizeof(ctrl_data),  PROT_READ|PROT_WRITE, MAP_SHARED, g_fd_ctrl, 0);
+    if(g_ctrl ==  MAP_FAILED){
+        printf("%s\n", strerror(errno));
+    }
+    //memset(g_ctrl, 0, sizeof(ctrl_data));
+    printf("sizeof:%d\n",sizeof(ctrl_data));
+}
+
+void close_ctrl(void)
+{
+    close(g_fd_ctrl);
+}
+
+/* 对prg进行计时 */
+int thr_prg(void* arg)
+{
+	int i, us;
+	struct timeval tv1, tv2;
+	while(!g_exit){
+		gettimeofday(&tv1, NULL);
+		if((g_ctrl->prg_cur >= 0) && (g_ctrl->prg_cur < PRGMAX)){//判断当前方案号是否有效
+			g_prg[g_ctrl->prg_cur].tx++;
+			if(g_prg[g_ctrl->prg_cur].tx >= g_prg[g_ctrl->prg_cur].tu){//完成一个周期
+				g_prg[g_ctrl->prg_cur].tx = 0;
+			}
+		}
+		gettimeofday(&tv2, NULL);
+		us = (tv2.tv_sec - tv1.tv_sec)*1000000 + (tv2.tv_usec - tv1.tv_usec);
+		printf("id:%3d tu:%3d tx:%3d\n", g_ctrl->prg_cur, g_prg[g_ctrl->prg_cur].tu, g_prg[g_ctrl->prg_cur].tx);
+		us_sleep(100000 - us);//100ms完成一次计时
+	}
+}
+
+void init_prg(void)
+{
+	int i;
+	memset(g_prg, 0, sizeof(prg)*PRGMAX);
+	for(i = 0; i < PRGMAX; i++){//根据XML中的数据
+		g_prg[i].tu = 720;
+		g_prg[i].tx = 0;
+	}
+	open_ctrl();
+	pthread_create(&g_tid_prg, NULL, thr_prg, NULL);
+}
+
+void deinit_prg(void)
+{
+	g_exit = 1;
+	pthread_join(g_tid_prg);
+	close_ctrl();
+}
+
+#if 0
 /* 产生方案队列 */
 int thr_prog(void* arg)
 {
@@ -118,7 +195,32 @@ int sim_prog_tu(void)
 	return 720;
 	return ((g_prog_list[0]).cycle_time/10)*10;
 }
+#endif
 
+int sim_prog_actual(void)
+{
+	if((g_ctrl->prg_cur >= 0) && (g_ctrl->prg_cur < PRGMAX))//判断当前方案号是否有效
+		return g_ctrl->prg_cur;
+}
+
+int sim_prog_select(void)
+{
+	if((g_ctrl->prg_next != -1) && (g_ctrl->prg_next >= 0) && (g_ctrl->prg_next < PRGMAX)){
+		g_ctrl->prg_cur = g_ctrl->prg_next;
+		g_ctrl->prg_next = -1;
+	}
+	return g_ctrl->prg_cur;
+}
+
+int sim_prog_tx(void)
+{
+	return g_prg[g_ctrl->prg_cur].tx;
+}
+
+int sim_prog_tu(void)
+{
+	return g_prg[g_ctrl->prg_cur].tu;
+}
 /***************检测器模拟**********************/
 int sim_sum_rising(int index)
 {
@@ -198,101 +300,6 @@ void close_det(void)
 	g_det_fd = 0;
 }
 
-
-/*****************灯组模拟***********************/
-//打开灯组运行信息文件
-void open_sg(void)
-{
-	int ret;
-	g_sg_fd = open("sg_nodes.dat", O_RDWR|O_CREAT, 0644);
-	if(g_sg_fd < 0){
-		printf("%s\n", strerror(errno));
-		return;
-	}
-	if(ret = ftruncate(g_sg_fd, sizeof(sg_node)*SGMAX) < 0){
-		printf("%s\n", strerror(errno));
-	}
-	g_sg = mmap(NULL, sizeof(sg_node)*SGMAX, PROT_READ|PROT_WRITE, MAP_SHARED, g_sg_fd, 0);
-	if(g_sg == MAP_FAILED){
-		printf("%s\n", strerror(errno));
-	}
-	//printf("sg:sizeof:%d\n", sizeof(sg_node)*SGMAX);
-
-	//FIXME:实际需要从XML文件中解析初始化数据
-	memset(g_sg, 0, sizeof(sg_node)*SGMAX);
-	int min_red[15] = {40,40,40,40,40,40,80,80,80,80,40,40,40,40,60};
-	int min_green[15] = {20,20,20,20,20,20,20,20,20,20,20,20,20,20,20};
-	int i;
-	for(i = 0; i < 15; i++){
-		g_sg[i].stat = 2;
-		g_sg[i].red_min = min_red[i];
-		g_sg[i].green_min = min_green[i];
-		g_sg[i].prep = 30;
-		g_sg[i].amber = 30;
-		g_sg[i].time = 0;
-		g_sg[i].ext = 0;
-	}
-}
-
-void close_sg(void)
-{
-	close(g_sg_fd);
-	g_sg_fd = 0;
-}
-
-//对信号灯状态进行计时
-int thr_sg(void* arg)
-{
-	int i;
-	while(!g_exit){
-		for(i = 0; i < SGMAX; i++){
-			g_sg[i].time++;
-			switch(g_sg[i].stat){
-				case 1://1-amber;2-min_red;3-ex_red;4-prep;5-min_green;6-ex_green
-					if(g_sg[i].time > g_sg[i].amber){
-						g_sg[i].stat++;
-						g_sg[i].time = 0;
-					}
-					break;
-				case 2:
-					if(g_sg[i].time > g_sg[i].red_min){
-						g_sg[i].stat++;
-						g_sg[i].time = 0;
-					}
-					break;
-				case 3://b00状态未变，b01进行红绿切换，b10进行绿红切换
-					if(1){//g_sg[i].ext == 1){//扩展红绿灯时间不固定，根据ext判断是否结束。ext由vsplus调用的open signal函数设置。
-						g_sg[i].ext = 0;
-						g_sg[i].stat++;
-						g_sg[i].time = 0;
-					}
-					break;
-				case 4:
-					if(g_sg[i].time > g_sg[i].prep){
-						g_sg[i].stat++;
-						g_sg[i].time = 0;
-					}
-					break;
-				case 5:
-					if(g_sg[i].time > g_sg[i].green_min){
-						g_sg[i].stat++;
-						g_sg[i].time = 0;
-					}
-					break;
-				case 6:
-					if(1){//g_sg[i].ext == 2){
-						g_sg[i].ext = 0;
-						g_sg[i].stat = 1;
-						g_sg[i].time = 0;
-					}
-					break;//FIXME
-			}
-
-		}
-		us_sleep(100000);
-	}
-}
-
 /*********************************************************/
 int sim_init(void)
 {
@@ -304,11 +311,10 @@ int sim_init(void)
 	}
 
 	open_det();
-	open_sg();
+	init_prg();
 
-	pthread_create(&g_tid_prog, NULL, thr_prog, NULL);
-	pthread_create(&g_tid_prog_tx, NULL, thr_prog_tx, NULL);
-	pthread_create(&g_tid_sg, NULL, thr_sg, NULL);
+	//pthread_create(&g_tid_prog, NULL, thr_prog, NULL);
+	//pthread_create(&g_tid_prog_tx, NULL, thr_prog_tx, NULL);
 
 	
 	return 0;
@@ -317,12 +323,12 @@ int sim_init(void)
 int sim_deinit(void)
 {
 	g_exit = 1;
-	pthread_join(g_tid_prog, NULL);
-	pthread_join(g_tid_prog_tx, NULL);
-	pthread_join(g_tid_sg, NULL);
+	//pthread_join(g_tid_prog, NULL);
+	//pthread_join(g_tid_prog_tx, NULL);
+	//pthread_join(g_tid_sg, NULL);
 
 	close_det();
-	close_sg();
+	deinit_prg();
 
 	return 0;
 }
