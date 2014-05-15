@@ -4,6 +4,116 @@
 #include <stdio.h>
 #include "tsc.h" //debug()
 
+#if 0
+/* API implemented by vsplus, controller can call these to get some info
+ */
+
+/* tells the controller that a pending program switch has to be delayed. 
+ * the controller has to delay the program switching until this function
+ * allows it. only traffic-actuated vsplus programs have to be delayed.
+ *
+ * int m_Prog_Schaltung_erlaubt(void);
+ * int vs_prog_swtich_allow(void);
+ *
+ * return: 1=allow, 0=not allow
+ */
+
+/* returns the value to the controller how PT on/off is set.
+ *
+ * l_VSP_X_Ein_Aus_Ist(0);
+ * short vs_pt_state(void);
+ *
+ * return: 1=PT off, 2=PT on
+ */
+
+/* returns the value to the controller how IT on/off is set.
+ *
+ * l_VSP_X_Ein_Aus_Ist(1);
+ * short vs_it_state(void);
+ *
+ * return: 1=IT off, 2=IT on
+ */
+
+/* returns the value to the controller of the active program modification
+ * and the job id.
+ *
+ * m_ZSondereingriffVSPvn(vn);
+ * unsigned char vs_prog_amod(unsigned long* jobID);
+ *
+ * return: number of program modification
+ * jobID: corresponding job id
+ */
+
+/* the controller starts the initialization of the vsplus parameter are.
+ *
+ * f_Initial_VSP_Parameter()
+ * int vs_init_parameter(void)
+ *
+ * return: 0=no error, -1=error
+ */
+
+/* the controller starts the parameter file checking by vsplus.
+ *
+ * f_Pruefen_VSP_Parameter()
+ * int vs_chk_parameter(void)
+ *
+ * return: 0=no error, <0=error value with some meaning
+ */
+
+/* the controoler starts the parameter file reading by vsplus.
+ *
+ * f_Lesen_VSP_Parameter()
+ * int vs_read_parameter(void)
+ *
+ * return: 0=no error, <0=error value whit some meaning
+ */
+
+/* the controller requests vsplus to give free the parameter area.
+ *
+ * f_Ende_VSP_Parameter()
+ * void vs_free_parameter(void)
+ */
+
+/* returns the path name for transmitting an OCIT command(default "57.520")
+ *
+ * l_VABefehlPfad()
+ * char* vs_ocit_path()
+ *
+ * return: OCIT path name for command file
+ */
+
+/* enables the controller to check if a program number belongs to a
+ * vsplus program or not
+ *
+ * l_Prog_VSP(x)
+ * short vs_prog_chk(short prg)
+ *
+ * return:	0 = not defined
+ *			1 = fixed time with vsplus parameters
+ *			2 = fixed time without vsplus parameters
+ *			5 = vsplus with parameters
+ *			6 = vsplus without parameters
+ * prg: program number
+ */
+
+/* controller can find out what vsplus version is in use
+ *
+ * f_versions_txt(x,y)
+ * short vs_version(char* text, int size)
+ *
+ * return:	1 = version information available
+ *			0 = not available
+ * text: vsplus version text
+ * size: maximum number of characters for version text(min, 10)
+ */
+
+/* controller can read the process data from vsplus according to OCIT-I
+ *
+ * f_VSP_ProzessDaten(x,y)
+ * unsigned short vs_read_process_data(void *px, void *py)
+ */
+#endif
+
 /* funktion:1=read;3=clear;4=stop and clear;5=stop
  * timer: timer index
  */
@@ -132,14 +242,14 @@ short int d_blg(short int det)
 
 short int d_ztlkn(short int det)
 {
-printf("%s(%d)\n", __func__, __LINE__);
+//FIXME:printf("%s(%d)\n", __func__, __LINE__);
 return 0;
    
 }
 
 short int d_zeitlb(short int det)
 {
-printf("%s(%d)\n", __func__, __LINE__);
+//FIXME:printf("%s(%d)\n", __func__, __LINE__);
 return 0;
 }
 
@@ -261,12 +371,12 @@ short int s_rot(short int sg)
 
 short int s_sr_aus(short int re)
 {
-printf("%s(%d)\n", __func__, __LINE__);
+//FIXME:printf("%s(%d)\n", __func__, __LINE__);
    return 0;
 }
 short int s_sb_aus(short int bli)
 {
-printf("%s(%d)\n", __func__, __LINE__);
+//FIXME:printf("%s(%d)\n", __func__, __LINE__);
    return 0;
 }
 
@@ -297,13 +407,13 @@ return 0;
 
 short int s_sr_ein(short int re)
 {
-printf("%s(%d)\n", __func__, __LINE__);
+//FIXME:printf("%s(%d)\n", __func__, __LINE__);
    return 0;
 }
 
 short int s_sb_ein(short int bli)
 {
-printf("%s(%d)\n", __func__, __LINE__);
+//FIXME:printf("%s(%d)\n", __func__, __LINE__);
    return 0;
 }
 short int s_min_grun(short int sg)
@@ -394,7 +504,7 @@ void Meldung(short int degree, short int nr, short int par1, short int par2, sho
 void  MeldungNET(short int degree, unsigned char nr, unsigned short Anr, unsigned char par1, unsigned char par2, unsigned char par3, unsigned char par4, unsigned char par5)
 {
 	debug(3, "==>\n");
-	debug(3, "degree:%d, nr:%d, par1-4:%d,%d,%d,%d\n", degree, nr, par1, par2, par3, par4);
+	debug(3, "degree:%d, nr:%d, Anr:%d, par1-5:%d,%d,%d,%d\n", degree, nr, Anr, par1, par2, par3, par4, par5);
 	return ;
 }
 

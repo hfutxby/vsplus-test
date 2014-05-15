@@ -1316,7 +1316,8 @@ When the controller is off or during switch-on or switch-off, this function must
 /*~A*/
 /*~+:Controller*/
 /*~T*/
-#define _#_()           m_Prog_Schaltung_erlaubt
+//#define _#_()           m_Prog_Schaltung_erlaubt
+#define _prog_swtich_allow               m_Prog_Schaltung_erlaubt()
  
 /*~E*/
 /*~-*/
@@ -1354,12 +1355,17 @@ When the controller is off or during switch-on or switch-off, this function must
 /*~A*/
 /*~+:Controller*/
 /*~T*/
+/* l_OePNV_Ein_Aus():
+ *
+ */
 #define l_OePNV_Ein_Aus()            OePNV_Ein_Aus()   /* Read PT on/off */
 #define l_IV_Ein_Aus()               IV_Ein_Aus()   /* Read IT on/off */
 
 /*~T*/
-#define _#_()                (l_VSP_X_Ein_Aus_Ist(0)    /* Read PT on/off state of VSP */
-#define _#_()                (l_VSP_X_Ein_Aus_Ist(1))   /* Read IT on/off state of VSP */
+//#define _#_()                (l_VSP_X_Ein_Aus_Ist(0)    /* Read PT on/off state of VSP */
+//#define _#_()                (l_VSP_X_Ein_Aus_Ist(1))   /* Read IT on/off state of VSP */
+#define vs_pt_state()               (l_VSP_X_Ein_Aus_Ist(0)    /* Read PT on/off state of VSP */
+#define vs_it_state()                (l_VSP_X_Ein_Aus_Ist(1))   /* Read IT on/off state of VSP */
 
 /*~E*/
 /*~-*/
@@ -1562,7 +1568,8 @@ When the controller is off or during switch-on or switch-off, this function must
 /*~+:Version includes job-number (vn)*/
 /*~+:*/
 /*~T*/
-#define _#_(vn)                         m_ZSondereingriffVSPvn(vn)
+//#define _#_(vn)                         m_ZSondereingriffVSPvn(vn)
+#define vs_prog_amod(vn)                         m_ZSondereingriffVSPvn(vn)
 
 /*~E*/
 /*~-*/
@@ -1722,7 +1729,8 @@ When the controller is off or during switch-on or switch-off, this function must
 /*~A*/
 /*~+:Controller*/
 /*~T*/
-#define _#_()           f_Initial_VSP_Parameter()
+//#define _#_()           f_Initial_VSP_Parameter()
+#define vs_init_parameter()          f_Initial_VSP_Parameter()
 
 /*~E*/
 /*~-*/
@@ -1747,7 +1755,8 @@ When the controller is off or during switch-on or switch-off, this function must
 /*~A*/
 /*~+:Controller*/
 /*~T*/
-#define _#_()           f_Pruefen_VSP_Parameter()
+//#define _#_()           f_Pruefen_VSP_Parameter()
+#define vs_chk_parameter()           f_Pruefen_VSP_Parameter()
 
 /*~E*/
 /*~-*/
@@ -1772,7 +1781,8 @@ When the controller is off or during switch-on or switch-off, this function must
 /*~A*/
 /*~+:Controller*/
 /*~T*/
-#define _#_()           f_Lesen_VSP_Parameter()
+//#define _#_()           f_Lesen_VSP_Parameter()
+#define vs_read_parameter()           f_Lesen_VSP_Parameter()
 
 /*~E*/
 /*~-*/
@@ -1797,7 +1807,8 @@ When the controller is off or during switch-on or switch-off, this function must
 /*~A*/
 /*~+:Controller*/
 /*~T*/
-#define _#_()           f_Ende_VSP_Parameter()
+//#define _#_()           f_Ende_VSP_Parameter()
+#define vs_free_parameter()           f_Ende_VSP_Parameter()
 /*~E*/
 /*~-*/
 #endif
@@ -1861,7 +1872,8 @@ When the controller is off or during switch-on or switch-off, this function must
 #define l_Schliessen_VSP_Befehle()      Schliessen_VSP_Befehle()
 
 /*~T*/
-#define _#_()                           l_VABefehlPfad()
+//#define _#_()                           l_VABefehlPfad()
+#define vs_ocit_path()                           l_VABefehlPfad()
 
 /*~E*/
 /*~-*/
@@ -1891,7 +1903,8 @@ When the controller is off or during switch-on or switch-off, this function must
 /*~A*/
 /*~+:Controller*/
 /*~T*/
-#define  _#_(x)         l_Prog_VSP(x)
+//#define  _#_(x)         l_Prog_VSP(x)
+#define  vs_prog_chk(x)         l_Prog_VSP(x)
 
 /*~E*/
 /*~-*/
@@ -1918,7 +1931,8 @@ When the controller is off or during switch-on or switch-off, this function must
 /*~+:short f_versions_txt(char* text, int size)*/
 /*~+:*/
 /*~T*/
-#define _#_()                   f_versions_txt(x,y)
+//#define _#_()                   f_versions_txt(x,y)
+#define vs_version(x,y)                   f_versions_txt(x,y)
 /*~E*/
 /*~-*/
 #endif
@@ -1941,7 +1955,8 @@ When the controller is off or during switch-on or switch-off, this function must
 /*~K*/
 /*~+:U_WORD f_VSP_ProzessDaten(void *px, void *py)*/
 /*~T*/
-#define _#_()                   f_VSP_ProzessDaten(x,y)
+//#define _#_()                   f_VSP_ProzessDaten(x,y)
+#define vs_read_process_data(x,y)                   f_VSP_ProzessDaten(x,y)
 /*~E*/
 /*~-*/
 #endif

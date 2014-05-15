@@ -74,7 +74,7 @@ int thr_prg(void* arg)
 		}
 		gettimeofday(&tv2, NULL);
 		us = (tv2.tv_sec - tv1.tv_sec)*1000000 + (tv2.tv_usec - tv1.tv_usec);
-		printf("id:%3d tu:%3d tx:%3d\n", g_ctrl->prg_cur, g_prg[g_ctrl->prg_cur].tu, g_prg[g_ctrl->prg_cur].tx);
+		//printf("id:%3d tu:%3d tx:%3d\n", g_ctrl->prg_cur, g_prg[g_ctrl->prg_cur].tu, g_prg[g_ctrl->prg_cur].tx);
 		us_sleep(100000 - us);//100ms完成一次计时
 	}
 }
