@@ -20,20 +20,21 @@ FILE* g_vcb_file = NULL; //配置参数vcb文件
 FILE* g_vcb_back = NULL; //备份参数vcb文件
 #define VCB_FILE "para.vcb" //配置参数vcb文件
 #define VCB_BACK "para_bak.vcb" //备份参数vcb文件
-#define _SIM_TEST_
+#define _SIM_TEST_ //使用模拟数据进行测试
 
 static int g_exit = 0;//退出线程标志
 
 int g_timer[MAXTIMER];//最低位做开关标志
-pthread_t g_tid_timer;
+pthread_t g_tid_timer;//定时器计时线程
 
-int g_fd_serial;//控制串口
-pthread_t g_tid_watchdog; //独立线程喂狗
+int g_fd_serial;//和驱动版通信串口
+pthread_t g_tid_watchdog; //喂狗线程
 
-int g_fd_sg; //记录信号灯状态
-sg_node* g_sg;
-pthread_t g_tid_sg;
+int g_fd_sg; //记录信号灯状态的文件
+sg_node* g_sg; //信号灯参数
+pthread_t g_tid_sg;//记录信号灯状态的线程
 
+/****************** 参数配置相关函数 **************************/
 /* 分配存储区  */
 void* tsc_alloc_mem(int size, int id)
 {
@@ -72,7 +73,7 @@ void tsc_free_mem(int id)
 	}
 }
 
-/* 存储区地址 */
+/* 取存储区地址 */
 void* tsc_get_mem(int id)
 {
 	if((id > 3) || (id < 1)){
@@ -89,7 +90,7 @@ void* tsc_get_mem(int id)
 	}
 }
 
-/* 打开VCB文件 */
+/* 打开配置参数VCB文件 */
 int tsc_open_vcb(void)
 {
 	if(g_vcb_file != NULL){
@@ -106,7 +107,7 @@ int tsc_open_vcb(void)
 	}
 }
 
-/* 关闭VCB文件 */
+/* 关闭配置参数VCB文件 */
 void tsc_close_vcb(void)
 {
 	if(g_vcb_file == NULL){
@@ -121,7 +122,7 @@ void tsc_close_vcb(void)
 	}
 }
 
-/* 读VCB数据 */
+/* 读配置参数VCB数据 */
 int tsc_read_vcb(char *data, int size)
 {
 	if(g_vcb_file == NULL){
@@ -133,6 +134,39 @@ int tsc_read_vcb(char *data, int size)
 
 }
 
+/* 打开备份vcb文件 */
+int tsc_open_back(void)
+{
+    g_vcb_back = fopen(VCB_BACK, "wb+");
+    if(!g_vcb_back){
+        debug(1, "open backup vcb file error\n");
+        return 0;
+    }
+
+    return 1;
+}
+
+/* 写入备份vcb文件 */
+int tsc_write_back(char* data, int size)
+{
+    if(!g_vcb_back){
+        debug(1, "backup vcb file not opened yet!\n");
+        return;
+    }
+    return fwrite(data, 1, size, g_vcb_back);
+}
+
+/* 关闭备份文件 */
+void tsc_close_back(void)
+{
+    if(!g_vcb_back){
+        debug(2, "backup vcb file not opened yet!\n");
+    }
+    fclose(g_vcb_back);
+    g_vcb_back = 0;
+}
+
+/****************** 定时器 ***************************/
 void time_go(void)
 {
 	//debug(3, "==>\n");
@@ -226,6 +260,7 @@ int deinit_timers(void)
 	return 0;
 }
 
+/****************** 配时方案 ***************************/
 /* FIXME
  * 当前执行的配时方案 */
 int tsc_prog_actual(void)
@@ -234,7 +269,6 @@ int tsc_prog_actual(void)
 	int ret = sim_prog_actual();
 	//printf("actual prog:%d\n", ret);
 	return ret;
-	//return sim_prog_actual();
 #else
 
 #endif
@@ -248,7 +282,6 @@ int tsc_prog_select(void)
 	int ret = sim_prog_select();
 	//printf("select prog:%d\n", ret);
 	return ret;
-	//return sim_prog_select();
 #else
 
 #endif
@@ -263,7 +296,6 @@ int tsc_prog_tx(void)
 	int ret = sim_prog_tx();
 	//printf("tx:%d\n", ret);
 	return ret;
-	//return sim_prog_tx();	
 #else
 
 #endif
@@ -278,7 +310,18 @@ int tsc_prog_tu(void)
 	int ret = sim_prog_tu();
 	//printf("tu:%d\n", ret);
 	return ret;
-	//return sim_prog_tu();
+#else
+
+#endif
+}
+
+/* FIXME:当前只有本地指令，没有网络功能
+ * 谁发出方案切换命令
+ */
+int tsc_prog_src(void)
+{
+#ifdef _SIM_TEST_
+	return 0;
 #else
 
 #endif
@@ -413,38 +456,30 @@ int tsc_det_exist(int index)
 #endif
 }
 
-/******************************************************/
-/* 打开备份vcb文件 */
-int tsc_open_back(void)
+/* FIXME
+ * 自最后一个下降沿以来的时间间隔
+ */
+int tsc_det_net(int index)
 {
-	g_vcb_back = fopen(VCB_BACK, "wb+");
-	if(!g_vcb_back){
-		debug(1, "open backup vcb file error\n");
-		return 0;
-	}
+#ifdef _SIM_TEST_
+	return sim_det_net(index);
+#else
 
-	return 1;
+#endif
 }
 
-/* 写入备份vcb文件 */
-int tsc_write_back(char* data, int size)
+/* FIXME
+ * 自最后一个上升沿以来的时间间隔
+ */
+int tsc_det_gross(int index)
 {
-	if(!g_vcb_back){
-		debug(1, "backup vcb file not opened yet!\n");
-		return;
-	}
-	return fwrite(data, 1, size, g_vcb_back);
-}
+#ifdef _SIM_TEST_
+	return sim_det_gross(index);
+#else
 
-/* 关闭备份文件 */
-void tsc_close_back(void)
-{
-	if(!g_vcb_back){
-		debug(2, "backup vcb file not opened yet!\n");
-	}
-	fclose(g_vcb_back);
-	g_vcb_back = 0;
+#endif
 }
+/***************** 其他函数 *****************************/
 
 /* FIXME
  * 判断当前是否处于vsplus动态控制中。
@@ -482,7 +517,7 @@ int tsc_get_date(int* year, int* month, int* mday, int* wday)
 	return 1;
 }
 
-/********************信号控制函数*****************/
+/***************** 信号控制函数 *****************/
 //打开灯组运行信息文件
 void open_sg(void)
 {
@@ -507,7 +542,7 @@ void open_sg(void)
 	int min_green[15] = {20,20,20,20,20,20,20,20,20,20,20,20,20,20,20};
 	int i;
 	for(i = 0; i < 15; i++){
-		g_sg[i].stat = 2;
+		g_sg[i].stat = 2;//random()%5+1;
 		g_sg[i].red_min = min_red[i];
 		g_sg[i].green_min = min_green[i];
 		g_sg[i].prep = 30;
@@ -523,7 +558,7 @@ void close_sg(void)
 	g_fd_sg = 0;
 }
 
-#define _TEST_SG_
+#define _TEST_SG_ //没有信号切换指令发出，自己切换
 int thr_sg(void* arg)
 {
 	int i;
@@ -561,7 +596,7 @@ int thr_sg(void* arg)
 					}
 					break;
 				case 3://b00状态未变，b01进行红绿切换，b10进行绿红切换
-					if(1){ //g_sg[i].ext == 1){//扩展红绿灯时间不固定，根据ext判断是否结束。ext由vsplus调用的open signal函数设置。
+					if(g_sg[i].ext == 1){//扩展红绿灯时间不固定，根据ext判断是否结束。ext由vsplus调用的open signal函数设置。
 						g_sg[i].ext = 0;
 						g_sg[i].stat++;
 						g_sg[i].time = 0;
@@ -595,7 +630,7 @@ int thr_sg(void* arg)
 					}
 					break;
 				case 6:
-					if(1){//g_sg[i].ext == 2){
+					if(g_sg[i].ext == 2){
 						g_sg[i].ext = 0;
 						g_sg[i].stat = 1;
 						g_sg[i].time = 0;
@@ -626,7 +661,7 @@ void deinit_sg(void)
 /* FIXME
  * 测试指定的signal group是否存在
  */
-int tsc_sg_exist(int index)
+int tsc_sg_exist(int sg)
 {
 	return 1;
 //	if(index < 15)
@@ -636,14 +671,25 @@ int tsc_sg_exist(int index)
 }
 
 /* FIXME
+ * 测试指定的signal group是否故障
+ */
+int tsc_sg_fault(int sg)
+{
+	if(g_sg[sg].stat == -1)
+		return 1;
+	else
+		return 0;
+}
+/* FIXME
  * 测试sg是否处于vsplus控制
  */
 int tsc_sg_enabled(int sg)
 {
-	if(sg<15)
-		return 1;
-	else
-		return 0;
+	return 1;
+//	if(sg<15)
+//		return 1;
+//	else
+//		return 0;
 }
 
 /* FIXME
@@ -682,6 +728,7 @@ int ts_sg_close(int sg)
 return;
 }
 
+/***** 信号灯状态检查 *****/
 /* FIXME
  * 检查灯组是否处于红灯状态 */
 int tsc_chk_red(int sg)
@@ -703,6 +750,47 @@ int tsc_chk_min_red(int sg)
 }
 
 /* FIXME
+ * 检查信号灯是否处于amber状态 */
+int tsc_chk_amber(int sg)
+{
+	if(g_sg[sg].stat == 1)
+		return 1;
+	else
+		return 0;
+}
+
+/* FIXME
+ * 检查信号灯是否处于green状态 */
+int tsc_chk_green(int sg)
+{
+	if((g_sg[sg].stat == 5) || (g_sg[sg].stat == 6))
+		return 1;
+	else
+		return 0;
+}
+
+/* FIXME
+ * 检查信号灯是否处于最小green状态 */
+int tsc_chk_min_green(int sg)
+{
+	if(g_sg[sg].stat == 5)
+		return 1;
+	else
+		return 0;
+}
+
+/* FIXME
+ * 检查信号灯是否处于prep状态 */
+int tsc_chk_prep(int sg)
+{
+	if(g_sg[sg].stat == 4)
+		return 1;
+	else
+		return 0;
+}
+
+/***** 信号灯状态计时 *****/
+/* FIXME
  * 返回红灯亮起时间 */
 int tsc_red_time(int sg)
 {
@@ -710,8 +798,63 @@ int tsc_red_time(int sg)
 		return g_sg[sg].time;
 	else if(g_sg[sg].stat == 3)
 		return g_sg[sg].time + g_sg[sg].red_min;
+	else
+		return 0;
 }
 
+/* FIXME
+ * 返回最小红灯亮起时间 */
+int tsc_min_red_time(int sg)
+{
+	if(g_sg[sg].stat == 2)
+		return g_sg[sg].time;
+	else
+		return 0;
+}
+
+/* FIXME
+ * 返回绿灯时间 */
+int tsc_green_time(int sg)
+{
+	if(g_sg[sg].stat == 5)
+		return g_sg[sg].time;
+	else if(g_sg[sg].stat == 6)
+		return g_sg[sg].time + g_sg[sg].green_min;
+	else
+		return 0;
+}
+
+/* FIXME
+ * 返回最小绿灯亮起时间 */
+int tsc_min_green_time(int sg)
+{
+	if(g_sg[sg].stat == 5)
+		return g_sg[sg].time;
+	else
+		return 0;
+}
+
+/* FIXME
+ * 返回amber时间 */
+int tsc_amber_time(int sg)
+{
+	if(g_sg[sg].stat == 1)
+		return g_sg[sg].time;
+	else
+		return 0;
+}
+
+/* FIXME
+ * 返回prep时间 */
+int tsc_prep_time(int sg)
+{
+	if(g_sg[sg].stat == 4)
+		return g_sg[sg].time;
+	else
+		return 0;
+}
+
+/***** 信号灯状态设定值 *****/
 /* FIXME
  * 返回最小红灯时间 */
 int tsc_min_red(int sg)
@@ -734,15 +877,64 @@ int tsc_min_green(int sg)
 }
 
 /* FIXME
- * 返回绿灯时间 */
-int tsc_green_time(int sg)
+ * 返回绿红过渡时间 */
+int tsc_amber(int sg)
 {
-	if(g_sg[sg].stat == 5)
-		return g_sg[sg].time;
-	if(g_sg[sg].stat == 6)
-		return g_sg[sg].time + g_sg[sg].green_min;
+	return g_sg[sg].amber;
 }
 
+/* FIXME: 需要根据XML定义
+ * 返回绿间隔时间 */
+int tsc_inter_green(int sgr, int sge)
+{
+	return 0;//32767;
+}
+/******************* Digital output switching ************************/
+/* FIXME:
+ * 打开一个数字信号输出 */
+void tsc_digital_on(int sg)
+{
+	//us_sleep(1);
+} 
+
+/* FIXME:
+ * 关闭一个数字信号输出 */
+void tsc_digital_off(int sg)
+{
+	//us_sleep(1);
+}
+
+/* FIXME:
+ * 打开一个数字闪烁信号输出 */
+void tsc_digital_blink_on(int sg)
+{
+	//us_sleep(1);
+}
+
+/* FIXME:
+ * 关闭一个数字闪烁信号输出 */
+void tsc_digital_blink_off(int sg)
+{
+	//us_sleep(1);
+}
+
+/* FIXME
+ * 检查某个数字信号输出的状态 
+ * 0 = 关闭，1 = 打开*/
+int tsc_digital_state(int sg)
+{
+	return 0;
+}
+
+/* FIXME
+ * 检查某个数字闪烁信号输出的状态 
+ * 0 = 关闭，1 = 打开*/
+int tsc_digital_blink_state(int sg)
+{
+	return 0;
+}
+
+/*********************************************************************/
 /* FIXME
  * 读取PT信息？*/
 int tsc_read_pt(void* arg)
@@ -760,6 +952,7 @@ int tsc_read_pt(void* arg)
 	return 0;
 }
 
+/******************** 串口操作 **********************************/
 int set_opt(int fd, int speed, int bits, char event, int stop)
 {
 	struct termios newtio, oldtio;
@@ -860,6 +1053,7 @@ int open_port(int port)
 	return fd;
 }
 
+/* 给驱动板喂狗 */
 int thr_watchdog(void* para)
 {
 	int fd = *(int*)(para);
@@ -891,12 +1085,13 @@ void deinit_serial(void)
 {
 	debug(3, "==>\n");
 	g_exit = 1;
-	pthread_join(g_tid_timer, NULL);
+	pthread_join(g_tid_watchdog, NULL);
 	close(g_fd_serial);
 	debug(3, "<==\n");
 }
 
 
+/********************* 初始化 ************************/
 int tsc_init()
 {
 	init_serial();

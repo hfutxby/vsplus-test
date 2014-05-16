@@ -27,6 +27,7 @@ int us_sleep(long us)
 	return select(0, NULL, NULL, NULL, &tv);
 }
 
+/* 打开一般模拟信息控制参数 */
 void open_ctrl(void)
 {
 	int ret;
@@ -42,10 +43,10 @@ void open_ctrl(void)
 	if(g_ctrl ==  MAP_FAILED){
 		printf("%s\n", strerror(errno));
 	}
-	memset(g_ctrl, 0, sizeof(ctrl_data));
-	printf("sizeof:%d\n",sizeof(ctrl_data));
-	g_ctrl->prg_cur = 0;
-	g_ctrl->prg_next = -1;
+//	memset(g_ctrl, 0, sizeof(ctrl_data));
+//	printf("sizeof:%d\n",sizeof(ctrl_data));
+//	g_ctrl->prg_cur = 1;
+//	g_ctrl->prg_next = -1;
 }
 
 void close_ctrl(void)
@@ -53,12 +54,13 @@ void close_ctrl(void)
 	close(g_fd_ctrl);
 }
 
+/* 选择控制内容 */
 int test_menu(void)
 {
 	int s;
 	printf("select test item\n");
 	printf("1:set next prg\n");
-	printf("2:test show\n");
+	printf("2:show prg list\n");
 	printf("input item:");
 	scanf("%d", &s);
 	if((s >= 1) && (s <= 2))
@@ -69,6 +71,7 @@ int test_menu(void)
 	}
 }
 
+/* item1控制实现 */
 void test_1(void)
 {
 	int s1;
@@ -82,6 +85,12 @@ void test_1(void)
 		printf("wrong prg num\n");
 }
 
+void test_2(void)
+{
+	printf("current prg:%d, next prg:%d\n", g_ctrl->prg_cur, g_ctrl->prg_next);
+}
+
+/* 控制测试 */
 void test(void)
 {
 	int item = 0;
@@ -90,6 +99,9 @@ void test(void)
 		switch(item){
 		case 1:
 			test_1();
+			break;
+		case 2:
+			test_2();
 			break;
 		default:
 			continue;

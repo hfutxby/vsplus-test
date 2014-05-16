@@ -140,8 +140,7 @@ short int timer_2(short int funktion, short int timer, short int wert)
 short int ProgrammAktuell(void)
 {
 	debug(3, "==>\n");
-	return 179;
-	//return tsc_prog_actual();
+	return tsc_prog_actual();
 }
 
 /* VS-PLUS is told a program change request. If there is no 
@@ -173,11 +172,15 @@ short int Umlaufzeit(void)
 	return tsc_prog_tu();
 }
 
+/* returns the program number source (who has sent current valid program
+ * switch command
+ * return:	1 = program number comes from central;
+ *			0 = comes locally from controller
+ */
 int ProgrammWahlZentrale(void)
 {
-printf("%s(%d)\n", __func__, __LINE__);
-return 0;
-  
+	debug(3, "==>\n");
+	return tsc_prog_src();
 }
 
 /* Number of rising slopes counted by the controller, until clearing by VS-PLUS
@@ -240,17 +243,24 @@ short int d_blg(short int det)
 	return tsc_hold_state(det);
 }
 
+/* the net time gap starts at the last falling slope
+ * return: net time gap in units of 100ms
+ * det: detector channel number
+ */
 short int d_ztlkn(short int det)
 {
-//FIXME:printf("%s(%d)\n", __func__, __LINE__);
-return 0;
-   
+	debug(3, "==>\n");
+	return tsc_det_net(det);
 }
 
+/* the gross time gap starts at the last rising slope
+ * return: gross time gap in units of 100ms
+ * det: detector channel number
+ */
 short int d_zeitlb(short int det)
 {
-//FIXME:printf("%s(%d)\n", __func__, __LINE__);
-return 0;
+	debug(3, "==>\n");
+	return tsc_det_gross(det);
 }
 
 /* Actual occupancy time of the detector
@@ -278,6 +288,7 @@ short int d_impab(short int type, short int det)
 		return tsc_clr_falling(det);
 }
 
+/* FIXME: for future use, not implemented */
 short int d_kvalue(short int det)
 {
 printf("%s(%d)\n", __func__, __LINE__);
@@ -292,6 +303,9 @@ short int min_rot(short int sg)
 {
 	debug(3, "==>\n");
 	return tsc_min_red(sg);
+//	int ret = tsc_min_red(sg);
+//	printf("%s(%d)==>sg:%d, ret:%d\n", __func__, __LINE__, sg, ret);
+//	return ret;
 }
 
 /* preparation time
@@ -302,16 +316,27 @@ short int u_rot_gelb(short int sg)
 	return tsc_prep(sg);
 }
 
+/* the minimum green time defined in the controller
+ * return: minimumu green time in units of 100ms
+ * sg: signal group channel number
+ */
 short int min_gruen(short int sg)
 {
-printf("%s(%d)\n", __func__, __LINE__);
-return 0;
+	debug(3, "==>\n");
+	return tsc_min_green(sg);;
 }
 
+/* the amber time expresses the transition time from open to closed.
+ * this function returns the value defined int the controller. the function
+ * returns 0 if no transition time is available. if the transition consist
+ * of several elements, the sum of transition times has to be returned.
+ * return: amber time in units of 100ms
+ * sg: signal group channel number
+ */
 short int u_gelb(short int sg)
 {
-printf("%s(%d)\n", __func__, __LINE__);
-return 0;
+	debug(3, "==>\n");
+	return tsc_amber(sg);
 }
 
 /* switch signal group to open
@@ -320,7 +345,7 @@ return 0;
 void SG_ein(short int sg)
 {
 	debug(3, "==>\n");
-	printf("%s(%d):================\n", __func__, __LINE__);
+	printf("%s(%d):sg=%d =================================\n", __func__, __LINE__, sg);
 	ts_sg_open(sg);
 	return;
 }
@@ -330,31 +355,50 @@ void SG_ein(short int sg)
 void SG_aus(short int sg)
 {
 	debug(3, "==>\n");
+	printf("%s(%d):sg=%d =================================\n", __func__, __LINE__, sg);
 	ts_sg_close(sg);
 	return;
 }
 
+/* command for switching a non-supervised output to "on"
+ * return: none
+ * sg: output channel number
+ */
 void Relais_ein(short int sg)
 {
-printf("%s(%d)\n", __func__, __LINE__);
+	debug(3, "==>\n");
+	tsc_digital_on(sg);
 }
 
+/* command for switching a non-supervised output to "off"
+ * return: none
+ * sg: output channel number
+ */
 void Relais_aus(short int sg)
 {
-printf("%s(%d)\n", __func__, __LINE__);
-   return;
+	debug(3, "==>\n");
+	tsc_digital_off(sg);
 }
 
+/* command for switching a non-supervised blinker output(blinking digital
+ * output) to "on"
+ * return: none
+ * sg: output channel number
+ */
 void Blinker_ein(short int sg)
 {
-printf("%s(%d)\n", __func__, __LINE__);
-   return ;
+	tsc_digital_blink_on(sg);
 }
 
+/* command for switching a non-supervised blinker output(blinking digital
+ * output) to "off"
+ * return: none
+ * sg: output channel number
+ */
 void Blinker_aus(short int sg)
 {
-printf("%s(%d)\n", __func__, __LINE__);
-   return;
+	debug(3, "==>\n");
+	tsc_digital_blink_off(sg);
 }
 
 /* This function enables VS-PLUS to check if a signal 
@@ -366,18 +410,30 @@ printf("%s(%d)\n", __func__, __LINE__);
 short int s_rot(short int sg)
 {
 	debug(3, "==>\n");
-	return tsc_chk_red(sg);
+	//return tsc_chk_red(sg);
+	int ret = tsc_chk_red(sg);
+	printf("%s(%d)======>sg:%d, ret:%d\n", __func__, __LINE__, sg, ret);
+	return ret;
 }
 
+/* enables vsplus to check if a digital output is switched off
+ * return:	1 = off, 0 = not off
+ * re: output channel number
+ */
 short int s_sr_aus(short int re)
 {
-//FIXME:printf("%s(%d)\n", __func__, __LINE__);
-   return 0;
+	debug(3, "==>\n");
+	return !tsc_digital_state(re);
 }
+
+/* enables vsplus to check if a digital blinker output is switched off
+ * return:  1 = off, 0 = not off
+ * re: output channel number
+ */
 short int s_sb_aus(short int bli)
 {
-//FIXME:printf("%s(%d)\n", __func__, __LINE__);
-   return 0;
+	debug(3, "==>\n");
+	return !tsc_digital_blink_state(bli);
 }
 
 /* This function enables VS-PLUS to check if a signal 
@@ -393,45 +449,63 @@ short int s_min_rot(short int sg)
 	return tsc_chk_min_red(sg);
 }
 
+/* to check if a signal group shows amber or in gerenal if the 
+ * signal group is in the "open-closed" transition.
+ */
 short int s_gelb(short int sg)
 {
-printf("%s(%d)\n", __func__, __LINE__);
-return 0;
+	debug(3, "==>\n");
+	return tsc_chk_amber(sg);
 }
 
+/* to check if a signal group shows green
+ */
 short int s_grun(short int sg)
 {
-printf("%s(%d)\n", __func__, __LINE__);
-return 0;
+	debug(3, "==>\n");
+	return tsc_chk_green(sg);
 }
 
+/* to check if a digital output is switched on
+ */
 short int s_sr_ein(short int re)
 {
-//FIXME:printf("%s(%d)\n", __func__, __LINE__);
-   return 0;
+	debug(3, "==>\n");
+	return tsc_digital_state(re);
 }
 
+/* to check if a digital blinker output is switched on
+ */
 short int s_sb_ein(short int bli)
 {
-//FIXME:printf("%s(%d)\n", __func__, __LINE__);
-   return 0;
+	debug(3, "==>\n");
+	return tsc_digital_blink_state(bli);
 }
+
+/* to check if a signal group show green and the elapsed green time
+ * is still within the minimum green time
+ */
 short int s_min_grun(short int sg)
 {
-printf("%s(%d)\n", __func__, __LINE__);
-return 0;
+	debug(3, "==>\n");
+	return tsc_chk_min_green(sg);
 }
 
+/* to check if a signal group show red-amber or in general if the signal
+ * group is in the "closed-open" transition.
+ */
 short int s_vor(short int sg)
 {
-printf("%s(%d)\n", __func__, __LINE__);
-return 0;
+	debug(3, "==>\n");
+	return tsc_chk_prep(sg);
 }
 
+/* indicates if the signal group is in fault mode
+ */
 short int s_stoeblink(short int sg)
 {
-printf("%s(%d)\n", __func__, __LINE__);
-return 0;
+	debug(3, "==>\n");
+	return tsc_sg_fault(sg);
 }
 
 /* Tells how long the signal group is already red.
@@ -444,19 +518,28 @@ unsigned short s_t_rot(short int sg)
 	return tsc_red_time(sg);
 }
 
+/* Tells how long the signal group is already amber(transition
+ * state from open to closed).
+ * return value:  current amber time in units of 100ms
+ * sg:   signal group channel number
+ */
 unsigned short int s_t_gelb(short int sg)
 {
-printf("%s(%d)\n", __func__, __LINE__);
-return 0;
+	debug(3, "==>\n");
+	return tsc_amber_time(sg);
 }
 
+/* tells how long the signal group is already in minimum read state.
+ * after the elasping of the minimum red time return value is 0.
+ *
+ */
 unsigned short int s_t_min_rot(short int sg)
 {
-printf("%s(%d)\n", __func__, __LINE__);
-return 0;
+	debug(3, "==>\n");
+	return tsc_min_red_time(sg);
 }
 
-/* current singal group green time
+/* tell how long the signal group is already green
  * return: current green time in units of 100ms
  * sg: signal group channel number
  */
@@ -466,16 +549,22 @@ unsigned short int s_t_grun(short int sg)
 	return tsc_green_time(sg);
 }
 
+/* tell how long the signal group is already red-amber (transition from
+ * closed to open)
+ */
 unsigned short int s_t_vor(short int sg)
 {
-printf("%s(%d)\n", __func__, __LINE__);
-return 0;
+	debug(3, "==>\n");
+	return tsc_prep_time(sg);
 }
 
+/* tell how long the signal group is already in miminum green state.
+ * after the elapsing of the minimum green time the return value is 0.
+ */
 unsigned short int s_t_min_grun(short int sg)
 {
-printf("%s(%d)\n", __func__, __LINE__);
-return 0;
+	debug(3, "==>\n");
+	return tsc_min_green_time(sg);
 }
 
 /* enable for vsplus
@@ -488,10 +577,16 @@ unsigned short int s_HW_VspFreigegeben(short int sg)
 	return tsc_sg_enabled(sg);
 }
 
+/* a controller intergreen value
+ * return: controller intergreen time in units of 100ms
+ * sgR: clearing signal group channel number
+ * sgE: entering signal group channel number
+ */
 short s_zwi_zeit(short sgR, short sgE)
 {
-printf("%s(%d)\n", __func__, __LINE__);
-   return 32767;      /* Nicht Feindlich                */
+	debug(3, "==>\n");
+	return tsc_inter_green(sgR, sgE);
+//return 32767;      /* Nicht Feindlich                */
 }
 
 void Meldung(short int degree, short int nr, short int par1, short int par2, short int par3, short int par4)
@@ -530,7 +625,7 @@ short TelegrammVomGeraet(void* oev_tele_poi)
 	return tsc_read_pt(oev_tele_poi);
 }
 
-/* returns  0 as long as a fixed time signal  plan
+/* returns 0 as long as a fixed time signal  plan
  * is being processed. When off or during switch on
  * or switch off, this function returns 1
  * return value:  1 = Off or switching on or off; 0 = signal program active
@@ -538,7 +633,7 @@ short TelegrammVomGeraet(void* oev_tele_poi)
 unsigned short int s_SteuerungNichtAktiv(void)
 {
 	debug(3, "==>\n");
-	return tsc_ctl_active();
+	return 0;//FIXME:tsc_ctl_active();
 }
 
 /* requests memory from the controller in order to 

@@ -23,15 +23,15 @@
 /* 模拟规则
  * 当计时状态=0或=100时随机产生一次计时，更新状态值
  * 100ms内要对所有检测器完成一次扫描
- * 1、state计时-1，相对应的hold或free+1
+ * 1、state计时-1，相对应的hold或free +1
  * 2、当hold+free=10时计算一次占用率occ1，同时更新平滑占用率occ2
  * occ1 = hold/(hold+free); 
  * if(occ1>occ2) occ2 = occ2 + f1*(occ1-occ2)
  * if(occ1<occ2) occ2 = occ2 + f2*(occ1-occ2)
  */
 
-double g_f1 = 0.2;
-double g_f2 = 0.2;
+double g_f1 = 0.2;//占用率上升折算因子
+double g_f2 = 0.2;//下降因子
 det_node* g_det = NULL;
 int g_det_fd = 0;
 static int g_exit = 0;
@@ -44,6 +44,7 @@ int us_sleep(long us)
 	return select(0, NULL, NULL, NULL, &tv);
 }
 
+/* 打开检测器模拟信息文件 */
 void open_det(void)
 {
 	int ret;
@@ -68,6 +69,7 @@ void close_det(void)
 	close(g_det_fd);
 }
 
+/* 检测器模拟信息维护 */
 int thr_det(void* arg)
 {
 	int i;
@@ -78,19 +80,22 @@ int thr_det(void* arg)
 	while(!g_exit){
 		gettimeofday(&tv_start, NULL);//较精确的将循环限制在100ms内
 		for(i = 0; i < DETMAX; i++){
-			if(g_det[i].fault){
+			if(g_det[i].fault){//处于fault状态的检测器不产生信号
 				us_sleep(10);
 				continue;
 			}
 			if((g_det[i].state == 0) || (g_det[i].state == 100)){//随机产生一次事件
-				if(g_det[i].state == 0)//表示占用事件结束，产生一次下降沿
+				if(g_det[i].state == 0){//表示占用事件结束，产生一次下降沿
 					g_det[i].sum_falling++;
+					g_det[i].net = 0;
+				}
 				gettimeofday(&tv, NULL);
 				srandom(tv.tv_sec + tv.tv_usec);
-				//step = random()%9+1;//随机事件时长1-10，<=5为占用事件，>5为空闲事件
-				step = random()%19+1;//随机事件时长1-20，<=5为占用事件，>5为空闲事件
+				step = random()%19+1;//随机事件时长1-10，<=5为占用事件，>5为空闲事件
+				//step = random()%19+1;//随机事件时长1-20，<=5为占用事件，>5为空闲事件
 				if(step <= 5){
 					g_det[i].sum_rising++;
+					g_det[i].gross = 0;
 					g_det[i].state = step;
 				}
 				else{
@@ -103,6 +108,8 @@ int thr_det(void* arg)
 			else
 				g_det[i].free++;
 			g_det[i].state--;
+			g_det[i].net++;
+			g_det[i].gross++;
 			//修改占用率计算
 			if((g_det[i].hold + g_det[i].free) >= 10){//累计1s（10次100ms）
 				g_det[i].occ1 = (double)(g_det[i].hold*100)/(g_det[i].hold + g_det[i].free);
@@ -111,7 +118,7 @@ int thr_det(void* arg)
 				else
 					g_det[i].occ2 = g_det[i].occ2 + g_f2*(g_det[i].occ1 - g_det[i].occ2);
 			}
-			printf("ID:%3d, state:%3d, occ1:%3d, occ2:%3d, sum_rising:%4d, sum_falling:%4d\n", i, g_det[i].state, g_det[i].occ1, g_det[i].occ2, g_det[i].sum_rising, g_det[i].sum_falling);
+			printf("ID:%3d, state:%3d, occ1:%3d, occ2:%3d, sum_rising:%3d, sum_falling:%3d, net:%3d, gross:%3d\n", i, g_det[i].state, g_det[i].occ1, g_det[i].occ2, g_det[i].sum_rising, g_det[i].sum_falling, g_det[i].net, g_det[i].gross);
 		}
 		gettimeofday(&tv_end, NULL);
 		us = (tv_end.tv_sec - tv_start.tv_sec)*1000000 + (tv_end.tv_usec - tv_start.tv_usec);

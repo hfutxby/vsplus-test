@@ -158,7 +158,7 @@ int main(void)
 #endif
 #if 1
 	//检查program是否存在
-	for(i = 1; i < 256; i++){
+	for(i = 0; i < 256; i++){
 		ret = vs_prog_chk(i);
 		if(ret != 0)
 			printf("%d:%d ", i, ret);
@@ -184,7 +184,7 @@ int main(void)
 		printf("call VSPLUS fail, ret=%d\n", ret);
 	}
 
-	pthread_create(&g_tid_sleep, NULL, thr_sleep, NULL);
+	//pthread_create(&g_tid_sleep, NULL, thr_sleep, NULL);
 	pthread_create(&g_tid_fix, NULL, thr_fix_run, NULL);
 
 	pthread_create(&g_tid_vsplus, NULL, thr_vsplus, NULL);
