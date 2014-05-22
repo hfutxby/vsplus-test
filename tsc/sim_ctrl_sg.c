@@ -49,18 +49,6 @@ void close_sg(void)
 /* 打印信号灯信息 */
 void print_signal(int stat, int time)
 {
-//	if(stat == 2) {
-//		printf("\033[40;31m%4d:2 \033[0m", time);
-//	}
-//	if(stat == 3) {
-//		printf("\033[40;31m%4d:3 \033[0m", time);
-//	}
-//	}if((stat == 5) || (stat == 6)){
-//		printf("\033[40;32m%3d \033[0m", time);
-//	}
-//	if((stat == 1) || (stat == 4)){
-//		printf("\033[40;33m%3d \033[0m", time);
-//	}
 	switch(stat){
 	case 2:
 		printf("\033[40;31m%4d:2 \033[0m", time);
@@ -89,8 +77,11 @@ int main(void)
 {
 	open_sg();
 	int i;
+	printf("SGMAX:%d\n", SGMAX);
 	while(1){
-		for(i = 0; i < SGMAX; i++){
+		//for(i = 0; i < SGMAX; i++){
+		for(i = 0; i <= 15; i++){
+			printf("%d", i);
 			print_signal(g_sg[i].stat, g_sg[i].time);
 		}
 		printf("\033[0m\r");

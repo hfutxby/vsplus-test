@@ -80,7 +80,7 @@ void init_prg(void)
 		g_prg[i].tx = 0;
 	}
 	//必须在此之前调用open_ctrl();
-	g_ctrl->prg_cur = 1;//默认执行方案1
+	g_ctrl->prg_cur = 1;//默认执行方案
 	pthread_create(&g_tid_prg, NULL, thr_prg, NULL);
 }
 
@@ -107,7 +107,8 @@ int sim_prog_select(void)
 
 int sim_prog_tx(void)
 {
-	return (g_prg[g_ctrl->prg_cur].tx+5)/10;
+	int ret = (g_prg[g_ctrl->prg_cur].tx+5)/10;
+	return ret*10;
 }
 
 int sim_prog_tu(void)
@@ -159,9 +160,10 @@ int sim_sum_falling(int index)
 	return g_det[index].sum_falling;
 }
 
-void sim_clr_falling(int index)
+int sim_clr_falling(int index)
 {
 	g_det[index].sum_falling = 0;
+	return 0;//g_det[index].sum_falling;
 }
 
 int sim_cur_hold(int index)
@@ -205,7 +207,10 @@ int sim_det_gross(int index)
 //FIXME:和配置文件中的定义有关
 int sim_det_exist(int index)
 {
-	return 1;	
+	if((index >= 1) && (index <=45))
+		return 1;	
+	else
+		return 0;
 }
 
 /************* 模拟功能初始化 ***************************/

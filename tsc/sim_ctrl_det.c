@@ -44,6 +44,11 @@ int us_sleep(long us)
 	return select(0, NULL, NULL, NULL, &tv);
 }
 
+int bsleep(long block)
+{
+	us_sleep(block*100*1000);
+}
+
 /* 打开检测器模拟信息文件 */
 void open_det(void)
 {
@@ -166,15 +171,15 @@ int set_fault(void)
 	}
 }
 
-/* 使能检测器并立即产生一个上升沿  */
+/* 使检测器立即产生一个上升沿  */
 int set_rising(void)
 {
 	int s;
 
 	int i;
-	for(i = 0; i < DETMAX; i++){
-		g_det[i].fault = 1;
-	}
+//	for(i = 0; i < DETMAX; i++){
+//		g_det[i].fault = 1;
+//	}
 
 	while(1){
 		printf("which detector set a rising:\n");
@@ -189,6 +194,112 @@ int set_rising(void)
 	}
 }
 
+int set_a_rising(void)
+{
+	int s;
+	int i;
+
+	while(1){
+		printf("which detector set a rising:\n");
+		scanf("%d", &s);
+		if(s > DETMAX)
+			printf("wrong det index\n");
+		else{
+			g_det[s].fault = 0;
+			g_det[s].sum_rising++;
+			g_det[s].state = 5;
+			i = s;
+			printf("ID:%3d, state:%3d, occ1:%3d, occ2:%3d, sum_rising:%3d, sum_falling:%3d, net:%3d, gross:%3d\n", i, g_det[i].state, g_det[i].occ1, g_det[i].occ2, g_det[i].sum_rising, g_det[i].sum_falling, g_det[i].net, g_det[i].gross);
+			us_sleep(5*100000);
+			g_det[s].sum_falling++;
+			g_det[s].state = 100;
+		}
+	}
+}
+
+/* 车辆进入检测器 */
+int in_det(int index)
+{
+	g_det[index].sum_rising++;//产生一个上升沿
+	g_det[index].state = 1;//占用状态
+	g_det[index].net = 0;//间隙计时清零
+	g_det[index].gross = 0;
+}
+
+/* 车辆离开检测器 */
+int out_det(int index)
+{
+	g_det[index].sum_falling++;//产生一个下降沿
+	g_det[index].state = 101;//释放占用状态
+}
+
+/* 检测器数据更新 */
+int go_det(int index, int time)
+{
+	if(g_det[index].state < 100){//占用中
+		g_det[index].hold += time;//占用时间增加
+		g_det[index].occ1 = (double)(g_det[index].hold)/(g_det[index].hold + g_det[index].free);
+		g_det[index].occ2 = g_det[index].occ1;
+		g_det[index].gross += time;//间隙时间增加
+	}
+	else{//空闲中
+		g_det[index].free += time;//空闲时间增加
+		g_det[index].occ1 = (double)(g_det[index].hold)/(g_det[index].hold + g_det[index].free);
+		g_det[index].occ2 = g_det[index].occ1;
+		g_det[index].gross += time;//间隙时间增加
+		g_det[index].net += time;
+	}
+	int i = index;
+	printf("ID:%3d, state:%3d, occ1:%3d, occ2:%3d, sum_rising:%3d, sum_falling:%3d, net:%3d, gross:%3d\n", i, g_det[i].state, g_det[i].occ1, g_det[i].occ2, g_det[i].sum_rising, g_det[i].sum_falling, g_det[i].net, g_det[i].gross);
+}
+
+int set_open(void)
+{
+	in_det(4);//D1_8
+	go_det(4, 1);//通过用时1个100ms
+	bsleep(1);
+
+	out_det(4);
+	go_det(4, 20);//到达下一个检测器用时5
+	bsleep(20);
+
+	in_det(3);//D1_5
+	go_det(3, 1);//通过用时1
+	go_det(4, 1);
+	bsleep(1);
+
+	out_det(3);
+	go_det(3, 20);//到到下一个检测器用时5
+	go_det(4, 20);
+	bsleep(20);
+
+	in_det(2);//D1_4
+	go_det(2, 30);//通过用时10
+	go_det(3, 30);
+	go_det(4, 30);
+	bsleep(30);
+
+	out_det(2);
+	go_det(2, 25);//到到下一个检测器用时5
+	go_det(3, 25);	
+	go_det(4, 25);	
+	bsleep(25);
+
+	in_det(1);//D1
+	go_det(1, 1);//通过用时5
+	go_det(2, 1);
+	go_det(3, 1);
+	go_det(4, 1);
+	bsleep(1);
+
+	out_det(1);
+	go_det(1, 5);
+	go_det(2, 5);
+	go_det(3, 5);
+	go_det(4, 5);
+	bsleep(5);
+}
+
 int main(void)
 {
 	open_det();
@@ -197,8 +308,11 @@ int main(void)
 
 //	set_fault();
 	set_rising();
+//	set_a_rising();
 //	while(1){
-//		sleep(1);
+//		int tmp;
+//		scanf("%d", &tmp);
+//		set_open();
 //	}
 	close_det();
 	return 0;

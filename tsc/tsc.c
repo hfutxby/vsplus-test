@@ -343,6 +343,7 @@ void tsc_stream_waiting(int index, int time)
 int tsc_sum_rising(int index)
 {
 #ifdef _SIM_TEST_
+	//printf("%s(%d):det index:%d\n", __func__, __LINE__, index);
 	return sim_sum_rising(index);
 #else
 
@@ -367,6 +368,7 @@ void tsc_clr_rising(int index)
 int tsc_sum_falling(int index)
 {
 #ifdef _SIM_TEST_
+	//printf("%s(%d):det index:%d\n", __func__, __LINE__, index);
 	return sim_sum_falling(index);
 #else
 
@@ -376,10 +378,10 @@ int tsc_sum_falling(int index)
 /* FIXME
  * 清空检测器下降沿计数
  */
-void tsc_clr_falling(int index)
+int tsc_clr_falling(int index)
 {
 #ifdef _SIM_TEST_
-	sim_clr_falling(index);
+	return sim_clr_falling(index);
 #else
 
 #endif
@@ -482,12 +484,13 @@ int tsc_det_gross(int index)
 /***************** 其他函数 *****************************/
 
 /* FIXME
- * 判断当前是否处于vsplus动态控制中。
- * 返回0表示处于定时配时控制中
+ * 判断当前vsplus控制状态。
+ * vsplus关闭或切换时返回1
+ * 其他返回0（vsplus动态控制，或vsplus定时控制中)
  */
 int tsc_ctl_active(void)
 {
-	return 1;
+	return 0;
 }
 
 /* 返回当前时间 */
@@ -538,10 +541,10 @@ void open_sg(void)
 
 	//FIXME:实际需要从XML文件中解析初始化数据
 	memset(g_sg, 0, sizeof(sg_node)*SGMAX);
-	int min_red[15] = {40,40,40,40,40,40,80,80,80,80,40,40,40,40,60};
-	int min_green[15] = {20,20,20,20,20,20,20,20,20,20,20,20,20,20,20};
+	int min_red[16] = {40,40,40,40,40,40,40,80,80,80,80,40,40,40,40,60};
+	int min_green[16] = {20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20};
 	int i;
-	for(i = 0; i < 15; i++){
+	for(i = 0; i < 16; i++){
 		g_sg[i].stat = 2;//random()%5+1;
 		g_sg[i].red_min = min_red[i];
 		g_sg[i].green_min = min_green[i];

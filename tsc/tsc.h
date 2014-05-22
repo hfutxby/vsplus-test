@@ -25,7 +25,11 @@ printf("\033[40;33m(%s:%d)\033[0m"fmt, __func__, __LINE__, ##args)
 #define debug3(fmt, args...) 
 #endif /* DEBUG>=3 */
 
+#if 1
 #define debug(level, fmt, args...) debug##level(fmt, ##args)
+#else
+#define debug(level, fmt, args...) printf("(%s:%d)"fmt, __func__, __LINE__, ##args)
+#endif
 
 void* tsc_alloc_mem(int size, int id);
 void tsc_free_mem(int id);

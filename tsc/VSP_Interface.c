@@ -119,8 +119,9 @@
  */
 short int timer(short int funktion, short int timer)
 {
-	//debug(3, "==>\n");
-	return tsc_timer(funktion, timer, 0);
+	short int ret = tsc_timer(funktion, timer, 0);
+	//debug(3, "funktion:%d, timer:%d, ret:%d\n", funktion, timer, ret);
+	return ret;
 }
 
 /* load and start a timer
@@ -130,8 +131,9 @@ short int timer(short int funktion, short int timer)
  */
 short int timer_2(short int funktion, short int timer, short int wert)
 {
-	debug(3, "==>\n");
-	return tsc_timer(funktion, timer, wert);
+	short int ret = tsc_timer(funktion, timer, wert);
+	debug(3, "funktion:%d, timer:%d, wert:%d, ret:%d\n", funktion, timer, wert, ret);
+	return ret;
 }
 
 /* VS-PLUS is told the actual program number
@@ -139,8 +141,9 @@ short int timer_2(short int funktion, short int timer, short int wert)
  */
 short int ProgrammAktuell(void)
 {
-	debug(3, "==>\n");
-	return tsc_prog_actual();
+	short int ret = tsc_prog_actual();
+	debug(3, "ret:%d\n", ret);
+	return ret;
 }
 
 /* VS-PLUS is told a program change request. If there is no 
@@ -150,8 +153,9 @@ short int ProgrammAktuell(void)
  */
 short int ProgrammWahl(void)
 {
-	debug(3, "==>\n");
-	return tsc_prog_select();
+	short int ret = tsc_prog_select();
+	debug(3, "ret:%d\n", ret);
+	return ret;
 }
 
 /* The current cycle second within the active signal program
@@ -159,8 +163,9 @@ short int ProgrammWahl(void)
  */
 short int Zykluszeit(void)
 {
-	debug(3, "==>\n");
-	return tsc_prog_tx();
+	short int ret = tsc_prog_tx();
+	debug(3, "ret:%d\n", ret);
+	return ret;
 }
 
 /* The cycle time of the active signal program (in units of 100ms)
@@ -168,8 +173,9 @@ short int Zykluszeit(void)
  */
 short int Umlaufzeit(void)
 {
-	debug(3, "==>\n");
-	return tsc_prog_tu();
+	short int ret = tsc_prog_tu();
+	debug(3, "ret:%d\n", ret);
+	return ret;
 }
 
 /* returns the program number source (who has sent current valid program
@@ -179,8 +185,9 @@ short int Umlaufzeit(void)
  */
 int ProgrammWahlZentrale(void)
 {
-	debug(3, "==>\n");
-	return tsc_prog_src();
+	int ret = tsc_prog_src();
+	debug(3, "ret:%d\n", ret);
+	return ret;
 }
 
 /* Number of rising slopes counted by the controller, until clearing by VS-PLUS
@@ -189,8 +196,9 @@ int ProgrammWahlZentrale(void)
  */ 
 short int d_imp(short int det)
 {
-	debug(3, "==>\n");
-	return tsc_sum_rising(det);
+	short int ret = tsc_sum_rising(det);
+	debug(3, "det:%d, ret:%d\n", det, ret);
+	return ret;
 }
 
 /* The rising slope counter is cleared by VS-PLUS
@@ -199,7 +207,7 @@ short int d_imp(short int det)
  */
 void d_limp(short int det)
 {
-	debug(3, "==>\n");
+	debug(3, "det:%d\n", det);
 	tsc_clr_rising(det);
 }
 
@@ -210,8 +218,9 @@ void d_limp(short int det)
  */
 short int d_belga(short int det)
 {
-	debug(3, "==>\n");
-	return tsc_cur_hold(det);
+	short int ret = tsc_cur_hold(det);
+	debug(3, "det:%d, ret:%d\n", det, ret);
+	return ret;
 }
 
 /* Detector fault
@@ -220,7 +229,9 @@ short int d_belga(short int det)
  */
 short int d_stoer(short int det)
 {
-	return tsc_det_fault(det);
+	short int ret = tsc_det_fault(det);
+	debug(3, "det:%d, ret:%d\n", det, ret);
+	return ret;
 }
 
 /* The  smoothened  occupancy  degree  is  calculated  over  a  defined  interval.
@@ -229,8 +240,9 @@ short int d_stoer(short int det)
  */
 short int d_belgg(short int det)
 {
-	debug(3, "==>\n");
-	return tsc_sm_hold(det);
+	short int ret = tsc_sm_hold(det);
+	debug(3, "det:%d, ret:%d\n", det, ret);
+	return ret;
 }
 
 /* Actual occupancy state of the detector
@@ -239,8 +251,9 @@ short int d_belgg(short int det)
  */
 short int d_blg(short int det)
 {
-	debug(3, "==>\n");
-	return tsc_hold_state(det);
+	short int ret = tsc_hold_state(det);
+	debug(3, "det:%d, ret:%d\n", det, ret);
+	return ret;
 }
 
 /* the net time gap starts at the last falling slope
@@ -249,8 +262,9 @@ short int d_blg(short int det)
  */
 short int d_ztlkn(short int det)
 {
-	debug(3, "==>\n");
-	return tsc_det_net(det);
+	short int ret = tsc_det_net(det);
+	debug(3, "det:%d, ret:%d\n", det, ret);
+	return ret;
 }
 
 /* the gross time gap starts at the last rising slope
@@ -259,8 +273,9 @@ short int d_ztlkn(short int det)
  */
 short int d_zeitlb(short int det)
 {
-	debug(3, "==>\n");
-	return tsc_det_gross(det);
+	short int ret = tsc_det_gross(det);
+	debug(3, "det:%d, ret:%d\n", det, ret);
+	return ret;
 }
 
 /* Actual occupancy time of the detector
@@ -269,8 +284,9 @@ short int d_zeitlb(short int det)
  */
 short int d_blgzt(short int det)
 {
-	debug(3, "==>\n");
-	return tsc_hold_time(det);
+	short int ret = tsc_hold_time(det);
+	debug(3, "det:%d, ret:%d\n", det ,ret);
+	return ret;
 }
 
 /* Number of falling slopes counted by the controller, until clearing by VS-PLUS
@@ -281,11 +297,13 @@ short int d_blgzt(short int det)
  */
 short int d_impab(short int type, short int det)
 {
-	debug(3, "==>\n");
+	short int ret;
 	if(type == 1)
-		return tsc_sum_falling(det);
+		ret = tsc_sum_falling(det);
 	else
-		return tsc_clr_falling(det);
+		ret = tsc_clr_falling(det);
+	debug(3, "type:%d, det:%d, ret:%d\n", type, det, ret);
+	return ret;
 }
 
 /* FIXME: for future use, not implemented */
@@ -301,19 +319,18 @@ return 0;
  */
 short int min_rot(short int sg)
 {
-	debug(3, "==>\n");
-	return tsc_min_red(sg);
-//	int ret = tsc_min_red(sg);
-//	printf("%s(%d)==>sg:%d, ret:%d\n", __func__, __LINE__, sg, ret);
-//	return ret;
+	short int ret = tsc_min_red(sg);
+	debug(3, "sg:%d, ret:%d\n", sg, ret);
+	return ret;
 }
 
 /* preparation time
  */
 short int u_rot_gelb(short int sg)
 {
-	debug(3, "==>\n");
-	return tsc_prep(sg);
+	short int ret = tsc_prep(sg);
+	debug(3, "sg:%d, ret:%d\n", sg, ret);
+	return ret;
 }
 
 /* the minimum green time defined in the controller
@@ -322,8 +339,9 @@ short int u_rot_gelb(short int sg)
  */
 short int min_gruen(short int sg)
 {
-	debug(3, "==>\n");
-	return tsc_min_green(sg);;
+	short int ret = tsc_min_green(sg);;
+	debug(3, "sg:%d, ret:%d\n", sg, ret);
+	return ret;
 }
 
 /* the amber time expresses the transition time from open to closed.
@@ -335,8 +353,9 @@ short int min_gruen(short int sg)
  */
 short int u_gelb(short int sg)
 {
-	debug(3, "==>\n");
-	return tsc_amber(sg);
+	short int ret = tsc_amber(sg);
+	debug(3, "sg:%d, ret:%d\n", sg, ret);
+	return ret;
 }
 
 /* switch signal group to open
@@ -344,20 +363,18 @@ short int u_gelb(short int sg)
  */
 void SG_ein(short int sg)
 {
-	debug(3, "==>\n");
+	debug(3, "sg:%d\n", sg);
 	printf("%s(%d):sg=%d =================================\n", __func__, __LINE__, sg);
 	ts_sg_open(sg);
-	return;
 }
 
 /* switch signal group to closed
  */
 void SG_aus(short int sg)
 {
-	debug(3, "==>\n");
+	debug(3, "sg:%d\n", sg);
 	printf("%s(%d):sg=%d =================================\n", __func__, __LINE__, sg);
 	ts_sg_close(sg);
-	return;
 }
 
 /* command for switching a non-supervised output to "on"
@@ -366,7 +383,7 @@ void SG_aus(short int sg)
  */
 void Relais_ein(short int sg)
 {
-	debug(3, "==>\n");
+	debug(3, "sg:%d\n", sg);
 	tsc_digital_on(sg);
 }
 
@@ -376,7 +393,7 @@ void Relais_ein(short int sg)
  */
 void Relais_aus(short int sg)
 {
-	debug(3, "==>\n");
+	debug(3, "sg:%d\n", sg);
 	tsc_digital_off(sg);
 }
 
@@ -387,6 +404,7 @@ void Relais_aus(short int sg)
  */
 void Blinker_ein(short int sg)
 {
+	debug(3, "sg:%d\n", sg);
 	tsc_digital_blink_on(sg);
 }
 
@@ -397,7 +415,7 @@ void Blinker_ein(short int sg)
  */
 void Blinker_aus(short int sg)
 {
-	debug(3, "==>\n");
+	debug(3, "sg:%d\n", sg);
 	tsc_digital_blink_off(sg);
 }
 
@@ -409,10 +427,8 @@ void Blinker_aus(short int sg)
  */
 short int s_rot(short int sg)
 {
-	debug(3, "==>\n");
-	//return tsc_chk_red(sg);
-	int ret = tsc_chk_red(sg);
-	printf("%s(%d)======>sg:%d, ret:%d\n", __func__, __LINE__, sg, ret);
+	short int ret = tsc_chk_red(sg);
+	debug(3, "sg:%d, ret:%d\n", sg, ret);
 	return ret;
 }
 
@@ -422,8 +438,9 @@ short int s_rot(short int sg)
  */
 short int s_sr_aus(short int re)
 {
-	debug(3, "==>\n");
-	return !tsc_digital_state(re);
+	short int ret = !tsc_digital_state(re);
+	debug(3, "re:%d, ret:%d\n", re, ret);
+	return ret;
 }
 
 /* enables vsplus to check if a digital blinker output is switched off
@@ -432,8 +449,9 @@ short int s_sr_aus(short int re)
  */
 short int s_sb_aus(short int bli)
 {
-	debug(3, "==>\n");
-	return !tsc_digital_blink_state(bli);
+	short int ret = !tsc_digital_blink_state(bli);
+	debug(3, "bli:%d, ret:%d\n", bli, ret);
+	return ret;
 }
 
 /* This function enables VS-PLUS to check if a signal 
@@ -445,8 +463,9 @@ short int s_sb_aus(short int bli)
  */
 short int s_min_rot(short int sg)
 {
-	debug(3, "==>\n");
-	return tsc_chk_min_red(sg);
+	short int ret = tsc_chk_min_red(sg);
+	debug(3, "sg:%d, ret:%d\n", sg, ret);
+	return ret;
 }
 
 /* to check if a signal group shows amber or in gerenal if the 
@@ -454,32 +473,36 @@ short int s_min_rot(short int sg)
  */
 short int s_gelb(short int sg)
 {
-	debug(3, "==>\n");
-	return tsc_chk_amber(sg);
+	short int ret = tsc_chk_amber(sg);
+	debug(3, "sg:%d, ret:%d\n", sg, ret);
+	return ret;
 }
 
 /* to check if a signal group shows green
  */
 short int s_grun(short int sg)
 {
-	debug(3, "==>\n");
-	return tsc_chk_green(sg);
+	short int ret = tsc_chk_green(sg);
+	debug(3, "sg:%d, ret:%d\n", sg, ret);
+	return ret;
 }
 
 /* to check if a digital output is switched on
  */
 short int s_sr_ein(short int re)
 {
-	debug(3, "==>\n");
-	return tsc_digital_state(re);
+	short int ret = tsc_digital_state(re);
+	debug(3, "re:%d, ret:%d\n", re, ret);
+	return ret;
 }
 
 /* to check if a digital blinker output is switched on
  */
 short int s_sb_ein(short int bli)
 {
-	debug(3, "==>\n");
-	return tsc_digital_blink_state(bli);
+	short int ret = tsc_digital_blink_state(bli);
+	debug(3, "bli:%d, ret:%d\n", bli, ret);
+	return ret;
 }
 
 /* to check if a signal group show green and the elapsed green time
@@ -487,8 +510,9 @@ short int s_sb_ein(short int bli)
  */
 short int s_min_grun(short int sg)
 {
-	debug(3, "==>\n");
-	return tsc_chk_min_green(sg);
+	short int ret = tsc_chk_min_green(sg);
+	debug(3, "sg:%d, ret:%d\n", sg, ret);
+	return ret;
 }
 
 /* to check if a signal group show red-amber or in general if the signal
@@ -496,16 +520,18 @@ short int s_min_grun(short int sg)
  */
 short int s_vor(short int sg)
 {
-	debug(3, "==>\n");
-	return tsc_chk_prep(sg);
+	short int ret = tsc_chk_prep(sg);
+	debug(3, "sg:%d, ret:%d\n", sg, ret);
+	return ret;
 }
 
-/* indicates if the signal group is in fault mode
+/* indicates if the signal group is in fault blinking mode
  */
 short int s_stoeblink(short int sg)
 {
-	debug(3, "==>\n");
-	return tsc_sg_fault(sg);
+	short int ret = tsc_sg_fault(sg);
+	debug(3, "sg:%d, ret:%d\n", sg, ret);
+	return ret;
 }
 
 /* Tells how long the signal group is already red.
@@ -514,8 +540,9 @@ short int s_stoeblink(short int sg)
  */
 unsigned short s_t_rot(short int sg)
 {
-	debug(3, "==>\n");
-	return tsc_red_time(sg);
+	unsigned short int ret = tsc_red_time(sg);
+	debug(3, "sg:%d, ret:%d\n", sg, ret);
+	return ret;
 }
 
 /* Tells how long the signal group is already amber(transition
@@ -525,8 +552,9 @@ unsigned short s_t_rot(short int sg)
  */
 unsigned short int s_t_gelb(short int sg)
 {
-	debug(3, "==>\n");
-	return tsc_amber_time(sg);
+	unsigned short int ret = tsc_amber_time(sg);
+	debug(3, "sg:%d, ret:%d\n", sg, ret);
+	return ret;
 }
 
 /* tells how long the signal group is already in minimum read state.
@@ -535,8 +563,9 @@ unsigned short int s_t_gelb(short int sg)
  */
 unsigned short int s_t_min_rot(short int sg)
 {
-	debug(3, "==>\n");
-	return tsc_min_red_time(sg);
+	unsigned short int ret = tsc_min_red_time(sg);
+	debug(3, "sg:%d, ret:%d\n", sg, ret);
+	return ret;
 }
 
 /* tell how long the signal group is already green
@@ -545,8 +574,9 @@ unsigned short int s_t_min_rot(short int sg)
  */
 unsigned short int s_t_grun(short int sg)
 {
-	debug(3, "==>\n");
-	return tsc_green_time(sg);
+	unsigned short int ret = tsc_green_time(sg);
+	debug(3, "sg:%d, ret:%d\n", sg, ret);
+	return ret;
 }
 
 /* tell how long the signal group is already red-amber (transition from
@@ -554,8 +584,9 @@ unsigned short int s_t_grun(short int sg)
  */
 unsigned short int s_t_vor(short int sg)
 {
-	debug(3, "==>\n");
-	return tsc_prep_time(sg);
+	unsigned short int ret = tsc_prep_time(sg);
+	debug(3, "sg:%d, ret:%d\n", sg, ret);
+	return ret;
 }
 
 /* tell how long the signal group is already in miminum green state.
@@ -563,18 +594,20 @@ unsigned short int s_t_vor(short int sg)
  */
 unsigned short int s_t_min_grun(short int sg)
 {
-	debug(3, "==>\n");
-	return tsc_min_green_time(sg);
+	unsigned short int ret = tsc_min_green_time(sg);
+	debug(3, "sg:%d, ret:%d\n", sg, ret);
+	return ret;
 }
 
-/* enable for vsplus
+/* indicates if a signal group is enabled for vsplus
  * return: 1 = sg is enabled; 0 = not enabled
  * sg:
  */
 unsigned short int s_HW_VspFreigegeben(short int sg)
 {
-	debug(3, "==>\n");
-	return tsc_sg_enabled(sg);
+	unsigned short int ret = tsc_sg_enabled(sg);
+	debug(3, "sg:%d, ret:%d\n", sg, ret);
+	return ret;
 }
 
 /* a controller intergreen value
@@ -584,23 +617,20 @@ unsigned short int s_HW_VspFreigegeben(short int sg)
  */
 short s_zwi_zeit(short sgR, short sgE)
 {
-	debug(3, "==>\n");
-	return tsc_inter_green(sgR, sgE);
+	short int ret = tsc_inter_green(sgR, sgE);
+	debug(3, "sgR:%d, sgE:%d, ret:%d\n", sgR, sgE, ret);
+	return ret;
 //return 32767;      /* Nicht Feindlich                */
 }
 
 void Meldung(short int degree, short int nr, short int par1, short int par2, short int par3, short int par4)
 {
-	debug(3, "==>\n");
 	debug(3, "degree:%d, nr:%d, par1-4:%d,%d,%d,%d\n", degree, nr, par1, par2, par3, par4);
-	return ;
 }
 
 void  MeldungNET(short int degree, unsigned char nr, unsigned short Anr, unsigned char par1, unsigned char par2, unsigned char par3, unsigned char par4, unsigned char par5)
 {
-	debug(3, "==>\n");
 	debug(3, "degree:%d, nr:%d, Anr:%d, par1-5:%d,%d,%d,%d\n", degree, nr, Anr, par1, par2, par3, par4, par5);
-	return ;
 }
 
 /* VS-PLUS tells the controller the number of the traffic 
@@ -611,7 +641,7 @@ void  MeldungNET(short int degree, unsigned char nr, unsigned short Anr, unsigne
  */
 void U_Kontrolle(short int vs, short int zeit)
 {
-	debug(3, "==>\n");
+	debug(3, "vs:%d, zeit:%d\n", vs, zeit);
 	tsc_stream_waiting(vs, zeit);
 }
 
@@ -621,19 +651,21 @@ void U_Kontrolle(short int vs, short int zeit)
  */
 short TelegrammVomGeraet(void* oev_tele_poi)
 {
-	debug(3, "==>\n");
-	return tsc_read_pt(oev_tele_poi);
+	short int ret = tsc_read_pt(oev_tele_poi);
+	debug(3, "ptr:%p, ret:%d\n", oev_tele_poi, ret);
+	return ret;
 }
 
-/* returns 0 as long as a fixed time signal  plan
+/* FIXME:returns 0 as long as a fixed time signal  plan
  * is being processed. When off or during switch on
  * or switch off, this function returns 1
  * return value:  1 = Off or switching on or off; 0 = signal program active
  */
 unsigned short int s_SteuerungNichtAktiv(void)
 {
-	debug(3, "==>\n");
-	return 0;//FIXME:tsc_ctl_active();
+	unsigned short int ret = tsc_ctl_active();
+	debug(3, "ret:%d\n", ret);
+	return ret;
 }
 
 /* requests memory from the controller in order to 
@@ -645,8 +677,9 @@ unsigned short int s_SteuerungNichtAktiv(void)
  */
 void* Allozieren_VSP_Speicher(int _sizeof, int id)
 {
-	debug(3, "==>\n");
-	return tsc_alloc_mem(_sizeof, id) ;
+	void *ptr = tsc_alloc_mem(_sizeof, id) ;
+	debug(3, "_sizeof:%d, id:%d, ret:%p\n", _sizeof, id, ptr);
+	return ptr;
 }
 
 /* returns the pointer to the memory area
@@ -655,8 +688,9 @@ void* Allozieren_VSP_Speicher(int _sizeof, int id)
  */
 void* Gib_VSP_Zeiger(int id)
 {
-	debug(3, "==>\n");
-	return tsc_get_mem(id);
+	void *ptr = tsc_get_mem(id);
+	debug(3, "id:%d, ret:%p\n", id, ptr);
+	return ptr;
 }
 
 /* frees memory that has been requested from the controller
@@ -665,9 +699,8 @@ void* Gib_VSP_Zeiger(int id)
  */
 void Freigeben_VSP_Speicher(int id)
 {
-	debug(3, "==>\n");
+	debug(3, "id:%d\n", id);
 	tsc_free_mem(id);
-	return;
 }
 
 /* opens the VCB file that has been sent to the controller
@@ -676,8 +709,9 @@ void Freigeben_VSP_Speicher(int id)
  */
 int Oeffnen_VSP_Parameter(void)
 {
-	debug(3, "==>\n");
-	return tsc_open_vcb();
+	int ret = tsc_open_vcb();
+	debug(3, "ret:%d\n", ret);
+	return ret;
 }
 
 #include <string.h>
@@ -689,16 +723,16 @@ int Oeffnen_VSP_Parameter(void)
  */
 int Read_VSP_Parameter(char* data, int _sizeof)
 {
-	debug(3, "==>\n");
 	int ret = tsc_read_vcb(data, _sizeof);
-	//debug(3, "size=%d,ret=%d\n", _sizeof, ret);
-//	int i;
-//	for(i = 0; i < ret; i++){
-//		printf("%x ", *(data+i)&0xff);
-//	}
-//	printf("\n");
+	debug(3, "size=%d, ret=%d\n", _sizeof, ret);
+#ifdef DEBUG
+	int i;
+	for(i = 0; i < ret; i++){
+		printf("%#x ", *(data+i)&0xff);
+	}
+	printf("\n");
+#endif
 	return ret;
-	//return tsc_read_vcb(data, _sizeof);
 }
 
 /* closes the supply file
@@ -708,7 +742,6 @@ void Schliessen_VSP_Parameter(void)
 {
 	debug(3, "==>\n");
 	tsc_close_vcb();
-	return;
 }
 
 /* open the backup supply file that is stored on the controller
@@ -716,16 +749,24 @@ void Schliessen_VSP_Parameter(void)
  */
 int Oeffnen_Sichern_Parameter(void)
 {
-	debug(3, "==>\n");
-	return tsc_open_back();
+	int ret = tsc_open_back();
+	debug(3, "ret:%d\n", ret);
+	return ret;
 }
 
 /* write backup supply file
  */
 void Schreiben_Sichern_Parameter(char* data, int _sizeof)
 {
-	debug(3, "==>\n");
 	tsc_write_back(data, _sizeof);
+	debug(3, "size=%d\n", _sizeof);
+#ifdef DEBUG
+	int i;
+	for(i = 0; i < _sizeof; i++){
+		printf("%x ", *(data+i)&0xff);
+	}
+	printf("\n");
+#endif
 }
 
 /* close the backup supply file
@@ -736,6 +777,7 @@ void Schliessen_Sichern_Parameter(void)
 	tsc_close_back();
 }
 
+//FIXME
 int Oeffnen_VSP_Befehle(void)
 {
 printf("%s(%d)\n", __func__, __LINE__);
@@ -757,13 +799,13 @@ return ;
 int OePNV_Ein_Aus(void)
 {
 printf("%s(%d)\n", __func__, __LINE__);
-return 0;
+return 1;
 }
 
 int IV_Ein_Aus(void)
 {
 printf("%s(%d)\n", __func__, __LINE__);
-return 0;
+return 1;
 }
 
 /* Function to check if a detector with a certain channel number is defined in the controller
@@ -772,8 +814,9 @@ return 0;
  */
 int Det_Aktiv(int KanalNummer)
 {
-	debug(3, "==>\n");
-	return tsc_det_exist(KanalNummer);
+	int ret = tsc_det_exist(KanalNummer);
+	debug(3, "KanalNummer:%d, ret:%d\n", KanalNummer, ret);
+	return ret;
 }
 
 /* Function to check if a signal group with a certain channel number is defined in the controller
@@ -782,8 +825,9 @@ int Det_Aktiv(int KanalNummer)
  */
 int Sg_Aktiv(int KanalNummer)
 {
-	debug(3, "==>\n");
-	return tsc_sg_exist(KanalNummer);
+	int ret = tsc_sg_exist(KanalNummer);
+	debug(3, "KanalNummer:%d, ret:%d\n", KanalNummer, ret);
+	return ret;
 }
 
 /* Read current time
@@ -812,7 +856,7 @@ int AktuellesDatum(int* Jahr, int* Monat, int* Tag, int* Wochentag)
 	return tsc_get_date(Jahr, Monat, Tag, Wochentag);
 }
 
-/* Returns the OCIT Outstations node identification
+/* FIXME:Returns the OCIT Outstations node identification
  * return value:  1 = id is set; 0 = not set
  *  ZNr:   area number
  * FNr:  controller number
@@ -820,22 +864,22 @@ int AktuellesDatum(int* Jahr, int* Monat, int* Tag, int* Wochentag)
  */
 int Get_OCITOutstationId(int* ZNr, int* FNr, int* Realknoten)
 {
-	debug(3, "==>\n");
-	*ZNr = 0; *FNr = 0; *Realknoten = 0;
-	debug(3, "ZNr:%d, FNr:%d, Realknoten:%d\n", *ZNr, *FNr, *Realknoten);
-	return 1;
+	int ret = 1;
+	*ZNr = 1; *FNr = 339; *Realknoten = 1;
+	debug(3, "ZNr:%d, FNr:%d, Realknoten:%d, ret:%d\n", *ZNr, *FNr, *Realknoten, ret);
+	return ret;
 }
 
 int Wunsch_VSPLUS(int Wunsch, int Teiknoten)
 {
-printf("%s(%d)\n", __func__, __LINE__);
-return 0;
+printf("%s(%d):Wunsch:%d, Teiknoten:%d\n", __func__, __LINE__, Wunsch, Teiknoten);
+return 1;
 }
 
 int Neue_Befehle(void)
 {
 printf("%s(%d)\n", __func__, __LINE__);
-   return 0;
+return 0;
 }
 
 void ZSondereingriffvn(unsigned char* Sondereingriff, unsigned long* EndZeitpunkt, unsigned long* VorgangsNummer)
