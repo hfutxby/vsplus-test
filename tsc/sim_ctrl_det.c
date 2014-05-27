@@ -84,7 +84,8 @@ int thr_det(void* arg)
 	int us;
 	while(!g_exit){
 		gettimeofday(&tv_start, NULL);//较精确的将循环限制在100ms内
-		for(i = 0; i < DETMAX; i++){
+		//for(i = 0; i < DETMAX; i++){
+		for(i = 0; i < 16; i++){
 			if(g_det[i].fault){//处于fault状态的检测器不产生信号
 				us_sleep(10);
 				continue;
@@ -304,11 +305,11 @@ int main(void)
 {
 	open_det();
 	pthread_t g_tid_det;
-	pthread_create(&g_tid_det, NULL, thr_det, NULL);
+//	pthread_create(&g_tid_det, NULL, thr_det, NULL);
 
 //	set_fault();
-	set_rising();
-//	set_a_rising();
+//	set_rising();
+	set_a_rising();
 //	while(1){
 //		int tmp;
 //		scanf("%d", &tmp);

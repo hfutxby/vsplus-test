@@ -59,17 +59,28 @@ int thr_fix_run(void* arg)
 
 int thr_vsplus(void* arg)
 {
-	//VS_PARA* vs_para = (VS_PARA*)arg;
+	struct timeval tv1, tv2;
+	int ret;
 	while(!g_exit){
 		if(g_vsplus_ret == -1){
 			printf("===VSPLUS Call===\n");
 			//us_sleep(100000*g_sleep);
 			g_vs_para.wb_ready[0] = 0;
-			printf("1:g_vs_para.wb_ready[0]:%d\n", g_vs_para.wb_ready[0]);
-			printf("1:g_vs_para.vsp_soll[0]:%d\n", g_vs_para.vsp_soll[0]);
+			//printf("1:g_vs_para.wb_ready[0]:%d\n", g_vs_para.wb_ready[0]);
+			//printf("1:g_vs_para.vsp_soll[0]:%d\n", g_vs_para.vsp_soll[0]);
+			gettimeofday(&tv1, NULL);
 			g_vsplus_ret = VSPLUS(g_vs_para.vsp_soll, g_vs_para.sg_mode, g_vs_para.wb_ready);
-			printf("ret:%d\n", g_vsplus_ret);
-			printf("2:g_vs_para.wb_ready[0]:%d\n", g_vs_para.wb_ready[0]);
+			ret = VSPLUS(g_vs_para.vsp_soll, g_vs_para.sg_mode, g_vs_para.wb_ready);
+			gettimeofday(&tv2, NULL);
+			printf("time use: %ldus\n", (tv2.tv_sec - tv1.tv_sec)*1000000 + (tv2.tv_usec - tv1.tv_usec));
+			if(ret == 1){
+				printf("%s(%d):call VSPLUS(NEU_EIN) success, ret=%d\n", __func__, __LINE__, ret);
+			}
+			else{
+				printf("%s(%d):call VSPLUS(NEU_EIN) fail, ret=%d\n", __func__, __LINE__, ret);
+			}
+			g_vsplus_ret = ret;
+			//printf("2:g_vs_para.wb_ready[0]:%d\n", g_vs_para.wb_ready[0]);
 		}
 	}
 }
@@ -79,6 +90,7 @@ int main(void)
 	int ret = 0;
 	int i;
 	tsc_init(); //控制器初始化
+	struct timeval tv1, tv2;
 	//sleep(2);
 
 #if 1
@@ -137,7 +149,11 @@ int main(void)
 	for(i = 0; i < GERAET_TEILKNOTEN_MAX; i++)
 		g_vs_para.wb_ready[i] = 0;
 	printf("%s(%d):before call VSPLUS(NEU_INI)\n", __func__, __LINE__);
-	if((ret = VSPLUS(g_vs_para.vsp_soll, g_vs_para.sg_mode, g_vs_para.wb_ready)) >= 0){
+	gettimeofday(&tv1, NULL);
+	ret = VSPLUS(g_vs_para.vsp_soll, g_vs_para.sg_mode, g_vs_para.wb_ready);
+	gettimeofday(&tv2, NULL);
+	printf("time use: %ldus\n", (tv2.tv_sec - tv1.tv_sec)*1000000 + (tv2.tv_usec - tv1.tv_usec));
+	if(ret  >= 0){
 		printf("%s(%d):call VSPLUS(NEU_INI) success, ret=%d\n", __func__, __LINE__, ret);
 	}
 	else{
@@ -155,7 +171,11 @@ int main(void)
 	for(i = 0; i < GERAET_TEILKNOTEN_MAX; i++)
 		g_vs_para.wb_ready[i] = 0;
 	printf("%s(%d):before call VSPLUS(AUS)\n", __func__, __LINE__);
-	if((ret = VSPLUS(g_vs_para.vsp_soll, g_vs_para.sg_mode, g_vs_para.wb_ready)) >= 0){
+	gettimeofday(&tv1, NULL);
+	ret = VSPLUS(g_vs_para.vsp_soll, g_vs_para.sg_mode, g_vs_para.wb_ready);
+	gettimeofday(&tv2, NULL);
+	printf("time use: %ldus\n", (tv2.tv_sec - tv1.tv_sec)*1000000 + (tv2.tv_usec - tv1.tv_usec));
+	if(ret >= 0){
 		printf("%s(%d):call VSPLUS(NEU_AUS) success, ret=%d\n", __func__, __LINE__, ret);
 	}
 	else{
@@ -194,19 +214,18 @@ int main(void)
 	for(i = 0; i < GERAET_TEILKNOTEN_MAX; i++)
 		g_vs_para.wb_ready[i] = 0;
 	printf("%s(%d):before call VSPLUS(NEU)\n", __func__, __LINE__);
-	printf("1:g_vs_para.wb_ready[0]:%d\n", g_vs_para.wb_ready[0]);
-	g_vsplus_ret = VSPLUS(g_vs_para.vsp_soll, g_vs_para.sg_mode, g_vs_para.wb_ready);
-	printf("2:g_vs_para.wb_ready[0]:%d\n", g_vs_para.wb_ready[0]);
-	//us_sleep(5*1000000);//1s
-//	while(g_vsplus_ret != VSP_NEU){
-//		sleep(1);
-//	}
-	if(g_vsplus_ret >= 0){
-		printf("%s(%d):call VSPLUS(NEU) success, ret=%d\n", __func__, __LINE__, g_vsplus_ret);
+	//printf("1:g_vs_para.wb_ready[0]:%d\n", g_vs_para.wb_ready[0]);
+	gettimeofday(&tv1, NULL);
+	ret = VSPLUS(g_vs_para.vsp_soll, g_vs_para.sg_mode, g_vs_para.wb_ready);
+	gettimeofday(&tv2, NULL);
+	printf("time use: %ldus\n", (tv2.tv_sec - tv1.tv_sec)*1000000 + (tv2.tv_usec - tv1.tv_usec));
+	//printf("2:g_vs_para.wb_ready[0]:%d\n", g_vs_para.wb_ready[0]);
+	if(ret >= 0){
+		printf("%s(%d):call VSPLUS(NEU) success, ret=%d\n", __func__, __LINE__, ret);
 	}
 	else{
-		printf("%s(%d):call VSPLUS(NEU) fail, ret=%d\n", __func__, __LINE__, g_vsplus_ret);
-		//return -1;
+		printf("%s(%d):call VSPLUS(NEU) fail, ret=%d\n", __func__, __LINE__, ret);
+		return -1;
 	}
 #endif
 

@@ -21,6 +21,7 @@ FILE* g_vcb_back = NULL; //备份参数vcb文件
 #define VCB_FILE "para.vcb" //配置参数vcb文件
 #define VCB_BACK "para_bak.vcb" //备份参数vcb文件
 #define _SIM_TEST_ //使用模拟数据进行测试
+//#define _TEST_SG_ //使用串口指令进行信号切换
 
 static int g_exit = 0;//退出线程标志
 
@@ -85,7 +86,7 @@ void* tsc_get_mem(int id)
 			debug(2, "area %d not allocated\n", id);
 			return NULL;
 		}
-		debug(3, "area %d:\"%s\"\n", id, (char*)g_mem[id-1]);
+		//debug(3, "area %d:\"%s\"\n", id, (char*)g_mem[id-1]);
 		return g_mem[id-1];
 	}
 }
@@ -561,7 +562,6 @@ void close_sg(void)
 	g_fd_sg = 0;
 }
 
-#define _TEST_SG_ //没有信号切换指令发出，自己切换
 int thr_sg(void* arg)
 {
 	int i;
@@ -576,6 +576,31 @@ int thr_sg(void* arg)
 		for(i = 0; i < SGMAX; i++){
 			g_sg[i].time++;
 			switch(g_sg[i].stat){
+				case 0://关灯状态
+					if(g_sg[i].ext == 1){//open
+						g_sg[i].ext = 0;
+						g_sg[i].stat = 4;
+						g_sg[i].time = 0;
+#ifdef _TEST_SG_
+						buf[1] = (i/4) << 4 | (i%4);
+						buf[2] = 0x02;//黄
+						write(g_fd_serial, buf, sizeof(buf));
+#endif
+					}
+					else if(g_sg[i].ext == 2){//close
+						g_sg[i].ext = 0;
+						g_sg[i].stat = 1;
+						g_sg[i].time = 0;
+#ifdef _TEST_SG_
+						buf[1] = (i/4) << 4 | (i%4);
+						buf[2] = 0x02;//黄
+						write(g_fd_serial, buf, sizeof(buf));
+#endif
+					}
+					else
+						g_sg[i].time = 0;
+					break;
+
 				case 1://1-amber;2-min_red;3-ex_red;4-prep;5-min_green;6-ex_green
 					if(g_sg[i].time > g_sg[i].amber){
 						g_sg[i].stat++;
@@ -652,14 +677,18 @@ int thr_sg(void* arg)
 
 void init_sg(void)
 {
+	debug(3, "==>\n");
 	open_sg();
 	pthread_create(&g_tid_sg, NULL, thr_sg, NULL);
+	debug(3, "<==\n");
 }
 
 void deinit_sg(void)
 {
+	debug(3, "==>\n");
 	pthread_join(g_tid_sg, NULL);
 	close_sg();
+	debug(3, "<==\n");
 }
 /* FIXME
  * 测试指定的signal group是否存在
@@ -688,18 +717,19 @@ int tsc_sg_fault(int sg)
  */
 int tsc_sg_enabled(int sg)
 {
-	return 1;
-//	if(sg<15)
-//		return 1;
-//	else
-//		return 0;
+//	return 1;
+	if((sg >=1 ) && (sg <= 15))
+		return 1;
+	else
+		return 0;
 }
 
 /* FIXME
  * 打开信号灯，红->绿 */
-int ts_sg_open(int sg)
+void ts_sg_open(int sg)
 {
 	g_sg[sg].ext = 1;
+#ifdef _TEST_SG_
 	char buf[4];
 	buf[0] = 0x96;
 	buf[1] = (sg/4)<<4 | (sg%4);
@@ -709,15 +739,15 @@ int ts_sg_open(int sg)
 	sleep(g_sg[sg].prep);
 	buf[2] = 0x04;//绿
 	write(g_fd_serial, buf, sizeof(buf));
-
-	return;
+#endif
 }
 
 /* FIXME
  * 关闭信号灯，绿->红 */
-int ts_sg_close(int sg)
+void ts_sg_close(int sg)
 {
 	g_sg[sg].ext = 2;
+#ifdef _TEST_SG_
 	char buf[4];
 	buf[0] = 0x96;
 	buf[1] = (sg/4)<<4 | (sg%4);
@@ -727,8 +757,7 @@ int ts_sg_close(int sg)
 	sleep(g_sg[sg].amber);
 	buf[2] = 0x01;//红
 	write(g_fd_serial, buf, sizeof(buf));
-
-return;
+#endif
 }
 
 /***** 信号灯状态检查 *****/

@@ -68,6 +68,9 @@ void print_signal(int stat, int time)
 	case 4:
 		printf("\033[40;33m%4d:4 \033[0m", time);
 		break;
+	case 0:
+		printf("\033[0m%4d:0", time);
+		break;	
 	default:
 		break;
 	}
@@ -81,7 +84,7 @@ int main(void)
 	while(1){
 		//for(i = 0; i < SGMAX; i++){
 		for(i = 0; i <= 15; i++){
-			printf("%d", i);
+			printf(" %d ", i);
 			print_signal(g_sg[i].stat, g_sg[i].time);
 		}
 		printf("\033[0m\r");

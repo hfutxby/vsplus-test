@@ -724,8 +724,8 @@ int Oeffnen_VSP_Parameter(void)
 int Read_VSP_Parameter(char* data, int _sizeof)
 {
 	int ret = tsc_read_vcb(data, _sizeof);
-	debug(3, "size=%d, ret=%d\n", _sizeof, ret);
-#ifdef DEBUG
+	//debug(3, "size=%d, ret=%d\n", _sizeof, ret);
+#if 0
 	int i;
 	for(i = 0; i < ret; i++){
 		printf("%#x ", *(data+i)&0xff);
@@ -759,8 +759,8 @@ int Oeffnen_Sichern_Parameter(void)
 void Schreiben_Sichern_Parameter(char* data, int _sizeof)
 {
 	tsc_write_back(data, _sizeof);
-	debug(3, "size=%d\n", _sizeof);
-#ifdef DEBUG
+	//debug(3, "size=%d\n", _sizeof);
+#if 0
 	int i;
 	for(i = 0; i < _sizeof; i++){
 		printf("%x ", *(data+i)&0xff);
@@ -798,14 +798,19 @@ return ;
 
 int OePNV_Ein_Aus(void)
 {
-printf("%s(%d)\n", __func__, __LINE__);
-return 1;
+	//int ret = 0;//PT not set
+	int ret = 1;//PT off
+	debug(3, "ret:%d\n", ret);
+	return ret;
 }
 
+//FIXME:
 int IV_Ein_Aus(void)
 {
-printf("%s(%d)\n", __func__, __LINE__);
-return 1;
+	//int ret = 0;//IT not set
+	int ret = 1;//IT off
+	debug(3, "ret:%d\n", ret);
+	return ret;
 }
 
 /* Function to check if a detector with a certain channel number is defined in the controller
@@ -838,8 +843,9 @@ int Sg_Aktiv(int KanalNummer)
  */
 int AktuelleZeit(int* Stunde, int* Minute, int* Sekunde)
 {
-	debug(3, "==>\n");
-	return tsc_get_time(Stunde, Minute, Sekunde);
+	int ret = tsc_get_time(Stunde, Minute, Sekunde);
+	debug(3, "Stunde:%d, Minute:%d, Sekunde:%d, ret:%d\n", *Stunde, *Minute, *Sekunde, ret);
+	return ret;
 }
 
 /* Read current date
@@ -852,8 +858,9 @@ int AktuelleZeit(int* Stunde, int* Minute, int* Sekunde)
  */
 int AktuellesDatum(int* Jahr, int* Monat, int* Tag, int* Wochentag)
 {
-	debug(3, "==>\n");
-	return tsc_get_date(Jahr, Monat, Tag, Wochentag);
+	int ret = tsc_get_date(Jahr, Monat, Tag, Wochentag);
+	debug(3, "Jahr:%d, Monat:%d, Tag:%d, Wochentag:%d, ret:%d\n", *Jahr, *Monat, *Tag, *Wochentag, ret);
+	return ret;
 }
 
 /* FIXME:Returns the OCIT Outstations node identification
@@ -872,24 +879,29 @@ int Get_OCITOutstationId(int* ZNr, int* FNr, int* Realknoten)
 
 int Wunsch_VSPLUS(int Wunsch, int Teiknoten)
 {
-printf("%s(%d):Wunsch:%d, Teiknoten:%d\n", __func__, __LINE__, Wunsch, Teiknoten);
-return 1;
+	int ret = 0;//FIXME
+	debug(3, "Wunsch:%d, Teiknoten:%d, ret:%d\n", Wunsch, Teiknoten, ret);
+	return ret;
 }
 
 int Neue_Befehle(void)
 {
-printf("%s(%d)\n", __func__, __LINE__);
-return 0;
+	int ret = 0;
+	debug(3, "ret:%d\n", ret);
+	return ret;
 }
 
 void ZSondereingriffvn(unsigned char* Sondereingriff, unsigned long* EndZeitpunkt, unsigned long* VorgangsNummer)
 {
-printf("%s(%d)\n", __func__, __LINE__);
-return;
+	*Sondereingriff = 0;
+	*EndZeitpunkt = 0;
+	*VorgangsNummer = 0;
+	printf("%s(%d):Sondereingriff:%s, EndZeitpunkt:%ld, VorgangsNummer:%ld\n", __func__, __LINE__, Sondereingriff, *EndZeitpunkt, *VorgangsNummer);
 }
 
 unsigned long UTCZeitstempel(void)
 {
-printf("%s(%d)\n", __func__, __LINE__);
-return 0;
+	int ret = 32767;
+	debug(3, "ret:%d\n", ret);
+	return ret;
 }
