@@ -195,7 +195,7 @@ int set_rising(void)
 	}
 }
 
-int set_a_rising(void)
+int set_a_rising_0(void)
 {
 	int s;
 	int i;
@@ -211,10 +211,94 @@ int set_a_rising(void)
 			g_det[s].state = 5;
 			i = s;
 			printf("ID:%3d, state:%3d, occ1:%3d, occ2:%3d, sum_rising:%3d, sum_falling:%3d, net:%3d, gross:%3d\n", i, g_det[i].state, g_det[i].occ1, g_det[i].occ2, g_det[i].sum_rising, g_det[i].sum_falling, g_det[i].net, g_det[i].gross);
-			us_sleep(5*100000);
+			us_sleep(5*100*1000);
 			g_det[s].sum_falling++;
 			g_det[s].state = 100;
 		}
+	}
+}
+
+//给脉冲型检测器一个触发信号
+int set_a_rising(int det)
+{
+	printf("%s: ID:%d\n", __func__, det);
+	int i;
+	int t = 45;//退出时间间隔
+
+	g_det[det].fault = 0;
+	g_det[det].sum_rising++;
+	g_det[det].state = 5;
+	printf("generate a rising slope to trigger\n");
+	i = det;
+	//printf("ID:%3d, state:%3d, occ1:%3d, occ2:%3d, sum_rising:%3d, sum_falling:%3d, net:%3d, gross:%3d\n", i, g_det[i].state, g_det[i].occ1, g_det[i].occ2, g_det[i].sum_rising, g_det[i].sum_falling, g_det[i].net, g_det[i].gross);
+	us_sleep(1000);
+	printf("generate a cancel condition\n");
+	us_sleep(t*100*1000);
+	g_det[det].sum_falling++;
+	g_det[det].net = 45;
+	g_det[det].state = 100;
+	us_sleep(1000);
+	g_det[det].net = 0;//reset
+	printf("\n");
+}
+
+//给占用率检测器一个触发信号
+int set_a_hold(int det)
+{
+	printf("%s: ID:%d\n", __func__, det);
+	int i;
+	int t = 25;//持续占有触发
+
+	g_det[det].fault = 0;
+	g_det[det].sum_rising++;
+	g_det[det].state = 5;
+	g_det[det].hold = t;
+	printf("generate a hold to trigger\n");
+	i = det;
+	//printf("ID:%3d, state:%3d, occ1:%3d, occ2:%3d, sum_rising:%3d, sum_falling:%3d, net:%3d, gross:%3d\n", i, g_det[i].state, g_det[i].occ1, g_det[i].occ2, g_det[i].sum_rising, g_det[i].sum_falling, g_det[i].net, g_det[i].gross);
+	us_sleep(t*100*1000);
+	printf("generate a cancel conditon\n");
+	g_det[det].sum_falling++;
+	g_det[det].state = 100;
+	g_det[det].hold = 0;
+	printf("\n");
+}
+
+int trigger_det(void)
+{
+	//检测器类型，
+	//0：不存在
+	//1：脉冲触发，net gap大于4s退出
+	//2：持续占用2s触发，不占用即退出
+	int type[46] = {0,
+		1,2,1,1,//D1
+			2,2,1,//D2
+			2,2,1,1,//D3
+			1,2,1,1,//D4
+			2,2,1,//D5
+			2,2,1,1,//D6
+			1,1,1,1,//F7-F9
+			1,1,1,1,1,1,//FL11-FL12
+			1,1,1,1,1,1,//DR1-6
+			1,2,1,//D13
+			1,2,1,//D14
+			1};//F15
+
+	int det;
+	while(1){
+		printf("input det num: ");
+		scanf("%d", &det);
+		if((det < 1) && ( det > 45)){
+			printf("wrong det num\n");
+			continue;
+		}
+
+		if(type[det] == 1)
+			set_a_rising(det);
+		else if(type[det] == 2)
+			set_a_hold(det);
+		else
+			printf("error! not defined\n");
 	}
 }
 
@@ -304,12 +388,12 @@ int set_open(void)
 int main(void)
 {
 	open_det();
-	pthread_t g_tid_det;
+//	pthread_t g_tid_det;
 //	pthread_create(&g_tid_det, NULL, thr_det, NULL);
 
 //	set_fault();
-//	set_rising();
-	set_a_rising();
+//	set_a_rising_0();
+	trigger_det();
 //	while(1){
 //		int tmp;
 //		scanf("%d", &tmp);

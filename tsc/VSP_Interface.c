@@ -120,7 +120,7 @@
 short int timer(short int funktion, short int timer)
 {
 	short int ret = tsc_timer(funktion, timer, 0);
-	//debug(3, "funktion:%d, timer:%d, ret:%d\n", funktion, timer, ret);
+	debug(3, "funktion:%d, timer:%d, ret:%d\n", funktion, timer, ret);
 	return ret;
 }
 
@@ -724,8 +724,8 @@ int Oeffnen_VSP_Parameter(void)
 int Read_VSP_Parameter(char* data, int _sizeof)
 {
 	int ret = tsc_read_vcb(data, _sizeof);
-	//debug(3, "size=%d, ret=%d\n", _sizeof, ret);
 #if 0
+	debug(3, "size=%d, ret=%d\n", _sizeof, ret);
 	int i;
 	for(i = 0; i < ret; i++){
 		printf("%#x ", *(data+i)&0xff);
@@ -759,8 +759,8 @@ int Oeffnen_Sichern_Parameter(void)
 void Schreiben_Sichern_Parameter(char* data, int _sizeof)
 {
 	tsc_write_back(data, _sizeof);
-	//debug(3, "size=%d\n", _sizeof);
 #if 0
+	debug(3, "size=%d\n", _sizeof);
 	int i;
 	for(i = 0; i < _sizeof; i++){
 		printf("%x ", *(data+i)&0xff);
@@ -896,7 +896,7 @@ void ZSondereingriffvn(unsigned char* Sondereingriff, unsigned long* EndZeitpunk
 	*Sondereingriff = 0;
 	*EndZeitpunkt = 0;
 	*VorgangsNummer = 0;
-	printf("%s(%d):Sondereingriff:%s, EndZeitpunkt:%ld, VorgangsNummer:%ld\n", __func__, __LINE__, Sondereingriff, *EndZeitpunkt, *VorgangsNummer);
+	debug(3,"Sondereingriff:%s, EndZeitpunkt:%ld, VorgangsNummer:%ld\n", Sondereingriff, *EndZeitpunkt, *VorgangsNummer);
 }
 
 unsigned long UTCZeitstempel(void)
