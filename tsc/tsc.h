@@ -56,6 +56,11 @@ typedef struct{
     int ext;//b00状态未变，b01进行红绿切换，b10进行绿红切换
 }sg_node;
 
+#include "if626max.h"
+typedef struct{
+	int det_sg[DETMAX];//检测器和信号灯对应关系
+}xml_para;
+
 typedef struct{
 	int MP;// (call point);
 	int Linie;// (line);
@@ -66,5 +71,7 @@ typedef struct{
 	int RichtungVonHand;// (direction by hand);
 	int FahrplanAbweichnung;// (difference to schedule);
 }PTMSG;
+
+//xml_para* g_xml_para = NULL;
 
 #endif /*__TSC_H*/

@@ -1,25 +1,30 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "if626bas.h"
 #include "if626max.h"
 #include "vsp626ste.h"
 #include "VSP_Interface.h"
 #include "tsc.h"
 
-static int g_exit = 0;
+//static int g_exit = 0;
 int g_sleep = 0;//测试用，延长vsplus运行时间，使进入fix mode
 pthread_t g_tid_sleep;
 int g_fix_mode = 0;//1=初次进入fix，2=已进入fix，3=初次离开fix进入vsplus，4=已进入vsplus
 pthread_t g_tid_fix;
-volatile int g_vsplus_ret = -1;
-pthread_t g_tid_vsplus;
+
 
 typedef struct{
 	VSPSollTyp vsp_soll[GERAET_TEILKNOTEN_MAX];// = {VSP_ND};
 	WBTyp sg_mode[SGMAX];// = {0};
 	WBReadyTyp wb_ready[GERAET_TEILKNOTEN_MAX];// = {0};
 }VS_PARA;
-VS_PARA g_vs_para;
+VS_PARA g_vs_para; //VSPLUS()调用参数
+volatile int g_vsplus_ret = -1;//每1s调用一次VSPLUS()
+pthread_t g_tid_vsplus;
+
+extern xml_para* g_xml_para;
+extern int g_exit;
 
 int thr_sleep(void* arg)
 {
@@ -69,7 +74,7 @@ int thr_vsplus(void* arg)
 			//printf("1:g_vs_para.wb_ready[0]:%d\n", g_vs_para.wb_ready[0]);
 			//printf("1:g_vs_para.vsp_soll[0]:%d\n", g_vs_para.vsp_soll[0]);
 			gettimeofday(&tv1, NULL);
-			g_vsplus_ret = VSPLUS(g_vs_para.vsp_soll, g_vs_para.sg_mode, g_vs_para.wb_ready);
+			//g_vsplus_ret = VSPLUS(g_vs_para.vsp_soll, g_vs_para.sg_mode, g_vs_para.wb_ready);
 			ret = VSPLUS(g_vs_para.vsp_soll, g_vs_para.sg_mode, g_vs_para.wb_ready);
 			gettimeofday(&tv2, NULL);
 			printf("time use: %ldus\n", (tv2.tv_sec - tv1.tv_sec)*1000000 + (tv2.tv_usec - tv1.tv_usec));
@@ -87,11 +92,21 @@ int thr_vsplus(void* arg)
 
 int main(void)
 {
-	int ret = 0;
-	int i;
-	tsc_init(); //控制器初始化
 	struct timeval tv1, tv2;
-	//sleep(2);
+	int i, ret = 0;
+
+	g_xml_para = (xml_para*)open_xml_para();
+	if(g_xml_para == NULL){
+		debug(1, "open_xml_para() error\n");
+		return -1;
+	}
+	parse_xml(g_xml_para);
+
+	ret = tsc_init(); //控制器初始化
+	if(ret == -1){
+		debug(1, "tsc_init() error\n");
+		return -1;
+	}
 
 #if 1
 	//初始化参数存储区

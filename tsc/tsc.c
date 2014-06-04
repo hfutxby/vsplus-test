@@ -21,9 +21,9 @@ FILE* g_vcb_back = NULL; //备份参数vcb文件
 #define VCB_FILE "para.vcb" //配置参数vcb文件
 #define VCB_BACK "para_bak.vcb" //备份参数vcb文件
 #define _SIM_TEST_ //使用模拟数据进行测试
-//#define _TEST_SG_ //使用串口指令进行信号切换
+#define _TEST_SG_ //使用串口指令进行信号切换
 
-static int g_exit = 0;//退出线程标志
+int g_exit;//退出线程标志
 
 int g_timer[MAXTIMER];//最低位做开关标志
 pthread_t g_tid_timer;//定时器计时线程
@@ -34,6 +34,8 @@ pthread_t g_tid_watchdog; //喂狗线程
 int g_fd_sg; //记录信号灯状态的文件
 sg_node* g_sg; //信号灯参数
 pthread_t g_tid_sg;//记录信号灯状态的线程
+
+xml_para* g_xml_para; //从xml解析出来的配置参数
 
 /****************** 参数配置相关函数 **************************/
 /* 分配存储区  */
@@ -242,12 +244,18 @@ int tsc_timer(int func, int index, int count)
 int init_timers(void)
 {
 	debug(3, "==>\n");
-	int i;
-	for(i = 0; i < MAXTIMER; i++)
+	int i, ret;
+	for(i = 0; i < MAXTIMER; i++)//初始化清零所有计数
 		g_timer[i] = 0;
-	pthread_create(&g_tid_timer, NULL, thr_timer, NULL);
+
+	ret = pthread_create(&g_tid_timer, NULL, thr_timer, NULL);
+	if(ret != 0){
+		printf("%s(%d):pthread_create error: %s\n", __func__, __LINE__, strerror(errno));
+		return -1;
+	}
 
 	debug(3, "<==\n");
+
 	return 0;
 }
 
@@ -255,9 +263,16 @@ int deinit_timers(void)
 {
 	debug(3, "==>\n");
 	g_exit = 1;
-	pthread_join(g_tid_timer, NULL);
+	
+	int ret;
+	ret = pthread_join(g_tid_timer, NULL);
+	if(ret != 0){
+		printf("%s(%d):pthread_join error: %s\n", __func__, __LINE__, strerror(errno));
+		return -1;
+	}
 
 	debug(3, "<==\n");
+
 	return 0;
 }
 
@@ -565,48 +580,50 @@ void close_sg(void)
 int thr_sg(void* arg)
 {
 	int i;
+	//xml_para* para = (xml_para*)(arg);
+	xml_para* para = g_xml_para;
 #ifdef _TEST_SG_
-	char buf[4];
+	char buf[4];//初始化所有灯组红灯
     buf[0] = 0x96;
-    buf[1] = 0;//(sg/4)<<4 | (sg%4);
-    buf[2] = 0x03;//灭
+    buf[1] = 0xff;//所有灯组
+    buf[2] = 0x01;//红灯
     buf[3] = 0x69;
 #endif
 	while(!g_exit){
 		for(i = 0; i < SGMAX; i++){
 			g_sg[i].time++;
 			switch(g_sg[i].stat){
-				case 0://关灯状态
-					if(g_sg[i].ext == 1){//open
-						g_sg[i].ext = 0;
-						g_sg[i].stat = 4;
-						g_sg[i].time = 0;
-#ifdef _TEST_SG_
-						buf[1] = (i/4) << 4 | (i%4);
-						buf[2] = 0x02;//黄
-						write(g_fd_serial, buf, sizeof(buf));
-#endif
-					}
-					else if(g_sg[i].ext == 2){//close
-						g_sg[i].ext = 0;
-						g_sg[i].stat = 1;
-						g_sg[i].time = 0;
-#ifdef _TEST_SG_
-						buf[1] = (i/4) << 4 | (i%4);
-						buf[2] = 0x02;//黄
-						write(g_fd_serial, buf, sizeof(buf));
-#endif
-					}
-					else
-						g_sg[i].time = 0;
-					break;
+//				case 0://关灯状态
+//					if(g_sg[i].ext == 1){//open
+//						g_sg[i].ext = 0;
+//						g_sg[i].stat = 4;
+//						g_sg[i].time = 0;
+//#ifdef _TEST_SG_
+//						buf[1] = (i/4) << 4 | (i%4);
+//						buf[2] = 0x02;//黄
+//						write(g_fd_serial, buf, sizeof(buf));
+//#endif
+//					}
+//					else if(g_sg[i].ext == 2){//close
+//						g_sg[i].ext = 0;
+//						g_sg[i].stat = 1;
+//						g_sg[i].time = 0;
+//#ifdef _TEST_SG_
+//						buf[1] = (i/4) << 4 | (i%4);
+//						buf[2] = 0x02;//黄
+//						write(g_fd_serial, buf, sizeof(buf));
+//#endif
+//					}
+//					else
+//						g_sg[i].time = 0;
+//					break;
 
 				case 1://1-amber;2-min_red;3-ex_red;4-prep;5-min_green;6-ex_green
 					if(g_sg[i].time > g_sg[i].amber){
 						g_sg[i].stat++;
 						g_sg[i].time = 0;
 #ifdef _TEST_SG_
-						buf[1] = (i/4) << 4 | (i%4);
+						buf[1] = g_xml_para->det_sg[i];
 						buf[2] = 0x01;//红
     					write(g_fd_serial, buf, sizeof(buf));
 #endif
@@ -617,7 +634,7 @@ int thr_sg(void* arg)
 						g_sg[i].stat++;
 						g_sg[i].time = 0;
 #ifdef _TEST_SG_
-						buf[1] = (i/4) << 4 | (i%4);
+						buf[1] = g_xml_para->det_sg[i];
 						buf[2] = 0x01;//红
     					write(g_fd_serial, buf, sizeof(buf));
 #endif
@@ -629,7 +646,7 @@ int thr_sg(void* arg)
 						g_sg[i].stat++;
 						g_sg[i].time = 0;
 #ifdef _TEST_SG_
-						buf[1] = (i/4) << 4 | (i%4);
+						buf[1] = g_xml_para->det_sg[i];
 						buf[2] = 0x02;//黄
     					write(g_fd_serial, buf, sizeof(buf));
 #endif
@@ -640,7 +657,7 @@ int thr_sg(void* arg)
 						g_sg[i].stat++;
 						g_sg[i].time = 0;
 #ifdef _TEST_SG_
-                        buf[1] = (i/4) << 4 | (i%4);
+						buf[1] = g_xml_para->det_sg[i];
                         buf[2] = 0x04;//绿
                         write(g_fd_serial, buf, sizeof(buf));
 #endif
@@ -651,7 +668,7 @@ int thr_sg(void* arg)
 						g_sg[i].stat++;
 						g_sg[i].time = 0;
 #ifdef _TEST_SG_
-                        buf[1] = (i/4) << 4 | (i%4);
+						buf[1] = g_xml_para->det_sg[i];
                         buf[2] = 0x04;//绿
                         write(g_fd_serial, buf, sizeof(buf));
 #endif
@@ -663,7 +680,7 @@ int thr_sg(void* arg)
 						g_sg[i].stat = 1;
 						g_sg[i].time = 0;
 #ifdef _TEST_SG_
-                        buf[1] = (i/4) << 4 | (i%4);
+						buf[1] = g_xml_para->det_sg[i];
                         buf[2] = 0x02;//黄
                         write(g_fd_serial, buf, sizeof(buf));
 #endif
@@ -765,7 +782,7 @@ void ts_sg_close(int sg)
  * 检查灯组是否处于红灯状态 */
 int tsc_chk_red(int sg)
 {
-	us_sleep(2000);
+	//us_sleep(2000);
 	if((g_sg[sg].stat == 2) || (g_sg[sg].stat == 3))
 		return 1;
 	else
@@ -990,7 +1007,7 @@ int set_opt(int fd, int speed, int bits, char event, int stop)
 {
 	struct termios newtio, oldtio;
 	if(tcgetattr(fd, &oldtio) != 0){
-		perror("tcgetattr fail");
+		debug(1, "tcgetattr fail:%s\n", strerror(errno));
 		return -1;
 	}
 	bzero(&newtio, sizeof(newtio));
@@ -1044,6 +1061,7 @@ int set_opt(int fd, int speed, int bits, char event, int stop)
 			cfsetospeed(&newtio, B115200);
 			break;
 		default:
+			debug(1, "not support bit speed %d, will set to default %d\n", speed, 9600);
 			cfsetispeed(&newtio, B9600);
 			cfsetospeed(&newtio, B9600);
 			break;
@@ -1062,11 +1080,10 @@ int set_opt(int fd, int speed, int bits, char event, int stop)
 	tcflush(fd, TCIFLUSH);
 
 	if((tcsetattr(fd, TCSANOW, &newtio)) != 0){
-		perror("set error");
+		debug(1, "set error:%s\n", strerror(errno));
 		return -1;
 	}
 
-	printf("set done\n");
 	return 0;
 }
 
@@ -1074,14 +1091,15 @@ int open_port(int port)
 {
 	char portname[20];
 	int fd;
-	sprintf(portname, "/dev/ttyS%d", port);
+	//sprintf(portname, "/dev/ttyS%d", port);
+	sprintf(portname, "/dev/ttyUSB0", port);//FIXME:TEST
 	fd = open(portname, O_RDWR|O_NOCTTY|O_NONBLOCK);//|O_NDELAY);
 	if(fd == -1){
 		debug(1, "cannot open %s\n", portname);
 		return -1;
 	}
 
-	printf("open %s sucess\n", portname);
+	debug(3, "open %s sucess\n", portname);
 
 	return fd;
 }
@@ -1097,39 +1115,76 @@ int thr_watchdog(void* para)
 	int ret;
 	while(!g_exit){
 		ret = write(fd, buf, sizeof(buf));
-		//printf("feed watchdog, ret=%d\n", ret);
-		sleep(2);
+		sleep(2);//每隔一段时间喂一次
 	}
+
 	return 0;
 }
 
+//返回0表示初始化成功
 int init_serial(void)
 {
 	debug(3, "==>\n");
-	int fd = open_port(1);//ttyS1
-	g_fd_serial = fd;
-	set_opt(fd, 19200, 8, 'N', 1);
-	pthread_create(&g_tid_watchdog, NULL, thr_watchdog, &fd);
+
+	int ret = 0;
+
+	g_fd_serial = open_port(1);//ttyS1
+	if(g_fd_serial == -1){
+		debug(1, "open_port() error\n");
+		return -1;
+	}
+
+	if(set_opt(g_fd_serial, 19200, 8, 'N', 1) != 0){
+		debug(1, "set_opt() error\n");
+		return -1;
+	}
+
+	ret = pthread_create(&g_tid_watchdog, NULL, thr_watchdog, &g_fd_serial);
+	if(ret != 0){
+		debug(1, "pthread_create() error:%s\n", strerror(errno));
+		return -1;
+	}
+
 	debug(3, "<==\n");
+
 	return 0;
 }
 
 void deinit_serial(void)
 {
 	debug(3, "==>\n");
+
 	g_exit = 1;
 	pthread_join(g_tid_watchdog, NULL);
 	close(g_fd_serial);
+
 	debug(3, "<==\n");
 }
 
 
 /********************* 初始化 ************************/
+//如果有参数调整的需求，放在main.c中更合适
 int tsc_init()
 {
-	init_serial();
-	init_timers();	
-	init_sg();
+	int ret = 0;
+	int i = 0;
+	for(i = 0; i < 46; i++)
+		printf("%d:%d ", i, g_xml_para->det_sg[i]);
+	printf("\n");
+
+	ret = init_serial(); //打开和底板通信的串口
+	if(ret != 0){
+		debug(1, "init_serial() error\n");
+		return -1;
+	}
+
+	ret = init_timers();	//初始化内部定时器
+	if(ret != 0){
+		debug(1, "init_timers() error\n");
+		return -1;
+	}
+
+	init_sg(); //初始化信号灯状态记录
 #ifdef _SIM_TEST_
 	sim_init(); //在sim.c中实现部分测试数据的产生
 #endif
