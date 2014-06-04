@@ -365,7 +365,7 @@ void SG_ein(short int sg)
 {
 	debug(3, "sg:%d\n", sg);
 	printf("%s(%d):sg=%d =================================\n", __func__, __LINE__, sg);
-	ts_sg_open(sg);
+	tsc_sg_open(sg);
 }
 
 /* switch signal group to closed
@@ -374,7 +374,7 @@ void SG_aus(short int sg)
 {
 	debug(3, "sg:%d\n", sg);
 	printf("%s(%d):sg=%d =================================\n", __func__, __LINE__, sg);
-	ts_sg_close(sg);
+	tsc_sg_close(sg);
 }
 
 /* command for switching a non-supervised output to "on"

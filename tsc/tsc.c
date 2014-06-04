@@ -30,6 +30,7 @@ pthread_t g_tid_timer;//定时器计时线程
 
 int g_fd_serial;//和驱动版通信串口
 pthread_t g_tid_watchdog; //喂狗线程
+int g_write = 0;
 
 int g_fd_sg; //记录信号灯状态的文件
 sg_node* g_sg; //信号灯参数
@@ -583,11 +584,16 @@ int thr_sg(void* arg)
 	//xml_para* para = (xml_para*)(arg);
 	xml_para* para = g_xml_para;
 #ifdef _TEST_SG_
-	char buf[4];//初始化所有灯组红灯
-    buf[0] = 0x96;
-    buf[1] = 0xff;//所有灯组
-    buf[2] = 0x01;//红灯
-    buf[3] = 0x69;
+	unsigned char buf[4];//初始化所有灯组红灯
+	buf[0] = 0x96;
+	buf[1] = 0xff;//所有灯组
+	buf[2] = 0x01;//红灯
+	buf[3] = 0x69;
+	while(g_write)
+		us_sleep(100);
+	g_write = 1;
+	write(g_fd_serial, buf, sizeof(buf));
+	g_write = 0;
 #endif
 	while(!g_exit){
 		for(i = 0; i < SGMAX; i++){
@@ -623,9 +629,13 @@ int thr_sg(void* arg)
 						g_sg[i].stat++;
 						g_sg[i].time = 0;
 #ifdef _TEST_SG_
-						buf[1] = g_xml_para->det_sg[i];
+						buf[1] = g_xml_para->sg[i];
 						buf[2] = 0x01;//红
-    					write(g_fd_serial, buf, sizeof(buf));
+						while(g_write)
+							us_sleep(100);
+						g_write = 1;
+						write(g_fd_serial, buf, sizeof(buf));
+						g_write = 0;
 #endif
 					}
 					break;
@@ -634,9 +644,13 @@ int thr_sg(void* arg)
 						g_sg[i].stat++;
 						g_sg[i].time = 0;
 #ifdef _TEST_SG_
-						buf[1] = g_xml_para->det_sg[i];
+						buf[1] = g_xml_para->sg[i];
 						buf[2] = 0x01;//红
-    					write(g_fd_serial, buf, sizeof(buf));
+						while(g_write)
+							us_sleep(100);
+						g_write = 1;
+						write(g_fd_serial, buf, sizeof(buf));
+						g_write = 0;
 #endif
 					}
 					break;
@@ -646,9 +660,13 @@ int thr_sg(void* arg)
 						g_sg[i].stat++;
 						g_sg[i].time = 0;
 #ifdef _TEST_SG_
-						buf[1] = g_xml_para->det_sg[i];
+						buf[1] = g_xml_para->sg[i];
 						buf[2] = 0x02;//黄
-    					write(g_fd_serial, buf, sizeof(buf));
+						while(g_write)
+							us_sleep(100);
+						g_write = 1;
+    write(g_fd_serial, buf, sizeof(buf));
+						g_write = 0;
 #endif
 					}
 					break;
@@ -657,9 +675,13 @@ int thr_sg(void* arg)
 						g_sg[i].stat++;
 						g_sg[i].time = 0;
 #ifdef _TEST_SG_
-						buf[1] = g_xml_para->det_sg[i];
-                        buf[2] = 0x04;//绿
-                        write(g_fd_serial, buf, sizeof(buf));
+						buf[1] = g_xml_para->sg[i];
+						buf[2] = 0x04;//绿
+						while(g_write)
+							us_sleep(100);
+						g_write = 1;
+    write(g_fd_serial, buf, sizeof(buf));
+						g_write = 0;
 #endif
 					}
 					break;
@@ -668,9 +690,13 @@ int thr_sg(void* arg)
 						g_sg[i].stat++;
 						g_sg[i].time = 0;
 #ifdef _TEST_SG_
-						buf[1] = g_xml_para->det_sg[i];
-                        buf[2] = 0x04;//绿
-                        write(g_fd_serial, buf, sizeof(buf));
+						buf[1] = g_xml_para->sg[i];
+						buf[2] = 0x04;//绿
+						while(g_write)
+							us_sleep(100);
+						g_write = 1;
+    write(g_fd_serial, buf, sizeof(buf));
+						g_write = 0;
 #endif
 					}
 					break;
@@ -680,15 +706,19 @@ int thr_sg(void* arg)
 						g_sg[i].stat = 1;
 						g_sg[i].time = 0;
 #ifdef _TEST_SG_
-						buf[1] = g_xml_para->det_sg[i];
-                        buf[2] = 0x02;//黄
-                        write(g_fd_serial, buf, sizeof(buf));
+						buf[1] = g_xml_para->sg[i];
+						buf[2] = 0x02;//黄
+						while(g_write)
+							us_sleep(100);
+						g_write = 1;
+    write(g_fd_serial, buf, sizeof(buf));
+						g_write = 0;
 #endif
 					}
 					break;
 			}
 		}
-		us_sleep(100000);
+		us_sleep(100*1000);
 	}
 }
 
@@ -743,17 +773,17 @@ int tsc_sg_enabled(int sg)
 
 /* FIXME
  * 打开信号灯，红->绿 */
-void ts_sg_open(int sg)
+void tsc_sg_open(int sg)
 {
 	g_sg[sg].ext = 1;
-#ifdef _TEST_SG_
-	char buf[4];
+#ifdef _TEST_SG_1
+	unsigned char buf[4];
 	buf[0] = 0x96;
-	buf[1] = (sg/4)<<4 | (sg%4);
+	buf[1] = g_xml_para->sg[sg];
 	buf[2] = 0x02;//黄
 	buf[3] = 0x69;
 	write(g_fd_serial, buf, sizeof(buf));
-	sleep(g_sg[sg].prep);
+	us_sleep(g_sg[sg].prep*100*1000);
 	buf[2] = 0x04;//绿
 	write(g_fd_serial, buf, sizeof(buf));
 #endif
@@ -761,17 +791,17 @@ void ts_sg_open(int sg)
 
 /* FIXME
  * 关闭信号灯，绿->红 */
-void ts_sg_close(int sg)
+void tsc_sg_close(int sg)
 {
 	g_sg[sg].ext = 2;
-#ifdef _TEST_SG_
-	char buf[4];
+#ifdef _TEST_SG_1
+	unsigned char buf[4];
 	buf[0] = 0x96;
-	buf[1] = (sg/4)<<4 | (sg%4);
+	buf[1] = g_xml_para->sg[sg];
 	buf[2] = 0x02;//黄
 	buf[3] = 0x69;
 	write(g_fd_serial, buf, sizeof(buf));
-	sleep(g_sg[sg].amber);
+	sleep(g_sg[sg].amber*100*1000);
 	buf[2] = 0x01;//红
 	write(g_fd_serial, buf, sizeof(buf));
 #endif
@@ -782,7 +812,7 @@ void ts_sg_close(int sg)
  * 检查灯组是否处于红灯状态 */
 int tsc_chk_red(int sg)
 {
-	//us_sleep(2000);
+	us_sleep(2000);
 	if((g_sg[sg].stat == 2) || (g_sg[sg].stat == 3))
 		return 1;
 	else
@@ -1091,8 +1121,8 @@ int open_port(int port)
 {
 	char portname[20];
 	int fd;
-	//sprintf(portname, "/dev/ttyS%d", port);
-	sprintf(portname, "/dev/ttyUSB0", port);//FIXME:TEST
+	sprintf(portname, "/dev/ttyS%d", port);
+	//sprintf(portname, "/dev/ttyUSB0", port);//FIXME:TEST
 	fd = open(portname, O_RDWR|O_NOCTTY|O_NONBLOCK);//|O_NDELAY);
 	if(fd == -1){
 		debug(1, "cannot open %s\n", portname);
@@ -1109,13 +1139,18 @@ int thr_watchdog(void* para)
 {
 	int fd = *(int*)(para);
 	char buf[3];
+	memset(buf, 0, sizeof(buf));
 	buf[0] = 0xC1;
 	buf[1] = 0xAB;
 	buf[2] = 0x5C;
 	int ret;
 	while(!g_exit){
+		while(g_write)
+			us_sleep(1000);
+		g_write = 1;
 		ret = write(fd, buf, sizeof(buf));
-		sleep(2);//每隔一段时间喂一次
+		g_write = 0;
+		us_sleep(2*1000*1000);//每隔一段时间喂一次
 	}
 
 	return 0;

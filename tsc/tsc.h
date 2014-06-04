@@ -59,6 +59,7 @@ typedef struct{
 #include "if626max.h"
 typedef struct{
 	int det_sg[DETMAX];//检测器和信号灯对应关系
+	int sg[SGMAX];
 }xml_para;
 
 typedef struct{
