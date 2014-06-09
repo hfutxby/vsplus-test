@@ -9,6 +9,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <termios.h>
+#include <pthread.h>
 
 #include "tsc.h"
 #include "sim.h"
@@ -21,7 +22,7 @@ FILE* g_vcb_back = NULL; //备份参数vcb文件
 #define VCB_FILE "para.vcb" //配置参数vcb文件
 #define VCB_BACK "para_bak.vcb" //备份参数vcb文件
 #define _SIM_TEST_ //使用模拟数据进行测试
-#define _TEST_SG_ //使用串口指令进行信号切换
+//#define _TEST_SG_ //使用串口指令进行信号切换
 
 int g_exit;//退出线程标志
 
@@ -30,7 +31,7 @@ pthread_t g_tid_timer;//定时器计时线程
 
 int g_fd_serial;//和驱动版通信串口
 pthread_t g_tid_watchdog; //喂狗线程
-int g_write = 0;
+pthread_mutex_t mutex_serial;
 
 int g_fd_sg; //记录信号灯状态的文件
 sg_node* g_sg; //信号灯参数
@@ -193,7 +194,7 @@ int us_sleep(long us)
 	return select(0, NULL, NULL, NULL, &tv);
 }
 
-int thr_timer(void* arg)
+void* thr_timer(void* arg)
 {
 	struct timeval tv1, tv2;
 	int us = 100000, diff;
@@ -578,7 +579,7 @@ void close_sg(void)
 	g_fd_sg = 0;
 }
 
-int thr_sg(void* arg)
+void* thr_sg(void* arg)
 {
 	int i;
 	//xml_para* para = (xml_para*)(arg);
@@ -589,11 +590,9 @@ int thr_sg(void* arg)
 	buf[1] = 0xff;//所有灯组
 	buf[2] = 0x01;//红灯
 	buf[3] = 0x69;
-	while(g_write)
-		us_sleep(100);
-	g_write = 1;
+	pthread_mutex_lock(&mutex_serial);
 	write(g_fd_serial, buf, sizeof(buf));
-	g_write = 0;
+	pthread_mutex_unlock(&mutex_serial);
 #endif
 	while(!g_exit){
 		for(i = 0; i < SGMAX; i++){
@@ -631,11 +630,9 @@ int thr_sg(void* arg)
 #ifdef _TEST_SG_
 						buf[1] = g_xml_para->sg[i];
 						buf[2] = 0x01;//红
-						while(g_write)
-							us_sleep(100);
-						g_write = 1;
+						pthread_mutex_lock(&mutex_serial);
 						write(g_fd_serial, buf, sizeof(buf));
-						g_write = 0;
+						pthread_mutex_unlock(&mutex_serial);
 #endif
 					}
 					break;
@@ -646,11 +643,9 @@ int thr_sg(void* arg)
 #ifdef _TEST_SG_
 						buf[1] = g_xml_para->sg[i];
 						buf[2] = 0x01;//红
-						while(g_write)
-							us_sleep(100);
-						g_write = 1;
+						pthread_mutex_lock(&mutex_serial);
 						write(g_fd_serial, buf, sizeof(buf));
-						g_write = 0;
+						pthread_mutex_unlock(&mutex_serial);
 #endif
 					}
 					break;
@@ -662,11 +657,9 @@ int thr_sg(void* arg)
 #ifdef _TEST_SG_
 						buf[1] = g_xml_para->sg[i];
 						buf[2] = 0x02;//黄
-						while(g_write)
-							us_sleep(100);
-						g_write = 1;
-    write(g_fd_serial, buf, sizeof(buf));
-						g_write = 0;
+						pthread_mutex_lock(&mutex_serial);
+						write(g_fd_serial, buf, sizeof(buf));
+						pthread_mutex_unlock(&mutex_serial);
 #endif
 					}
 					break;
@@ -677,11 +670,9 @@ int thr_sg(void* arg)
 #ifdef _TEST_SG_
 						buf[1] = g_xml_para->sg[i];
 						buf[2] = 0x04;//绿
-						while(g_write)
-							us_sleep(100);
-						g_write = 1;
-    write(g_fd_serial, buf, sizeof(buf));
-						g_write = 0;
+						pthread_mutex_lock(&mutex_serial);
+						write(g_fd_serial, buf, sizeof(buf));
+						pthread_mutex_unlock(&mutex_serial);
 #endif
 					}
 					break;
@@ -692,11 +683,9 @@ int thr_sg(void* arg)
 #ifdef _TEST_SG_
 						buf[1] = g_xml_para->sg[i];
 						buf[2] = 0x04;//绿
-						while(g_write)
-							us_sleep(100);
-						g_write = 1;
-    write(g_fd_serial, buf, sizeof(buf));
-						g_write = 0;
+						pthread_mutex_lock(&mutex_serial);
+						write(g_fd_serial, buf, sizeof(buf));
+						pthread_mutex_unlock(&mutex_serial);
 #endif
 					}
 					break;
@@ -708,11 +697,9 @@ int thr_sg(void* arg)
 #ifdef _TEST_SG_
 						buf[1] = g_xml_para->sg[i];
 						buf[2] = 0x02;//黄
-						while(g_write)
-							us_sleep(100);
-						g_write = 1;
-    write(g_fd_serial, buf, sizeof(buf));
-						g_write = 0;
+						pthread_mutex_lock(&mutex_serial);
+						write(g_fd_serial, buf, sizeof(buf));
+						pthread_mutex_unlock(&mutex_serial);
 #endif
 					}
 					break;
@@ -1121,8 +1108,8 @@ int open_port(int port)
 {
 	char portname[20];
 	int fd;
-	sprintf(portname, "/dev/ttyS%d", port);
-	//sprintf(portname, "/dev/ttyUSB0", port);//FIXME:TEST
+	//sprintf(portname, "/dev/ttyS%d", port);
+	sprintf(portname, "/dev/ttyUSB0", port);//FIXME:TEST
 	fd = open(portname, O_RDWR|O_NOCTTY|O_NONBLOCK);//|O_NDELAY);
 	if(fd == -1){
 		debug(1, "cannot open %s\n", portname);
@@ -1135,7 +1122,7 @@ int open_port(int port)
 }
 
 /* 给驱动板喂狗 */
-int thr_watchdog(void* para)
+void* thr_watchdog(void* para)
 {
 	int fd = *(int*)(para);
 	char buf[3];
@@ -1145,15 +1132,11 @@ int thr_watchdog(void* para)
 	buf[2] = 0x5C;
 	int ret;
 	while(!g_exit){
-		while(g_write)
-			us_sleep(1000);
-		g_write = 1;
+		pthread_mutex_lock(&mutex_serial);
 		ret = write(fd, buf, sizeof(buf));
-		g_write = 0;
+		pthread_mutex_unlock(&mutex_serial);
 		us_sleep(2*1000*1000);//每隔一段时间喂一次
 	}
-
-	return 0;
 }
 
 //返回0表示初始化成功
@@ -1174,6 +1157,7 @@ int init_serial(void)
 		return -1;
 	}
 
+	pthread_mutex_init(&mutex_serial, NULL);
 	ret = pthread_create(&g_tid_watchdog, NULL, thr_watchdog, &g_fd_serial);
 	if(ret != 0){
 		debug(1, "pthread_create() error:%s\n", strerror(errno));
@@ -1192,6 +1176,7 @@ void deinit_serial(void)
 	g_exit = 1;
 	pthread_join(g_tid_watchdog, NULL);
 	close(g_fd_serial);
+	pthread_mutex_destroy(&mutex_serial);
 
 	debug(3, "<==\n");
 }
@@ -1202,17 +1187,18 @@ void deinit_serial(void)
 int tsc_init()
 {
 	int ret = 0;
-	int i = 0;
-	for(i = 0; i < 46; i++)
-		printf("%d:%d ", i, g_xml_para->det_sg[i]);
-	printf("\n");
+//	int i = 0;
+//	for(i = 0; i < 46; i++)
+//		printf("%d:%d ", i, g_xml_para->det_sg[i]);
+//	printf("\n");
 
+#ifdef _TEST_SG_
 	ret = init_serial(); //打开和底板通信的串口
 	if(ret != 0){
 		debug(1, "init_serial() error\n");
 		return -1;
 	}
-
+#endif
 	ret = init_timers();	//初始化内部定时器
 	if(ret != 0){
 		debug(1, "init_timers() error\n");
@@ -1229,7 +1215,9 @@ int tsc_init()
 
 int tsc_deinit()
 {
+#ifdef _TEST_SG_
 	deinit_serial();
+#endif
 	deinit_timers();
 	deinit_sg();
 #ifdef _SIM_TEST_

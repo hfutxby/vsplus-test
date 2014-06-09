@@ -249,6 +249,8 @@ int main(void)
 	//pthread_create(&g_tid_sleep, NULL, thr_sleep, NULL);
 	//pthread_create(&g_tid_fix, NULL, thr_fix_run, NULL);
 
+	g_vsplus_ret = 0;
+	g_vs_para.vsp_soll[0] = VSP_EIN;
 	pthread_create(&g_tid_vsplus, NULL, thr_vsplus, NULL);
 
 	while(!g_exit){//如果VSPLUS函数未能在1s内返回则关闭VSPLUS
