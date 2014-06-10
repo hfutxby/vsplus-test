@@ -13,7 +13,7 @@ CC = gcc
 CFLAGS += -D_PROZESSOR_INTEL_ -D_HELPER_MACROS_ -D_ADVANCED_MEMORY_ -DDEBUG=1
 #CFLAGS += -D_PROZESSOR_INTEL_ -D_HELPER_MACROS_ -DDEBUG=3
 
-all: main test sim_ctrl
+all: main test sim_ctrl decode
 main: main.c tsc.c VSP_Interface.c
 	$(CC) $(CFLAGS) tsc.c sim.c VSP_Interface.c parse_xml.c main.c vsp_core.lib -pthread -o main.x86.out
 	$(ARMCC) $(CFLAGS) tsc.c sim.c VSP_Interface.c parse_xml.c main.c vsp_core_arm.lib -pthread -o main.arm.out
@@ -29,8 +29,8 @@ sim_ctrl: sim_ctrl_det.c sim_ctrl_sg.c sim_ctrl.c
 	$(CC) sim_ctrl.c -pthread -o sim_ctrl.x86.out
 	$(ARMCC) sim_ctrl.c -pthread -o sim_ctrl.arm.out
 
-decode: decode.c
-	$(CC) decode.c -o decode.out
+decode: base64.c
+	$(CC) base64.c -o decode.out
 
 clean:
 	$(RM) *.x86 *.arm *.o *.out
