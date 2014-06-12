@@ -15,8 +15,8 @@ CFLAGS += -D_PROZESSOR_INTEL_ -D_HELPER_MACROS_ -D_ADVANCED_MEMORY_ -DDEBUG=1
 
 all: main test sim_ctrl decode
 main: main.c tsc.c VSP_Interface.c
-	$(CC) $(CFLAGS) tsc.c sim.c VSP_Interface.c parse_xml.c main.c vsp_core.lib -pthread -o main.x86.out
-	$(ARMCC) $(CFLAGS) tsc.c sim.c VSP_Interface.c parse_xml.c main.c vsp_core_arm.lib -pthread -o main.arm.out
+	$(CC) $(CFLAGS) tsc.c sim.c VSP_Interface.c parse_xml.c vs_main.c main.c vsp_core.lib -pthread -o main.x86.out
+	#$(ARMCC) $(CFLAGS) tsc.c sim.c VSP_Interface.c parse_xml.c main.c vsp_core_arm.lib -pthread -o main.arm.out
 
 test: test.c tsc.c
 	$(CC) $(CFLAGS) test.c tsc.c sim.c -pthread -o test.x86.out

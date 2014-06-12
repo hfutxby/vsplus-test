@@ -37,6 +37,10 @@ int g_fd_sg; //记录信号灯状态的文件
 sg_node* g_sg; //信号灯参数
 pthread_t g_tid_sg;//记录信号灯状态的线程
 
+int g_fd_det; //记录检测器状态的文件
+det_node* g_det; //检测器参数
+pthread_t g_tid_det; //近路检测器状态的线程
+
 xml_para* g_xml_para; //从xml解析出来的配置参数
 
 /****************** 参数配置相关函数 **************************/

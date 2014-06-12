@@ -15,6 +15,7 @@
 
 int g_fd_xml_para = 0;
 
+//打开文件内存映射
 void* open_xml_para(void)
 {
     int ret;
@@ -36,6 +37,7 @@ void* open_xml_para(void)
 	return para;
 }
 
+//解析XML文件获取配置
 void parse_xml(xml_para* para)
 {
 	int det_sg[46] = {0,
@@ -72,6 +74,14 @@ void parse_xml(xml_para* para)
 		para->det_sg[i] = det_sg[i];
 	for(i = 0; i < 16; i++)
 		para->sg[i] = sg[i];
+}
+
+void dump_xml(xml_para* para)
+{
+	int i;
+	for(i = 0; i < 16; i++)
+                printf("%d:%d ", i, para->sg[i]);
+	printf("\n");
 }
 
 void close_xml_para(void)
