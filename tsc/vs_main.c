@@ -15,6 +15,13 @@ typedef struct{
 }VS_PARA;
 VS_PARA g_vs_para; //VSPLUS()调用参数
 
+typedef struct { 
+	long id; 
+	unsigned short inst; 
+	unsigned char KmpInd; 
+	unsigned char ErgLaenge;
+}pd_t;
+
 xml_para* g_xml_para = NULL;
 
 volatile int g_vsplus_ret = -1;//每1s调用一次VSPLUS()
@@ -268,6 +275,49 @@ int vs_stop(void)
 #endif
 
 	return 0;
+}
+
+int vs_test(void)
+{
+	typedef struct{
+		int ocit4; //四字节表示的编号
+		char sym[32]; //字符名
+		int size; //数据长度
+		int rang; //范围
+	}ocit;
+
+	ocit g_ocit[] = { 
+		{(57 << 16 | 0), "OITD_VSP_VERSION", 2, 1},
+		{(57 << 16 | 1), "OITD_VSP_SYSTEM1", 2, 2},
+	};
+	printf("ocit number: %d\n", sizeof(g_ocit)/sizeof(ocit));
+
+	int ret;
+
+	////char* vs_ocit_path(void);
+	//char *path = vs_ocit_path();
+	//printf("vs_ocit_path():%s\n", path);
+	////unsigned short vs_read_process_data(void* px, void* y);
+	//pd_t px, py;
+	//int na = 57;
+	//int nb = 1;
+	//px.id = na << 16 | nb;
+	//printf("px.id=%ld\n", px.id);
+	//px.inst = 1;
+	//unsigned short size = vs_read_process_data(&px, NULL);
+	//printf("vs_read_process_data: name=%d.%d, size=%d\n\n", na, nb, size);
+
+	FILE* fp = fopen("all_ocit.ini", "wb+");
+	if(fp == NULL){
+		perror("can not open all_ocit.ini");
+		return -1;
+	}
+	char buf[] = "hello world\n";
+	//fwrite(buf, sizeof(buf), 1, fp); 
+	ret = vs_read_process_data(NULL, fp);
+	printf("vs_read_process_data(NULL, fp):ret=%d\n", ret);
+
+	fclose(fp);
 }
 
 void vs_deinit(void)

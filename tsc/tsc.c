@@ -803,7 +803,7 @@ void tsc_sg_close(int sg)
  * 检查灯组是否处于红灯状态 */
 int tsc_chk_red(int sg)
 {
-	us_sleep(2000);
+	//us_sleep(2000);
 	if((g_sg[sg].stat == 2) || (g_sg[sg].stat == 3))
 		return 1;
 	else

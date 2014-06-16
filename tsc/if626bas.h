@@ -1317,7 +1317,7 @@ When the controller is off or during switch-on or switch-off, this function must
 /*~+:Controller*/
 /*~T*/
 //#define _#_()           m_Prog_Schaltung_erlaubt
-#define _prog_swtich_allow               m_Prog_Schaltung_erlaubt()
+#define vs_prog_swtich_allow               m_Prog_Schaltung_erlaubt()
  
 /*~E*/
 /*~-*/

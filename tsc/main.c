@@ -22,6 +22,9 @@ int main(void)
 		printf("vs_start() failed\n");
 	}
 
+	sleep(1);
+	vs_test();
+
 	sleep(5);
 
 	printf("\nvs_stop\n");
