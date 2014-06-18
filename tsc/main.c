@@ -22,28 +22,29 @@ int main(void)
 		printf("vs_start() failed\n");
 	}
 
-	sleep(1);
-	vs_test();
+	//sleep(2);
+	printf("\nvs_log()\n");
+	vs_log();
 
-	sleep(5);
-
-	printf("\nvs_stop\n");
-	ret = vs_stop();
-	if(ret < 0){
-		printf("vs_stop() failed\n");
-	}
-
-	sleep(5);
-
-	printf("\nvs_start()\n");
-	ret = vs_start();
-	if(ret < 0){
-		printf("vs_start() failed\n");
-	}
-
-	sleep(5);
-	//while(1) 
-	//	sleep(1);
+//	sleep(5);
+//
+//	printf("\nvs_stop\n");
+//	ret = vs_stop();
+//	if(ret < 0){
+//		printf("vs_stop() failed\n");
+//	}
+//
+//	sleep(5);
+//
+//	printf("\nvs_start()\n");
+//	ret = vs_start();
+//	if(ret < 0){
+//		printf("vs_start() failed\n");
+//	}
+//
+//	sleep(5);
+	while(1) 
+		sleep(1);
 
 	return 0;
 }
