@@ -424,7 +424,7 @@ void title_print(void* arg, FILE* fp, int count)
 		item = (arg + i * sizeof(log_oitd));
 		sprintf((buf + i * cl), "%3d.%3d-%4d", (item->id >> 16) & 0xffff, item->id & 0xffff, item->inst);
 	}
-	printf("%s\n", buf);
+	//printf("%s\n", buf);
 	for(i = 0; i < cl; i++){
 		for(j = 0; j < log_count; j++){
 			*(tl + i * line_size + j * cw) = *(buf + j * cl + i);
@@ -432,9 +432,9 @@ void title_print(void* arg, FILE* fp, int count)
 				*(tl + (i + 1) * line_size - 1) = '\n'; 
 		}
 	}
-	for(i = 0; i < line_size * cl; i++){
-		printf("%c ", *(tl + i));
-	}
+	//for(i = 0; i < line_size * cl; i++){
+	//	printf("%c ", *(tl + i));
+	//}
 	fwrite(tl, line_size * cl, 1, fp);
 	fprintf(fp, "\n\n");
 	fflush(fp);

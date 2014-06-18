@@ -56,6 +56,20 @@ typedef struct{
     int ext;//b00状态未变，b01进行红绿切换，b10进行绿红切换
 }sg_node;
 
+//检测器记录信息
+typedef struct {
+    int sum_rising; //上升沿计数
+    int sum_falling; //下降沿计数
+    int state; //计时状态，<100:占用中，>100:空闲中
+    int hold; //总占用计时
+    int free; //总空闲计时
+    int fault; //故障
+    int occ1;//占用率
+    int occ2;//平滑占用率
+    int net;//net time gap starts at the last falling slope
+    int gross;//gross time gap starts at the last rising slope
+}det_node;
+
 #include "if626max.h"
 typedef struct{
 	int det_sg[DETMAX];//检测器和信号灯对应关系

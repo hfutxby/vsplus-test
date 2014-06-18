@@ -359,20 +359,173 @@ void tsc_stream_waiting(int index, int time)
 }
 
 /*************检测器函数************************/
-/* FIXME
+double g_f1 = 0.2;//占用率上升折算因子
+double g_f2 = 0.2;//下降因子
+int g_det_time = 0;//防止下降沿丢失
+#define DET_MAXTIME 600
+
+det_node* g_det = NULL;
+int g_det_fd = 0;
+
+int g_exit_det = 0;
+pthread_mutex_t mutex_det = PTHREAD_MUTEX_INITILIZER;
+pthread_t g_tid_det;
+
+/* 打开检测器数据映射 */
+void open_det(void)
+{   
+    int ret;
+    //默认保存文件
+    g_det_fd = open("det_nodes.dat", O_RDWR|O_CREAT, 0644);
+    if(g_det_fd < 0){
+        printf("%s\n", strerror(errno));
+        return;
+    }
+    if(ret = ftruncate(g_det_fd, sizeof(det_node)*DETMAX) < 0){
+        printf("%s\n", strerror(errno));
+    }
+    //映射进内存
+    g_det = mmap(NULL, sizeof(det_node)*DETMAX,  PROT_READ|PROT_WRITE, MAP_SHARED, g_det_fd, 0);
+    if(g_det ==  MAP_FAILED){
+        printf("%s\n", strerror(errno));
+    }
+    memset(g_det, 0, sizeof(det_node)*DETMAX);
+	for(i = 0; i < DETMAX; i++){
+		g_det[i].free = 10;//即时占用率计算窗口为1s
+	}
+}
+
+/* 关闭检测器数据映射 */
+void close_det(void)
+{
+    close(g_det_fd);
+    g_det_fd = 0;
+}
+
+//typedef struct {
+//  int sum_rising; //上升沿计数，驱动板信号修改
+//  int sum_falling; //下降沿计数，驱动板信号修改
+//  int state; //占用状态，驱动板信号修改
+//  int hold; //总占用计时
+//  int free; //总空闲计时
+//  int fault; //故障
+//  int occ1;//占用率
+//  int occ2;//平滑占用率
+//	int net;//time gap starts at the last falling slope，驱动板信号修改
+//	int gross;
+//}det_node;
+/* 更新规则
+ * 100ms内要对所有检测器完成一次更新
+ * 1、如果state为1，如果free>0，则相对应的hold+1，free-1
+ *	果state为0，如果hold>0，则相对应的hold-1，free+1
+ * 	初始时free设定一个值，free=10表示即时占用率计算窗口为1s。
+ * 2、如果state=1，gross++，net保持不变；如果state=0，两个都++；
+ *	rising时都清零，falling时net清零
+ * 3、occ1 = hold/(hold+free); 
+ * if(occ1>occ2) occ2 = occ2 + f1*(occ1-occ2)
+ * if(occ1<occ2) occ2 = occ2 + f2*(occ1-occ2)
+ */
+void upade_det(void)
+{
+	int i;
+	for(i = 0; i < DETMAX; i++){
+		if(g_det[i].fault)//检测器故障，不用更新数据
+			continue;
+		if(g_det[i].state){//检测器占用中
+			if(g_det[i].free){
+				g_det[i].hold++;
+				g_det[i].free--;
+				g_det[i].gross++;
+				g_det_time++;
+			}
+		}
+		else{
+			if(g_det[i].hold){
+				g_det[i].hold--;
+				g_det[i].free++;
+				g_det[i].gross++;
+				g_det[i].net++;
+			}
+		}
+		//计算占用率
+		g_det[i].occ1 = (double)(g_det[i].hold * 100) / (g_det[i].hold + g_det[i].free);
+		if(g_det[i].occ1 > g_det[i].occ2)
+			g_det[i].occ2 = g_det[i].occ2 + g_f1 * (g_det[i].occ1 - g_det[i].occ2);
+		else
+			g_det[i].occ2 = g_det[i].occ2 + g_f2 * (g_det[i].occ1 - g_det[i].occ2);
+	}
+}
+
+/* 驱动模块调用此函数，op=1上升沿,op=2下降沿 */
+void tsc_det_op(int op)
+{
+	pthread_mutex_lock(&mutex_det);
+	if(op == 1){
+		g_det[i].sum_rising++;
+		g_det[i].net = 0;
+		g_det[i].gross = 0;
+	}
+	if(op == 2){
+		g_det[i].sum_falling++;
+		g_det[i].net = 0;
+	}
+	pthread_mutex_unlock(&mutex_det);
+}
+
+/* 定时更新检测器数据 */
+void* thr_det(void* arg)
+{
+	struct timeval tv1, tv2;
+	long us;
+	while(!g_exit_det){
+		gettimeofday(&tv1, NULL);
+		pthread_mutex_lock(&mutex_det);
+		update_det();
+		pthread_mutex_unlock(&mutex_det);
+		if(g_det_time > DET_MAXTIME)
+			tsc_det_op(2);//超时，人为产生一个下降沿
+		gettimeofday(&tv1, NULL);
+		us = (tv2.tv_sec - tv1.tv_sec) * 1000000 + (tv2.tv_usec - tv1.tv_usec);
+		us_sleep(100*1000 - us);//100ms更新一次检测器状态
+	}
+}
+
+//初始化检测器
+int init_det(void)
+{
+	open_det();
+
+	pthread_create(&g_tid_det, NULL, thr_det, NULL);
+
+	return 0;
+}
+
+void deinit_det(void)
+{
+	g_exit_det = 1;
+	pthread_join(g_tid_det, NULL);
+	
+	close_det();
+}
+
+/* 
  * 读取检测器上升沿计数
  */
 int tsc_sum_rising(int index)
 {
+	int ret;
 #ifdef _SIM_TEST_
-	//printf("%s(%d):det index:%d\n", __func__, __LINE__, index);
-	return sim_sum_rising(index);
+	ret = sim_sum_rising(index);
+	return ret;
 #else
-
+	pthread_mutex_lock(&mutex_det);
+	ret = g_det[index].sum_rising;
+	pthread_mutex_unlock(&mutex_det);
+	return ret;
 #endif
 }
 
-/* FIXME
+/* 
  * 清空检测器上升沿计数
  */
 void tsc_clr_rising(int index)
@@ -380,68 +533,94 @@ void tsc_clr_rising(int index)
 #ifdef _SIM_TEST_
 	sim_clr_rising(index);
 #else
-
+	pthread_mutex_lock(&mutex_det);
+	g_det[index].sum_rising = 0;
+	pthread_mutex_unlock(&mutex_det);
 #endif
 }
 
-/* FIXME
+/* 
  * 读取检测器下降沿计数
  */
 int tsc_sum_falling(int index)
 {
+	int ret;
 #ifdef _SIM_TEST_
-	//printf("%s(%d):det index:%d\n", __func__, __LINE__, index);
-	return sim_sum_falling(index);
+	ret = sim_sum_falling(index);
+	return ret;
 #else
-
+	pthread_mutex_lock(&mutex_det);
+	ret = g_det[i].sum_falling;
+	pthread_mutex_unlock(&mutex_det);
+	return ret;
 #endif
 }
 
-/* FIXME
+/* 
  * 清空检测器下降沿计数
  */
 int tsc_clr_falling(int index)
 {
+	int ret;
 #ifdef _SIM_TEST_
-	return sim_clr_falling(index);
+	ret = sim_clr_falling(index);
+	return ret;
 #else
-
+	pthread_mutex_lock(&mutex_det);
+	g_det[index].sum_falling = 0;
+	pthread_mutex_unlock(&mutex_det);
+	return 0;
 #endif
 }
 
-/* FIXME
+/* 
  * 检测器占用率，单位是percent
  */
 int tsc_cur_hold(int index)
 {
+	int ret;
 #ifdef _SIM_TEST_
-	return sim_cur_hold(index);
+	ret = sim_cur_hold(index);
+	return ret;
 #else
-
+	pthread_mutex_lock(&mutex_det);
+	ret = g_det[index].occ1;
+	pthread_mutex_unlock(&mutex_det);
+	return ret;
 #endif
 }
 
-/* FIXME
+/* 
  * 平滑处理后的检测器占用率，单位是percent
  */
 int tsc_sm_hold(int index)
 {
+	int ret;
 #ifdef _SIM_TEST_
-	return sim_sm_hold(index);
+	ret = sim_sm_hold(index);
+	return ret;
 #else
-
+	pthread_mutex_lock(&mutex_det);
+	ret = g_det[index].occ2;
+	pthread_mutex_unlock(&mutex_det);
+	return ret;
 #endif
 }
 
-/* FIXME
+/* 
  * 检测器当前占用状态
  */
 int tsc_hold_state(int index)
 {
+	int ret;
 #ifdef _SIM_TEST_
-	return sim_hold_state(index);
+	ret = sim_hold_state(index);
+	return ret;
 #else
-
+	pthread_mutex_lock(&mutex_det);
+	ret = g_det[index].state;
+	pthread_mutex_unlock(&mutex_det);
+	return ret;
 #endif
 }
 
@@ -450,29 +629,40 @@ int tsc_hold_state(int index)
  */
 int tsc_hold_time(int index)
 {
+	int ret;
 #ifdef _SIM_TEST_
-	return sim_hold_time(index);
+	ret = sim_hold_time(index);
+	return ret;
 #else
-
+	pthread_mutex_lock(&mutex_det);
+	ret = g_det[index].hold;
+	pthread_mutex_unlock(&mutex_det);
+	return ret;
 #endif
 }
 
-/* FIXME
+/* 
  * 检测器是否出现故障 */
 int tsc_det_fault(int index)
 {
+	int ret;
 #ifdef _SIM_TEST_
-	return sim_det_fault(index);
+	ret = sim_det_fault(index);
+	return ret;
 #else 
-
+	pthread_mutex_lock(&mutex_det);
+	ret = g_det[index].fault;
+	pthread_mutex_lock(&mutex_det);
+	return ret;
 #endif
 }
 
-/* FIXME
+/* FIXME 
  * 检测指定的检测器是否存在
  */
 int tsc_det_exist(int index)
 {
+	int ret;
 #ifdef _SIM_TEST_
 	return sim_det_exist(index);
 #else
@@ -480,27 +670,36 @@ int tsc_det_exist(int index)
 #endif
 }
 
-/* FIXME
+/* 
  * 自最后一个下降沿以来的时间间隔
  */
 int tsc_det_net(int index)
 {
+	int ret;
 #ifdef _SIM_TEST_
-	return sim_det_net(index);
+	ret = sim_det_net(index);
+	return ret;
 #else
-
+	pthread_mutex_lock(&mutex_det);
+	ret = g_det[index].net;
+	pthread_mutex_unlock(&mutex_det);
+	return ret;
 #endif
 }
 
-/* FIXME
+/* 
  * 自最后一个上升沿以来的时间间隔
  */
 int tsc_det_gross(int index)
 {
 #ifdef _SIM_TEST_
-	return sim_det_gross(index);
+	ret = sim_det_gross(index);
+	return ret;
 #else
-
+	pthread_mutex_lock(&mutex_det);
+	ret = g_det[index].gross;
+	pthread_mutex_unlock(&mutex_det);
+	return ret;
 #endif
 }
 /***************** 其他函数 *****************************/

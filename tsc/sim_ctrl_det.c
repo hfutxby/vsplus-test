@@ -13,7 +13,7 @@
 //typedef struct {
 //	int sum_rising; //上升沿计数
 //	int sum_falling; //下降沿计数
-//	int state; //计时状态，<100:占用中，>100:空闲中
+//	int state; //计时状态，<100:占用中，>100:空闲中;ps:占用状态
 //	int hold; //总占用计时
 //	int free; //总空闲计时
 //	int fault; //故障
