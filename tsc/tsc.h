@@ -45,6 +45,10 @@ void tsc_stream_waiting(int index, int time);
 
 #define MAXCOUNT (32767<<1)
 
+/****** 控制器程序调用接口 ******/
+void tsc_det_op(int index, int op);
+
+
 //信号灯记录信息
 typedef struct{
     int stat; //信号灯状态，0-disable;1-amber;2-min_red;3-ex_red;4-prep;5-min_green;6-ex_green

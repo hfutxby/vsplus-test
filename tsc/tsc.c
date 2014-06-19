@@ -21,7 +21,7 @@ FILE* g_vcb_file = NULL; //配置参数vcb文件
 FILE* g_vcb_back = NULL; //备份参数vcb文件
 #define VCB_FILE "para.vcb" //配置参数vcb文件
 #define VCB_BACK "para_bak.vcb" //备份参数vcb文件
-#define _SIM_TEST_ //使用模拟数据进行测试
+//#define _SIM_TEST_ //使用模拟数据进行测试
 //#define _TEST_SG_ //使用串口指令进行信号切换
 
 int g_exit;//退出线程标志
@@ -361,31 +361,30 @@ void tsc_stream_waiting(int index, int time)
 /*************检测器函数************************/
 double g_f1 = 0.2;//占用率上升折算因子
 double g_f2 = 0.2;//下降因子
-int g_det_time = 0;//防止下降沿丢失
-#define DET_MAXTIME 600
+#define DET_MAXTIME 600 //等待下降沿超时
 
-det_node* g_det = NULL;
-int g_det_fd = 0;
+det_node* g_det = NULL; //检测器数据
+int g_fd_det = 0; //检测器数据映射文件
 
-int g_exit_det = 0;
-pthread_mutex_t mutex_det = PTHREAD_MUTEX_INITILIZER;
+int g_exit_det = 0; //检测器数据维护线程退出标志
+pthread_mutex_t mutex_det = PTHREAD_MUTEX_INITIALIZER;
 pthread_t g_tid_det;
 
 /* 打开检测器数据映射 */
 void open_det(void)
 {   
-    int ret;
+    int i, ret;
     //默认保存文件
-    g_det_fd = open("det_nodes.dat", O_RDWR|O_CREAT, 0644);
-    if(g_det_fd < 0){
+    g_fd_det = open("det_nodes.dat", O_RDWR|O_CREAT, 0644);
+    if(g_fd_det < 0){
         printf("%s\n", strerror(errno));
         return;
     }
-    if(ret = ftruncate(g_det_fd, sizeof(det_node)*DETMAX) < 0){
+    if(ret = ftruncate(g_fd_det, sizeof(det_node)*DETMAX) < 0){
         printf("%s\n", strerror(errno));
     }
     //映射进内存
-    g_det = mmap(NULL, sizeof(det_node)*DETMAX,  PROT_READ|PROT_WRITE, MAP_SHARED, g_det_fd, 0);
+    g_det = mmap(NULL, sizeof(det_node) * DETMAX,  PROT_READ|PROT_WRITE, MAP_SHARED, g_fd_det, 0);
     if(g_det ==  MAP_FAILED){
         printf("%s\n", strerror(errno));
     }
@@ -398,8 +397,9 @@ void open_det(void)
 /* 关闭检测器数据映射 */
 void close_det(void)
 {
-    close(g_det_fd);
-    g_det_fd = 0;
+	munmap(g_det, sizeof(det_node) * DETMAX);
+    close(g_fd_det);
+    g_fd_det = 0;
 }
 
 //typedef struct {
@@ -425,7 +425,7 @@ void close_det(void)
  * if(occ1>occ2) occ2 = occ2 + f1*(occ1-occ2)
  * if(occ1<occ2) occ2 = occ2 + f2*(occ1-occ2)
  */
-void upade_det(void)
+void update_det(void)
 {
 	int i;
 	for(i = 0; i < DETMAX; i++){
@@ -436,7 +436,6 @@ void upade_det(void)
 				g_det[i].hold++;
 				g_det[i].free--;
 				g_det[i].gross++;
-				g_det_time++;
 			}
 		}
 		else{
@@ -457,17 +456,19 @@ void upade_det(void)
 }
 
 /* 驱动模块调用此函数，op=1上升沿,op=2下降沿 */
-void tsc_det_op(int op)
+void tsc_det_op(int index, int op)
 {
 	pthread_mutex_lock(&mutex_det);
 	if(op == 1){
-		g_det[i].sum_rising++;
-		g_det[i].net = 0;
-		g_det[i].gross = 0;
+		g_det[index].sum_rising++;
+		g_det[index].state = 1;
+		g_det[index].net = 0;
+		g_det[index].gross = 0;
 	}
 	if(op == 2){
-		g_det[i].sum_falling++;
-		g_det[i].net = 0;
+		g_det[index].sum_falling++;
+		g_det[index].state = 0;
+		g_det[index].net = 0;
 	}
 	pthread_mutex_unlock(&mutex_det);
 }
@@ -477,14 +478,17 @@ void* thr_det(void* arg)
 {
 	struct timeval tv1, tv2;
 	long us;
+	int i;
 	while(!g_exit_det){
 		gettimeofday(&tv1, NULL);
 		pthread_mutex_lock(&mutex_det);
 		update_det();
 		pthread_mutex_unlock(&mutex_det);
-		if(g_det_time > DET_MAXTIME)
-			tsc_det_op(2);//超时，人为产生一个下降沿
-		gettimeofday(&tv1, NULL);
+		for(i = 0; i < DETMAX; i++){
+			if(g_det[i].gross > DET_MAXTIME)
+				tsc_det_op(i, 2);//超时，人为产生一个下降沿
+		}
+		gettimeofday(&tv2, NULL);
 		us = (tv2.tv_sec - tv1.tv_sec) * 1000000 + (tv2.tv_usec - tv1.tv_usec);
 		us_sleep(100*1000 - us);//100ms更新一次检测器状态
 	}
@@ -550,7 +554,7 @@ int tsc_sum_falling(int index)
 	return ret;
 #else
 	pthread_mutex_lock(&mutex_det);
-	ret = g_det[i].sum_falling;
+	ret = g_det[index].sum_falling;
 	pthread_mutex_unlock(&mutex_det);
 	return ret;
 #endif
@@ -692,6 +696,7 @@ int tsc_det_net(int index)
  */
 int tsc_det_gross(int index)
 {
+	int ret;
 #ifdef _SIM_TEST_
 	ret = sim_det_gross(index);
 	return ret;
