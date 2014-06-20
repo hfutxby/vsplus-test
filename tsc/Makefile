@@ -15,7 +15,7 @@ CFLAGS += -D_PROZESSOR_INTEL_ -D_HELPER_MACROS_ -D_ADVANCED_MEMORY_ -DDEBUG=1
 
 all: main test sim_ctrl decode
 main: main.c tsc.c VSP_Interface.c
-	$(CC) $(CFLAGS) tsc.c VSP_Interface.c parse_xml.c vs_main.c main.c vsp_core.lib -pthread -o main.x86.out
+	$(CC) $(CFLAGS) tsc.c VSP_Interface.c parse_xml.c vs_main.c main.c ring_buf.c serial_pack.c drive.c vsp_core.lib -pthread -o main.x86.out
 	#$(CC) $(CFLAGS) tsc.c sim.c VSP_Interface.c parse_xml.c vs_main.c main.c vsp_core.lib -pthread -o main.x86.out
 	#$(ARMCC) $(CFLAGS) tsc.c sim.c VSP_Interface.c parse_xml.c main.c vsp_core_arm.lib -pthread -o main.arm.out
 
@@ -27,6 +27,10 @@ serial_test: ring_buf.c serial_test.c serial_read.c
 	$(CC) ring_buf.c serial_test.c -pthread -o serial_test.x86.out
 	$(ARMCC) ring_buf.c serial_test.c -pthread -o serial_test.arm.out
 	$(CC) ring_buf.c serial_read.c -pthread -o serial_read.x86.out
+
+#用来观察信号灯状态
+sg_view: sg_view.c
+	$(CC) sg_view.c -o sg_view.x86.out
 
 sim_ctrl: sim_ctrl_det_2.c sim_ctrl_sg.c sim_ctrl.c
 	#$(CC) tsc.c sim_ctrl_det_2.c -pthread -o sim_ctrl_det_2.x86.out

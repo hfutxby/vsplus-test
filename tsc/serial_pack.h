@@ -7,4 +7,6 @@ typedef struct{
     int load_size;//携带数据量
 }pack;
 
+void serial_coomand(unsigned char* buf, int size);
+
 #endif /* __SERIAL_PACK_H*/

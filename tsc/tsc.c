@@ -28,18 +28,21 @@ int g_exit;//退出线程标志
 
 int g_timer[MAXTIMER];//最低位做开关标志
 pthread_t g_tid_timer;//定时器计时线程
+pthread_mutex_t mutex_timer = PTHREAD_MUTEX_INITIALIZER;
+int g_exit_timer = 0;
 
-int g_fd_serial;//和驱动版通信串口
-pthread_t g_tid_watchdog; //喂狗线程
-pthread_mutex_t mutex_serial;
+//int g_fd_serial;//和驱动版通信串口
+//pthread_t g_tid_watchdog; //喂狗线程
+//pthread_mutex_t mutex_serial;
 
 int g_fd_sg; //记录信号灯状态的文件
 sg_node* g_sg; //信号灯参数
 pthread_t g_tid_sg;//记录信号灯状态的线程
+int g_exit_sg = 0;
 
-int g_fd_det; //记录检测器状态的文件
-det_node* g_det; //检测器参数
-pthread_t g_tid_det; //近路检测器状态的线程
+//int g_fd_det; //记录检测器状态的文件
+//det_node* g_det; //检测器参数
+//pthread_t g_tid_det; //近路检测器状态的线程
 
 xml_para* g_xml_para; //从xml解析出来的配置参数
 
@@ -201,14 +204,16 @@ int us_sleep(long us)
 void* thr_timer(void* arg)
 {
 	struct timeval tv1, tv2;
-	int us = 100000, diff;
+	long us;
 	while(!g_exit){
 		gettimeofday(&tv1, NULL);
+		pthread_mutex_lock(&mutex_timer);
 		time_go();
+		pthread_mutex_unlock(&mutex_timer);
 		gettimeofday(&tv2, NULL);
-		diff = (tv2.tv_sec-tv1.tv_sec)*1000000+(tv2.tv_usec-tv1.tv_usec);
-		//printf("time_go:%dus\n", diff);
-		us_sleep(us-diff);
+		us = (tv2.tv_sec - tv1.tv_sec) * 1000000 + (tv2.tv_usec - tv1.tv_usec);
+		//printf("time_go:%dus\n", us);
+		us_sleep(1000000 - us);
 	}
 }
 
@@ -216,6 +221,7 @@ void* thr_timer(void* arg)
 int tsc_timer(int func, int index, int count)
 {
 	//debug(3, "==>\n");
+	pthread_mutex_lock(&mutex_timer);
 	int ret = 0;
 	int i = 0;
 	if((index >= 0) && (index <= MAXTIMER)){
@@ -244,6 +250,7 @@ int tsc_timer(int func, int index, int count)
 		}
 	}
 
+	pthread_mutex_unlock(&mutex_timer);
 	return ret;
 }
 
@@ -292,7 +299,7 @@ int tsc_prog_actual(void)
 	//printf("actual prog:%d\n", ret);
 	return ret;
 #else
-
+	return 0;
 #endif
 }
 
@@ -305,7 +312,7 @@ int tsc_prog_select(void)
 	//printf("select prog:%d\n", ret);
 	return ret;
 #else
-
+	return 0;
 #endif
 }
 
@@ -747,65 +754,92 @@ int tsc_get_date(int* year, int* month, int* mday, int* wday)
 }
 
 /***************** 信号控制函数 *****************/
-//打开灯组运行信息文件
-void open_sg(void)
+////打开灯组运行信息文件
+//void open_sg(void)
+//{
+//	int ret;
+//	g_fd_sg = open("sg_nodes.dat", O_RDWR|O_CREAT, 0644);
+//	if(g_fd_sg < 0){
+//		printf("%s\n", strerror(errno));
+//		return;
+//	}
+//	if(ret = ftruncate(g_fd_sg, sizeof(sg_node)*SGMAX) < 0){
+//		printf("%s\n", strerror(errno));
+//	}
+//	g_sg = mmap(NULL, sizeof(sg_node)*SGMAX, PROT_READ|PROT_WRITE, MAP_SHARED, g_fd_sg, 0);
+//	if(g_sg == MAP_FAILED){
+//		printf("%s\n", strerror(errno));
+//	}
+//	//printf("sg:sizeof:%d\n", sizeof(sg_node)*SGMAX);
+//
+//	//FIXME:实际需要从XML文件中解析初始化数据
+//	memset(g_sg, 0, sizeof(sg_node)*SGMAX);
+//	int min_red[16] = {40,40,40,40,40,40,40,80,80,80,80,40,40,40,40,60};
+//	int min_green[16] = {20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20};
+//	int i;
+//	for(i = 0; i < 16; i++){
+//		g_sg[i].stat = 2;//random()%5+1;
+//		g_sg[i].red_min = min_red[i];
+//		g_sg[i].green_min = min_green[i];
+//		g_sg[i].prep = 30;
+//		g_sg[i].amber = 30;
+//		g_sg[i].time = 0;
+//		g_sg[i].ext = 0;
+//	}
+//}
+//
+//void close_sg(void)
+//{
+//	close(g_fd_sg);
+//	g_fd_sg = 0;
+//}
+
+////信号灯配置参数
+//typedef struct{
+//	int fault; //1：不存在，2：存在但是故障了，0：正常
+//	int red_min; //最小红灯时间
+//	int prep; //红绿过渡时间
+//	int green_min; //最小绿灯时间
+//	int amber; //绿红过渡时间
+//	int ext; //信号切换标志，1：open, 2:close
+//}sg_def;
+
+sg_def* g_sg = NULL;
+int g_exit_sg = 0;
+pthread_t g_tid_sg;
+
+int init_tsc_sg(void)
 {
 	int ret;
-	g_fd_sg = open("sg_nodes.dat", O_RDWR|O_CREAT, 0644);
-	if(g_fd_sg < 0){
-		printf("%s\n", strerror(errno));
-		return;
+	g_sg = (sg_def*)malloc(sizeof(sg_def) * SGMAX);
+	if(!g_sg){
+		printf("%s(%d),malloc for sg_def fail,%s\n", __func__, __LINE__, strerror(errno));
+		return -1;
 	}
-	if(ret = ftruncate(g_fd_sg, sizeof(sg_node)*SGMAX) < 0){
-		printf("%s\n", strerror(errno));
-	}
-	g_sg = mmap(NULL, sizeof(sg_node)*SGMAX, PROT_READ|PROT_WRITE, MAP_SHARED, g_fd_sg, 0);
-	if(g_sg == MAP_FAILED){
-		printf("%s\n", strerror(errno));
-	}
-	//printf("sg:sizeof:%d\n", sizeof(sg_node)*SGMAX);
+	ret = drv_sg_para(g_sg);//读入参数
+	pthread_create(&g_tid_sg, NULL, thr_sg, NULL);
 
-	//FIXME:实际需要从XML文件中解析初始化数据
-	memset(g_sg, 0, sizeof(sg_node)*SGMAX);
-	int min_red[16] = {40,40,40,40,40,40,40,80,80,80,80,40,40,40,40,60};
-	int min_green[16] = {20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20};
-	int i;
-	for(i = 0; i < 16; i++){
-		g_sg[i].stat = 2;//random()%5+1;
-		g_sg[i].red_min = min_red[i];
-		g_sg[i].green_min = min_green[i];
-		g_sg[i].prep = 30;
-		g_sg[i].amber = 30;
-		g_sg[i].time = 0;
-		g_sg[i].ext = 0;
-	}
+	return ret;
 }
 
-void close_sg(void)
+void deinit_tsc_sg(void)
 {
-	close(g_fd_sg);
-	g_fd_sg = 0;
+	g_exit_sg = 1;
+	pthread_join(g_tid_sg, NULL);
+	free(g_sg);
+
 }
 
 void* thr_sg(void* arg)
 {
-	int i;
-	//xml_para* para = (xml_para*)(arg);
-	xml_para* para = g_xml_para;
-#ifdef _TEST_SG_
-	unsigned char buf[4];//初始化所有灯组红灯
-	buf[0] = 0x96;
-	buf[1] = 0xff;//所有灯组
-	buf[2] = 0x01;//红灯
-	buf[3] = 0x69;
-	pthread_mutex_lock(&mutex_serial);
-	write(g_fd_serial, buf, sizeof(buf));
-	pthread_mutex_unlock(&mutex_serial);
-#endif
-	while(!g_exit){
+	int i, ret;
+	while(!g_exit_sg){
 		for(i = 0; i < SGMAX; i++){
-			g_sg[i].time++;
-			switch(g_sg[i].stat){
+			switch(g_sg[i].ext){
+				case 1://open操作中
+					ret = drv_sg_chk(i, 5);//检查是否处于红灯状态
+					
+				case 2://close操作中
 //				case 0://关灯状态
 //					if(g_sg[i].ext == 1){//open
 //						g_sg[i].ext = 0;
@@ -917,43 +951,28 @@ void* thr_sg(void* arg)
 	}
 }
 
-void init_sg(void)
-{
-	debug(3, "==>\n");
-	open_sg();
-	pthread_create(&g_tid_sg, NULL, thr_sg, NULL);
-	debug(3, "<==\n");
-}
-
-void deinit_sg(void)
-{
-	debug(3, "==>\n");
-	pthread_join(g_tid_sg, NULL);
-	close_sg();
-	debug(3, "<==\n");
-}
-/* FIXME
+/* 
  * 测试指定的signal group是否存在
  */
 int tsc_sg_exist(int sg)
 {
-//	return 1;
-	if((sg >=1 ) && (sg <= 15))
+	if(g_sg[sg].fault != 1)
+		return 1;
+	else 
+		return 0;
+}
+
+/* 
+ * 测试指定的signal group是否故障
+ */
+int tsc_sg_fault(int sg)
+{
+	if(g_sg[sg].fault == 2)
 		return 1;
 	else
 		return 0;
 }
 
-/* FIXME
- * 测试指定的signal group是否故障
- */
-int tsc_sg_fault(int sg)
-{
-	if(g_sg[sg].stat == -1)
-		return 1;
-	else
-		return 0;
-}
 /* FIXME
  * 测试sg是否处于vsplus控制
  */
@@ -966,40 +985,18 @@ int tsc_sg_enabled(int sg)
 		return 0;
 }
 
-/* FIXME
+/* 
  * 打开信号灯，红->绿 */
 void tsc_sg_open(int sg)
 {
 	g_sg[sg].ext = 1;
-#ifdef _TEST_SG_1
-	unsigned char buf[4];
-	buf[0] = 0x96;
-	buf[1] = g_xml_para->sg[sg];
-	buf[2] = 0x02;//黄
-	buf[3] = 0x69;
-	write(g_fd_serial, buf, sizeof(buf));
-	us_sleep(g_sg[sg].prep*100*1000);
-	buf[2] = 0x04;//绿
-	write(g_fd_serial, buf, sizeof(buf));
-#endif
 }
 
-/* FIXME
+/* 
  * 关闭信号灯，绿->红 */
 void tsc_sg_close(int sg)
 {
 	g_sg[sg].ext = 2;
-#ifdef _TEST_SG_1
-	unsigned char buf[4];
-	buf[0] = 0x96;
-	buf[1] = g_xml_para->sg[sg];
-	buf[2] = 0x02;//黄
-	buf[3] = 0x69;
-	write(g_fd_serial, buf, sizeof(buf));
-	sleep(g_sg[sg].amber*100*1000);
-	buf[2] = 0x01;//红
-	write(g_fd_serial, buf, sizeof(buf));
-#endif
 }
 
 /***** 信号灯状态检查 *****/
@@ -1329,23 +1326,23 @@ int open_port(int port)
 	return fd;
 }
 
-/* 给驱动板喂狗 */
-void* thr_watchdog(void* para)
-{
-	int fd = *(int*)(para);
-	char buf[3];
-	memset(buf, 0, sizeof(buf));
-	buf[0] = 0xC1;
-	buf[1] = 0xAB;
-	buf[2] = 0x5C;
-	int ret;
-	while(!g_exit){
-		pthread_mutex_lock(&mutex_serial);
-		ret = write(fd, buf, sizeof(buf));
-		pthread_mutex_unlock(&mutex_serial);
-		us_sleep(2*1000*1000);//每隔一段时间喂一次
-	}
-}
+///* 给驱动板喂狗 */
+//void* thr_watchdog(void* para)
+//{
+//	int fd = *(int*)(para);
+//	char buf[3];
+//	memset(buf, 0, sizeof(buf));
+//	buf[0] = 0xC1;
+//	buf[1] = 0xAB;
+//	buf[2] = 0x5C;
+//	int ret;
+//	while(!g_exit){
+//		pthread_mutex_lock(&mutex_serial);
+//		ret = write(fd, buf, sizeof(buf));
+//		pthread_mutex_unlock(&mutex_serial);
+//		us_sleep(2*1000*1000);//每隔一段时间喂一次
+//	}
+//}
 
 //返回0表示初始化成功
 int init_serial(void)

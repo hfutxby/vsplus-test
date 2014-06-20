@@ -1,13 +1,32 @@
-if626max.h:一些常量定义
-if626bas.h:基本接口定义
-VSP_Interface.c:基本接口实现
-tsc.c:主控实现函数，部分接口函数的实现
-sim.c:模拟数据产生
-sim_ctrl_det.c:对检测器模拟数据
 
-tsc.c
-依赖模拟数据的实现使用_SIM_TEST_宏管理
+===== 程序架构 =====
+vsplus <--> tsc.c <--> drive.c <--> serial_pack.c
+				  			   <--> parse_xml.c	
 
-sim.c
+VSP_Interface.c: vsplus基本接口
+tsc.c: 对vsplus接口的实现
+drive.c: 为tsc.c提供的实现，1：驱动板相关的功能；2：参数配置相关的功能
+parse_xml.c: 解析xml文件获取配置参数
+ring_buf.c, serial_pack.c: 串口通信，控制驱动板
+sg_track.c: 跟踪信号灯状态
+vs_main.c: 对vsplus功能大打包封装
+
+serial_test.c: 测试程序，1：模拟驱动板为主控提供检测器信号；2：接受主控向驱动板下发的信号
+serial_read.c: 测试程序，读串口数据
+sg_view.c: 测试程序，检查内部记录的信号灯状态
 
 
+===== 模拟 =====
+vsplus <--> tsc.c <--> sim.c
+sim.c: 模拟驱动板的功能
+
+
+===== 其它 =====
+if626max.h: 一些常量定义
+if626bas.h: 基本接口定义
+vsp626ste.h: 几个结构定义
+
+base64.c: base64解码程序
+para.vcb: 提供给vsplus参数文件
+para_bak.vcb: vsplus生成的备份文件
+log.def, log.output: 生成log文件

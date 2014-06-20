@@ -1,6 +1,8 @@
 #ifndef __TSC_H
 #define __TSC_H
 
+#include "if626max.h"
+
 /* 出错信息 */
 #if(DEBUG>=1)
 #define debug1(fmt, args...) \
@@ -49,16 +51,26 @@ void tsc_stream_waiting(int index, int time);
 void tsc_det_op(int index, int op);
 
 
-//信号灯记录信息
+////信号灯记录信息
+//typedef struct{
+//    int stat; //信号灯状态，0-disable;1-amber;2-min_red;3-ex_red;4-prep;5-min_green;6-ex_green
+//    int red_min; //最小红灯时间设定
+//    int prep; //红绿过渡时间设定 
+//    int green_min; //最小绿灯时间设定
+//    int amber;//绿红过渡时间设定
+//    int time; //信号灯状态计时
+//    int ext;//b00状态未变，b01进行红绿切换，b10进行绿红切换
+//}sg_node;
+
+//信号灯配置参数
 typedef struct{
-    int stat; //信号灯状态，0-disable;1-amber;2-min_red;3-ex_red;4-prep;5-min_green;6-ex_green
-    int red_min; //最小红灯时间设定
-    int prep; //红绿过渡时间设定 
-    int green_min; //最小绿灯时间设定
-    int amber;//绿红过渡时间设定
-    int time; //信号灯状态计时
-    int ext;//b00状态未变，b01进行红绿切换，b10进行绿红切换
-}sg_node;
+	int fault; //1：不存在，2：存在但是故障了，0：正常
+    int red_min; //最小红灯时间
+    int prep; //红绿过渡时间
+    int green_min; //最小绿灯时间
+    int amber; //绿红过渡时间
+    int ext; //信号切换标志，1：open, 2:close
+}sg_def;
 
 //检测器记录信息
 typedef struct {
@@ -74,7 +86,6 @@ typedef struct {
     int gross;//gross time gap starts at the last rising slope
 }det_node;
 
-#include "if626max.h"
 typedef struct{
 	int det_sg[DETMAX];//检测器和信号灯对应关系
 	int sg[SGMAX];

@@ -10,6 +10,9 @@
 int main(void)
 {
 	int i, ret;
+	ret = init_serial();
+
+	sleeP(1000);
 	printf("\nvs_init()\n");
 	ret = vs_init();
 	if(ret < 0){
