@@ -196,12 +196,16 @@ int vs_start(void)
 	int i, ret;
 #if 1
 	//关闭AUS线程
-	g_aus_exit = 1;
-	ret = pthread_join(g_tid_aus, NULL);
-	printf("pthread_join(g_tid_aus, NULL):ret=%d\n", ret);
-	g_vsplus_exit = 1;
-	ret = pthread_join(g_tid_vsplus, NULL);
-	printf("pthread_join(g_tid_vsplus, NULL):ret=%d\n", ret);
+	if(g_tid_aus){
+		g_aus_exit = 1;
+		ret = pthread_join(g_tid_aus, NULL);
+		printf("pthread_join(g_tid_aus, NULL):ret=%d\n", ret);
+	}
+	if(g_tid_vsplus){
+		g_vsplus_exit = 1;
+		ret = pthread_join(g_tid_vsplus, NULL);
+		printf("pthread_join(g_tid_vsplus, NULL):ret=%d\n", ret);
+	}
 #endif
 #if 10
 	//VSP_NEU
@@ -253,12 +257,16 @@ int vs_stop(void)
 	int i, ret;
 #if 1
 	//关闭EIN线程
-	g_ein_exit = 1;
-	ret = pthread_join(g_tid_ein, NULL);
-	printf("pthread_join(g_tid_ein, NULL):ret=%d\n", ret);
-	g_vsplus_exit = 1;
-	ret = pthread_join(g_tid_vsplus, NULL);
-	printf("pthread_join(g_tid_vsplus, NULL):ret=%d\n", ret);
+	if(g_tid_ein){
+		g_ein_exit = 1;
+		ret = pthread_join(g_tid_ein, NULL);
+		printf("pthread_join(g_tid_ein, NULL):ret=%d\n", ret);
+	}
+	if(g_tid_vsplus){
+		g_vsplus_exit = 1;
+		ret = pthread_join(g_tid_vsplus, NULL);
+		printf("pthread_join(g_tid_vsplus, NULL):ret=%d\n", ret);
+	}
 #endif
 #if 1
 	//开启EIN线程

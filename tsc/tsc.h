@@ -49,42 +49,44 @@ void tsc_stream_waiting(int index, int time);
 
 /****** 控制器程序调用接口 ******/
 void tsc_det_op(int index, int op);
+void tsc_det_fault_set(int index, int type);
 
-
-////信号灯记录信息
-//typedef struct{
-//    int stat; //信号灯状态，0-disable;1-amber;2-min_red;3-ex_red;4-prep;5-min_green;6-ex_green
-//    int red_min; //最小红灯时间设定
-//    int prep; //红绿过渡时间设定 
-//    int green_min; //最小绿灯时间设定
-//    int amber;//绿红过渡时间设定
-//    int time; //信号灯状态计时
-//    int ext;//b00状态未变，b01进行红绿切换，b10进行绿红切换
-//}sg_node;
 
 //信号灯配置参数
 typedef struct{
 	int fault; //1：不存在，2：存在但是故障了，0：正常
-    int red_min; //最小红灯时间
+    int min_red; //最小红灯时间
     int prep; //红绿过渡时间
-    int green_min; //最小绿灯时间
+    int min_green; //最小绿灯时间
     int amber; //绿红过渡时间
     int ext; //信号切换标志，1：open, 2:close
 }sg_def;
 
+#define MAXPRG 64
+//配时方案配置参数
+typedef struct{
+	int tu;//方案总时长
+	int fault;//1：不存在，0：存在
+}prg_def;
+
+//检测器配置参数
+typedef struct{
+	int fault; //1：不存在，0：存在
+}det_def;
+
 //检测器记录信息
 typedef struct {
-    int sum_rising; //上升沿计数
-    int sum_falling; //下降沿计数
-    int state; //计时状态，<100:占用中，>100:空闲中
-    int hold; //总占用计时
-    int free; //总空闲计时
-    int fault; //故障
-    int occ1;//占用率
-    int occ2;//平滑占用率
-    int net;//net time gap starts at the last falling slope
-    int gross;//gross time gap starts at the last rising slope
-}det_node;
+  int sum_rising; //上升沿计数，驱动板信号修改
+  int sum_falling; //下降沿计数，驱动板信号修改
+  int state; //占用状态，驱动板信号修改
+  int hold; //总占用计时
+  int free; //总空闲计时
+  int fault; //1:故障,0:正常
+  int occ1;//占用率
+  int occ2;//平滑占用率
+  int net;//time gap starts at the last falling slope，驱动>板信号修改
+  int gross;
+}det_track;
 
 typedef struct{
 	int det_sg[DETMAX];//检测器和信号灯对应关系

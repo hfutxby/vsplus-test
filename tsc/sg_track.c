@@ -20,7 +20,6 @@ int g_exit_sg_track = 0;
 int g_fd_sg = 0;
 sg_track* g_sg = NULL;
 
-
 //打开灯组状态跟踪文件
 void sg_track_open(void)
 {
@@ -69,60 +68,24 @@ int sg_track_chk(int sg, int stat)
 	return -1;
 }
 
-void sg_track_disable(int sg)
+//设置sg处于故障状态
+int sg_track_fault_set(int sg, int type)
 {
+	int ret = 0;
 	pthread_mutex_lock(&mutex_sg_track);
-	g_sg[sg].stat = 0;
-	g_sg[sg].time = 0;
+	if(type)
+		g_sg[sg].fault = 1;
+	else
+		g_sg[sg].fault = 0;
 	pthread_mutex_unlock(&mutex_sg_track);
+
+	return 0;
 }
 
-void sg_track_amber(int sg)
-{	
-	pthread_mutex_lock(&mutex_sg_track);
-	g_sg[sg].stat = 1;
-	g_sg[sg].time = 0;
-	pthread_mutex_unlock(&mutex_sg_track);
-}
-
-void sg_track_red(int sg)
+//检查sg是否处于故障状态
+int sg_track_fault(int sg)
 {
-	pthread_mutex_lock(&mutex_sg_track);
-	g_sg[sg].stat = 2;
-	g_sg[sg].time = 0;
-	pthread_mutex_unlock(&mutex_sg_track);
-}
-
-void sg_track_red_ext(int sg)
-{
-	pthread_mutex_lock(&mutex_sg_track);
-	g_sg[sg].stat = 3;
-	g_sg[sg].time = 0;
-	pthread_mutex_unlock(&mutex_sg_track);
-}
-
-void sg_track_prep(int sg)
-{
-	pthread_mutex_lock(&mutex_sg_track);
-	g_sg[sg].stat = 4;
-	g_sg[sg].time = 0;
-	pthread_mutex_unlock(&mutex_sg_track);
-}
-
-void sg_track_green(int sg)
-{
-	pthread_mutex_lock(&mutex_sg_track);
-	g_sg[sg].stat = 5;
-	g_sg[sg].time = 0;
-	pthread_mutex_unlock(&mutex_sg_track);
-}
-
-void sg_track_green_ext(int sg)
-{
-	pthread_mutex_lock(&mutex_sg_track);
-	g_sg[sg].stat = 6;
-	g_sg[sg].time = 0;
-	pthread_mutex_unlock(&mutex_sg_track);
+	return g_sg[sg].fault;
 }
 
 //对信号灯状态进行计时

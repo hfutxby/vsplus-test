@@ -103,19 +103,14 @@ void handle_pack(unsigned char* buf)
 	switch(buf[0]){
 		case 0xf0:
 			printf("get a det rising slope\n");
-			drv_det_op(buf[1], 1);
+			tsc_det_op(buf[1], 1);
 			break;
 		case 0xf1:
 			printf("get a det falling slope\n");
-			drv_det_op(buf[1], 2);
+			tsc_det_op(buf[1], 2);
 			break;
-		//case 0x96:
-		//	printf("get a sg switch request\n");
-		//	break;
-		//case 0x5a:
-		//	printf("get a watchdog feed\n");
-		//	break;
 		default:
+			drv_handle_pack(buf);
 			printf("unknown pack\n");
 	}
 }
@@ -298,23 +293,6 @@ void* thr_read(void* para)
 	}
 }
 
-//void* thr_read_2(void* para)
-//{
-//	int ret, i;
-//	char buf[200] = {0};
-//
-//	while(!g_exit_read){
-//		//pthread_mutex_lock(&serial_read_mutex);
-//		ret = read(g_fd_serial, buf, sizeof(buf));
-//		//pthread_mutex_unlock(&serial_read_mutex);
-//		if(ret == 0) continue;
-//		printf("thr_read:%d:", ret);
-//		for( i = 0; i < ret; i++)
-//			printf("%#x ", buf[i]);
-//		printf("\n");
-//	}
-//}
-
 //发送喂狗信息
 void* thr_watchdog(void* para)
 {
@@ -333,123 +311,18 @@ void* thr_watchdog(void* para)
 }
 
 //通过串口发送命令
-void serial_command(unsigned char* buf, int size)
+int serial_command(unsigned char* buf, int size)
 {
 	pthread_mutex_lock(&serial_write_mutex);
 	int ret = write(g_fd_serial, buf, size);
 	pthread_mutex_unlock(&serial_write_mutex);
+	
+	return ret;
 }
 
-////编号为index的检测器产生一个上升沿
-//void set_rising(int index)
-//{
-//	unsigned char buf[3];
-//	buf[0] = 0xf0;
-//	buf[1] = index;
-//	buf[2] = 0x5c;
-//	pthread_mutex_lock(&serial_write_mutex);
-//	int ret = write(g_fd_serial, buf, sizeof(buf));
-//	pthread_mutex_unlock(&serial_write_mutex);
-//}
-
-////编号为index的检测器产生一个下降沿
-//void set_falling(int index)
-//{
-//	unsigned char buf[5];
-//	buf[0] = 0xf1;
-//	buf[1] = index;
-//	buf[2] = 0; buf[3] = 0;
-//	buf[4] = 0x5c;
-//	pthread_mutex_lock(&serial_write_mutex);
-//	int ret = write(g_fd_serial, buf, sizeof(buf));
-//	pthread_mutex_unlock(&serial_write_mutex);
-//}
-
-////发送检测器信号
-//void* thr_det(void* para)
-//{
-//	int index, op, ret;
-//	while(!g_exit_det){
-//		printf("input det num (1-45): ");
-//		scanf("%d", &index);
-//		if((index <= 0) || (index > 45)){
-//			printf("wrong det num\n");
-//			continue;
-//		}
-//		printf("select op type:\n  1 = set a rising slope;\n  2 = set a falling slope\n");
-//		scanf("%d", &op);
-//		if(op == 1){
-//			set_rising(index);
-//		}
-//		else if(op == 2){
-//			set_falling(index);
-//		}
-//		else{
-//			printf("wrong op type\n");
-//		}
-//	}
-//}
-
-////发送测试信号
-//void* thr_write(void* para)
-//{
-//	unsigned char buf[4];
-//	int group, stat, ret;
-//	buf[0] = 0x96; buf[3] = 0x69;
-//	while(!g_exit_write){
-//		printf("input light group:");
-//		scanf("%x", &group);
-//		printf("input light stat:");
-//		scanf("%x", &stat);
-//		printf("ready to send command\n");
-//		buf[1] = group; buf[2] = stat;
-//		pthread_mutex_lock(&serial_write_mutex);
-//		ret =write(g_fd_serial, buf, sizeof(buf));
-//		pthread_mutex_unlock(&serial_write_mutex);
-//		printf("thr_write:ret=%d:%#x %#x %#x %#x\n", ret, buf[0], buf[1], buf[2], buf[3]);
-//	}
-//}
-//
-////测试用，随机发送命令
-//void* thr_test_send(void* para)
-//{
-//    ring_buf* r = (ring_buf*)para;
-//    int i, list_len, pack_index;
-//    unsigned char buf[100];
-//    struct timeval tv;
-//    list_len = sizeof(pack_list) / sizeof(pack);
-//    while(1){
-//        gettimeofday(&tv, NULL);
-//        srand(tv.tv_usec);
-//        pack_index = random() % list_len;//任意选择一个pack
-//        memset(buf, 0, sizeof(buf));
-//        i = 0;
-//        buf[i] = pack_list[pack_index].p1;
-//		if(!(random() % 5)) buf[i] = 0xa0;//error test
-//        for(i = 1; i <= pack_list[pack_index].load_size; i++)
-//            buf[i] = 0x1;
-//        buf[i] = pack_list[pack_index].p2;
-//
-//        pthread_mutex_lock(&serial_write_mutex);
-//        write(g_fd_serial, buf, i+1);
-//        printf("send a pack:");
-//        for(i = 0; i < pack_list[pack_index].load_size + 2; i++)
-//            printf("0x%02x ", buf[i]);
-//        printf("\n\n");
-//        pthread_mutex_unlock(&serial_write_mutex);
-//
-//        usleep(1000*1000);
-//    }
-//}
-
-//int main(int argc, char* argv[])
 int init_serial(char* dev)
 {
 	int ret = 0;
-	//if(argc == 2)
-	//	g_fd_serial = open_port(argv[1]);
-	//else
-	//	g_fd_serial = open_port("ttyS1");
 
 	g_fd_serial = open_port(dev);
 	if(g_fd_serial < 0){

@@ -1,16 +1,18 @@
 //驱动板功能
 #include <stdio.h>
+#include <string.h>
 
 #include "drive.h"
 #include "tsc.h"
+#include "serial_pack.h"
 #include "parse_xml.h"
 
-/******* 信号灯操作 **********/
+/*====== 信号灯操作 =======*/
 //取得信号灯编号的代码
 int drv_sg_code(int sg)
 {
 #if 0
-	xml_sg_code(int* sg, int size);
+	int xml_sg_code(int sg);
 #else
 	int sg_code[] = {0,//匹配信号灯测试面板
 		0x41,//D1
@@ -49,7 +51,7 @@ int drv_sg_stat_code(int stat)
 		0x14 //绿闪
 	};
 	if(stat < (sizeof(sg_stat_code) / sizeof(int)))
-		return sg_stat_code(sg);
+		return sg_stat_code[stat];
 	else
 		return -1;
 }
@@ -57,7 +59,6 @@ int drv_sg_stat_code(int stat)
 //切换信号灯并记录状态
 void drv_sg_switch(int sg, int stat)
 {
-	int
 	unsigned char msg[4];
 	msg[0] = 0x96; msg[3] = 0x69;
 	msg[1] = drv_sg_code(sg);
@@ -67,7 +68,9 @@ void drv_sg_switch(int sg, int stat)
 	sg_track_switch(sg, stat);//记录信号灯状态信息	
 }
 
+#if 0
 //检查信号灯的状态
+//如果sg处于stat状态，返回此状态时间，否则返回-1
 int drv_sg_chk(int sg, int stat)
 {
 	int ret;
@@ -75,39 +78,111 @@ int drv_sg_chk(int sg, int stat)
 
 	return ret;
 }
+#endif
 
 //获取信号灯配置
-//
-int drv_sg_para(void* ptr)
+int drv_sg_para(void* ptr, int size)
 {
 #if 0
-	xml_sg_para(ptr);
+	int xml_sg_para(void* ptr, int size);
 #else
 	int i;
-	int red_min[16] = {40,40,40,40,40,40,40,80,80,80,80,40,40,40,40,60};
-	int green_min[16] = {20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20};
+	int min_red[16] = {40,40,40,40,40,40,40,80,80,80,80,40,40,40,40,60};
+	int min_green[16] = {20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20};
 	sg_def* sg = NULL;	
-	for(i = 0; i < 16; i++){
+	int num = size / sizeof(sg_def);
+	for(i = 0; i < num; i++){
 		sg = (sg_def*)(ptr + i * sizeof(sg_def));
-		sg->red_min = red_min[i];
-		sg->green_min = green_min[i];
+		memset(sg, 0, sizeof(sg_def));
+		sg->fault = 1;//sg不存在
+	}
+	num = (num > 16) ? 16 : num;
+	for(i = 0; i < num; i++){
+		sg = (sg_def*)(ptr + i * sizeof(sg_def));
+		sg->min_red = min_red[i];
+		sg->min_green = min_green[i];
 		sg->prep = 30;
 		sg->amber = 30;
 		sg->ext = 0;
 		sg->fault = 0;
 	}
-	for(i = 16; i < SGMAX; i++){
-		sg = (sg_def*)(ptr + i * sizeof(sg_def));
-		memset(sg, 0, sizeof(sg_def));
-		sg->fault = 1;
-	}
+
 #endif
 }
 
-/******* 串口操作 ********/
+void drv_sg_para_dump(void* ptr)
+{
+	if(!ptr)
+		return;
+	
+	int i;
+	sg_def* sg = NULL;
+	for(i = 0; i < 16; i++){
+		sg = (sg_def*)(ptr + i * sizeof(sg_def));
+		printf("%3d %3d %3d\n", sg->min_red, sg->min_green, sg->prep);
+	}
+}
 
-/********* vsplus提供的调用函数 ***********/
+#if 0
+//检查信号灯是否故障
+int drv_sg_fault(int index)
+{
+	return sg_track_fault(index);
+}
+#endif
+
+/*===== 检测器操作 ======*/
+#if 0
 void drv_det_op(int index, int op)
 {
 	tsc_det_op(index, op);
+}
+#endif
+
+//获取检测器配置参数
+int drv_det_para(void* ptr, int size)
+{
+#if 0
+	int xml_det_para(void* ptr, int size);
+#else
+	int num = size / sizeof(det_def);
+	memset(ptr, 1, size);
+	int i;
+	det_def* det = NULL;
+	num = (num > 45) ? 45 : num;
+	for(i = 0; i < num; i++){
+		det = (det_def*)(ptr + i * sizeof(det_def));
+		det->fault = 0;
+	}
+	return 0;
+#endif
+}
+
+/*=== 串口命令 ===*/
+//处理串口命令
+int drv_handle_pack(unsigned char* buf)
+{
+	printf("command: 0x%x\n", buf[0]);
+
+	return 0;
+}
+
+/*===== 配时方案 ====*/
+int drv_prg_para(void* ptr, int size)
+{
+#if 0
+	int xml_prg_para(void* ptr, int size);
+#else
+	int num = size / sizeof(prg_def);
+	memset(ptr, 1, size);
+	int i;
+	prg_def* prg = NULL;
+	num = (num > 6) ? 6 : num;
+	for(i = 0; i < num; i++){
+		prg = (prg_def*)(ptr + i * sizeof(prg_def));
+		prg->fault = 0;
+		prg->tu = 720;//72s
+	}
+	return 0;
+#endif
 }

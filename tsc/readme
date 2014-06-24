@@ -1,7 +1,7 @@
 
 ===== 程序架构 =====
 vsplus <--> tsc.c <--> drive.c <--> serial_pack.c
-				  			   <--> parse_xml.c	
+                               <--> parse_xml.c	
 
 VSP_Interface.c: vsplus基本接口
 tsc.c: 对vsplus接口的实现
@@ -16,11 +16,6 @@ serial_read.c: 测试程序，读串口数据
 sg_view.c: 测试程序，检查内部记录的信号灯状态
 
 
-===== 模拟 =====
-vsplus <--> tsc.c <--> sim.c
-sim.c: 模拟驱动板的功能
-
-
 ===== 其它 =====
 if626max.h: 一些常量定义
 if626bas.h: 基本接口定义
@@ -30,3 +25,41 @@ base64.c: base64解码程序
 para.vcb: 提供给vsplus参数文件
 para_bak.vcb: vsplus生成的备份文件
 log.def, log.output: 生成log文件
+
+=== 关于信号灯操作 ===
+在tsc.c中响应vsplus对信号灯的操作(open,close)。
+将其分解成drive.c中提供的信号灯操作(amber,min_red,ext_red,prep,min_green,ext_green)。
+
+在drive.c中进行信号灯操作必须同时调用serial_command(发送串口命令)和sg_track(同步记录信号灯状态)
+
+sg_track.c维护信号灯状态。sg_view.c查看信号灯状态。
+
+维护跟踪信号灯状态使用struct sg_track；
+信号灯配置信息使用struct sg_def；
+
+=== 关于检测器的操作 ===
+tsc.c获得检测器的上升沿下降沿信号，然后在内部计时算出占用率等数据。
+serial_pack.c获得串口命令。检测器信号出发tsc_det_op()函数。
+
+
+==== 关于配时方案 ====
+
+
+=== 接口函数汇总 ===
+提供给drive.c调用
+1、tsc_det_op():tsc.c提供,告知vsplus有检测器数据;当前serial_pack.c直接调用,略过drive.c
+2、tsc_det_fault_set():tsc.c提供,告知vsplus有检测器故障
+3、sg_track_fault_set():sg_track.c提供,告知vsplus有信号灯故障
+4、sg_track_fault():sg_track.c提供,检查信号灯是否有故障;当前tsc.c直接调用,略过drive.c
+5、sg_track_switch():sg_track.c提供,记录信号灯状态
+6、sg_track_chk():sg_track.c提供,查看信号灯状态;当前tsc.c直接调用,略过drive.c
+7、serial_command():serial_pack.c提供,发送串口命令
+
+drive.c提供调用
+1、drv_sg_switch():切换信号灯状态
+2、drv_sg_para():读取信号灯配置参数,数据结构struct sg_def;
+3、drv_handle_pack():处理从串口收到的命令
+4、drv_det_para():读取检测器配置参数,数据结构struct det_def;
+
+==== 备注 ====
+1、tsc.c中计数都是从0开始，VSP中都是从1开始，注意区分。处理方式是tsc.c中0下标都空着没用。
