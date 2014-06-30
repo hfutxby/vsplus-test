@@ -16,7 +16,7 @@
 pthread_t g_tid_prg;
 int g_exit_prg = 0;
 
-prg_track g_prg_track = NULL;
+prg_track* g_prg_track = NULL;
 prg_def* g_prg_def = NULL;
 
 //对当前prg进行计时

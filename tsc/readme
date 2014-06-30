@@ -43,7 +43,8 @@ serial_pack.c获得串口命令。检测器信号出发tsc_det_op()函数。
 
 
 ==== 关于配时方案 ====
-
+drive.c:读取prg的配置
+prg_track.c:对prg进行操作
 
 === 接口函数汇总 ===
 提供给drive.c调用

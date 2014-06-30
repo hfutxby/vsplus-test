@@ -289,13 +289,14 @@ void deinit_prg(void)
  * 当前执行的配时方案 */
 int tsc_prog_actual(void)
 {
+	int ret;
 #ifdef _SIM_TEST_
-	int ret = sim_prog_actual();
+	ret = sim_prog_actual();
 	//printf("actual prog:%d\n", ret);
-	return ret;
 #else
-	return 0;
+	ret = drv_prg_cur();
 #endif
+	return ret;
 }
 
 /* FIXME
