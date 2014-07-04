@@ -15,42 +15,53 @@
 
 pthread_mutex_t mutex_sg_track = PTHREAD_MUTEX_INITIALIZER;
 pthread_t g_tid_sg_track;
-int g_exit_sg_track = 0;
+static int g_exit_sg_track = 0;
 
-int g_fd_sg = 0;
-sg_track* g_sg = NULL;
+static int g_fd_sg_track = 0;
+static sg_track* g_sg_track = NULL;
 
 //打开灯组状态跟踪文件
-void sg_track_open(void)
+int sg_track_open(void)
 {
+	debug(3, "==>\n");
     int ret;
-    g_fd_sg = open("sg_track.dat", O_RDWR|O_CREAT, 0644);
-    if(g_fd_sg < 0){
-        printf("%s\n", strerror(errno));
-        return;
+    g_fd_sg_track = open("sg_track.dat", O_RDWR|O_CREAT, 0644);
+    if(g_fd_sg_track < 0){
+        debug(1, "%s\n", strerror(errno));
+        return -1;
     }
-    if(ret = ftruncate(g_fd_sg, sizeof(sg_track) * SGMAX) < 0){
-        printf("%s\n", strerror(errno));
+    if(ret = ftruncate(g_fd_sg_track, sizeof(sg_track) * SGMAX) < 0){
+        debug(1, "%s\n", strerror(errno));
+		return -1;
     }
-    g_sg = mmap(NULL, sizeof(sg_track) * SGMAX, PROT_READ|PROT_WRITE, MAP_SHARED, g_fd_sg, 0);
-    if(g_sg == MAP_FAILED){
-        printf("%s\n", strerror(errno));
+    g_sg_track = mmap(NULL, sizeof(sg_track) * SGMAX, PROT_READ|PROT_WRITE, MAP_SHARED, g_fd_sg_track, 0);
+    if(g_sg_track == MAP_FAILED){
+        debug(1, "%s\n", strerror(errno));
+		return -1;
     }
+	//init stat = 0, wait tsc.c give real init
+	memset(g_sg_track, 0, sizeof(sg_track) * SGMAX);
+	debug(3, "<==\n");
 }
 
 //关闭灯组状态跟踪文件
 void sg_track_close(void)
 {
-    close(g_fd_sg);
-    g_fd_sg = 0;
+	int ret = -1;
+	ret = munmap(g_sg_track, sizeof(sg_track) * SGMAX);
+	if(ret != 0){
+		debug(1, "%s\n", strerror(errno));
+	}
+    close(g_fd_sg_track);
+    g_fd_sg_track = 0;
 }
 
 //切换信号灯状态
 void sg_track_switch(int sg, int stat)
 {
 	pthread_mutex_lock(&mutex_sg_track);
-	g_sg[sg].stat = stat;
-	g_sg[sg].time = 0;
+	g_sg_track[sg].stat = stat;
+	g_sg_track[sg].time = 0;
 	pthread_mutex_unlock(&mutex_sg_track);
 }
 
@@ -59,13 +70,13 @@ int sg_track_chk(int sg, int stat)
 {
 	int ret = 0;
 	pthread_mutex_lock(&mutex_sg_track);
-	if(g_sg[sg].stat == stat)
-		ret = g_sg[sg].time;
+	if(g_sg_track[sg].stat == stat)
+		ret = g_sg_track[sg].time;
 	else
 		ret = -1;
 	pthread_mutex_unlock(&mutex_sg_track);
 
-	return -1;
+	return ret;
 }
 
 //设置sg处于故障状态
@@ -74,9 +85,9 @@ int sg_track_fault_set(int sg, int type)
 	int ret = 0;
 	pthread_mutex_lock(&mutex_sg_track);
 	if(type)
-		g_sg[sg].fault = 1;
+		g_sg_track[sg].fault = 1;
 	else
-		g_sg[sg].fault = 0;
+		g_sg_track[sg].fault = 0;
 	pthread_mutex_unlock(&mutex_sg_track);
 
 	return 0;
@@ -85,7 +96,7 @@ int sg_track_fault_set(int sg, int type)
 //检查sg是否处于故障状态
 int sg_track_fault(int sg)
 {
-	return g_sg[sg].fault;
+	return g_sg_track[sg].fault;
 }
 
 //对信号灯状态进行计时
@@ -97,7 +108,8 @@ void* thr_sg_track(void* arg)
 	while(!g_exit_sg_track){
 		gettimeofday(&tv1, NULL);
 		for(i = 0; i < SGMAX; i++){
-			g_sg[i].time++;
+			if(!g_sg_track[i].fault && g_sg_track[i].stat)
+				g_sg_track[i].time++;
 		}
 		gettimeofday(&tv2, NULL);
 		us = (tv2.tv_sec - tv1.tv_sec) * 1000000 + (tv2.tv_usec - tv1.tv_usec);
@@ -108,14 +120,21 @@ void* thr_sg_track(void* arg)
 
 int init_sg_track(void)
 {
+	debug(3, "==>\n");
+	//sleep(10);//FIXME
 	sg_track_open();
+	sleep(1);//FIXME
 	pthread_create(&g_tid_sg_track, NULL, thr_sg_track, NULL);
+	debug(3, "<==\n");
 	return 0;
 }
 
 void deinit_sg_track(void)
 {
+	debug(3, "==>\n");
 	g_exit_sg_track = 1;
-	pthread_join(g_tid_sg_track, NULL);
+	if(g_tid_sg_track)
+		pthread_join(g_tid_sg_track, NULL);
 	sg_track_close();
+	debug(3, "<==\n");
 }

@@ -22,6 +22,7 @@ pack pack_list[] = {
 
 //int g_exit_serial = 0; //线程退出
 int g_fd_serial = -1; //串口
+ring_buf r;
 pthread_mutex_t serial_write_mutex = PTHREAD_MUTEX_INITIALIZER;//写串口保护
 pthread_mutex_t serial_read_mutex = PTHREAD_MUTEX_INITIALIZER;//读串口保护
 pthread_mutex_t ring_mutex = PTHREAD_MUTEX_INITIALIZER;//ring_buf读写保护
@@ -121,7 +122,7 @@ void handle_pack(unsigned char* buf)
 //对缓存的串口数据进行解包
 void* thr_pop(void* para)
 {
-    ring_buf* r = (ring_buf*)para;
+    //ring_buf* r = (ring_buf*)para;
     int ret, i;
     unsigned char buf[100];
     struct timeval tv1, tv2;
@@ -130,7 +131,7 @@ void* thr_pop(void* para)
         memset(buf, 0, sizeof(buf));
         pthread_mutex_lock(&ring_mutex);
         gettimeofday(&tv1, NULL);
-        ret = pop_pack(r, pack_list, list_len, buf);
+        ret = pop_pack(&r, pack_list, list_len, buf);
         gettimeofday(&tv2, NULL);
         //printf("ret:%d time diff: %ldus\n", ret, (tv2.tv_sec - tv1.tv_sec) * 1000000 + (tv2.tv_usec - tv1.tv_usec));
         pthread_mutex_unlock(&ring_mutex);
@@ -254,7 +255,7 @@ int set_opt(int fd, int speed, int bits, char event, int stop)
 //读串口原始数据，未解包
 void* thr_read(void* para)
 {
-	ring_buf* r = (ring_buf*)para;
+	//ring_buf* r = (ring_buf*)para;
 	fd_set set_read;
 	int ret, i;
 	unsigned char buf[200] = {0};
@@ -287,7 +288,7 @@ void* thr_read(void* para)
 					printf("\n");
 					if(ret > 0){
 						pthread_mutex_lock(&ring_mutex);
-						ring_adds_over(r, buf, ret);
+						ring_adds_over(&r, buf, ret);
 						//__dump(r);
 						pthread_mutex_unlock(&ring_mutex);
 					}
@@ -452,7 +453,7 @@ int main(int argc, char* argv[])
 
 	printf("g_fd_serial=%d\n", g_fd_serial);
 
-	ring_buf r;
+	//ring_buf r;
 	init_ring(&r);
 
 	//pthread_create(&g_tid_watchdog, NULL, thr_watchdog, NULL);

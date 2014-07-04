@@ -10,14 +10,14 @@
 int main(void)
 {
 	int i, ret;
-	ret = init_serial();
+	ret = init_serial("ttyUSB0");
 
-	sleeP(1000);
 	printf("\nvs_init()\n");
 	ret = vs_init();
 	if(ret < 0){
 		printf("vs_init() failed\n");
 	}
+	sleep(1);//FIXME:
 
 	printf("\nvs_start()\n");
 	ret = vs_start();

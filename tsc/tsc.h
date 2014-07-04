@@ -54,7 +54,7 @@ void tsc_det_fault_set(int index, int type);
 
 //信号灯配置参数
 typedef struct{
-	int fault; //1：不存在，2：存在但是故障了，0：正常
+	int exist; //1：存在，0：不存在
     int min_red; //最小红灯时间
     int prep; //红绿过渡时间
     int min_green; //最小绿灯时间
@@ -62,16 +62,15 @@ typedef struct{
     int ext; //信号切换标志，1：open, 2:close
 }sg_def;
 
-#define MAXPRG 64
 //配时方案配置参数
 typedef struct{
 	int tu;//方案总时长
-	int fault;//1：不存在，0：存在
+	int exist;//1：存在，0：不存在
 }prg_def;
 
 //检测器配置参数
 typedef struct{
-	int fault; //1：不存在，0：存在
+	int exist; //1：存在
 }det_def;
 
 //检测器记录信息

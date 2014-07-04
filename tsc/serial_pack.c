@@ -9,8 +9,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
+
 #include "serial_pack.h"
 #include "ring_buf.h"
+#include "tsc.h"
 
 //命令特征
 pack pack_list[] = {
@@ -20,17 +22,18 @@ pack pack_list[] = {
 //    {0x96, 0x69, 2},//sg switch
     };
 
-int g_fd_serial = -1; //串口
+static int g_fd_serial = -1; //串口
+ring_buf r;
 pthread_mutex_t serial_write_mutex = PTHREAD_MUTEX_INITIALIZER;//写串口保护
 pthread_mutex_t serial_read_mutex = PTHREAD_MUTEX_INITIALIZER;//读串口保护
 pthread_mutex_t ring_mutex = PTHREAD_MUTEX_INITIALIZER;//ring_buf读写保护
 pthread_t g_tid_watchdog; //下发喂狗信息
-int g_exit_watchdog = 0;
+static int g_exit_watchdog = 0;
 pthread_t g_tid_read; //读取串口
-int g_exit_read = 0;
+static int g_exit_read = 0;
 //pthread_t g_tid_write; //下发命令
 pthread_t g_tid_pop; //解析串口命令
-int g_exit_pop = 0;
+static int g_exit_pop = 0;
 //pthread_t g_tid_test_send;
 //pthread_t g_tid_det;
 //int g_exit_det = 0;
@@ -118,7 +121,8 @@ void handle_pack(unsigned char* buf)
 //对缓存的串口数据进行解包
 void* thr_pop(void* para)
 {
-    ring_buf* r = (ring_buf*)para;
+	debug(3, "==>\n");
+    //ring_buf* r = (ring_buf*)para;
     int ret, i;
     unsigned char buf[100];
     struct timeval tv1, tv2;
@@ -127,7 +131,7 @@ void* thr_pop(void* para)
         memset(buf, 0, sizeof(buf));
         pthread_mutex_lock(&ring_mutex);
         gettimeofday(&tv1, NULL);
-        ret = pop_pack(r, pack_list, list_len, buf);
+        ret = pop_pack(&r, pack_list, list_len, buf);
         gettimeofday(&tv2, NULL);
         //printf("ret:%d time diff: %ldus\n", ret, (tv2.tv_sec - tv1.tv_sec) * 1000000 + (tv2.tv_usec - tv1.tv_usec));
         pthread_mutex_unlock(&ring_mutex);
@@ -144,6 +148,7 @@ void* thr_pop(void* para)
 		else
             usleep(1000);
     }
+	debug(3, "<==\n");
 }
 
 int open_port(char* tty_name)
@@ -244,14 +249,15 @@ int set_opt(int fd, int speed, int bits, char event, int stop)
 		return -1;
 	}
 
-	printf("set done\n");
+//	printf("set done\n");
 	return 0;
 }
 
 //读串口原始数据，未解包
 void* thr_read(void* para)
 {
-	ring_buf* r = (ring_buf*)para;
+	debug(3, "==>\n");
+	//ring_buf* r = (ring_buf*)para;
 	fd_set set_read;
 	int ret, i;
 	unsigned char buf[200] = {0};
@@ -284,18 +290,20 @@ void* thr_read(void* para)
 					printf("\n");
 					if(ret > 0){
 						pthread_mutex_lock(&ring_mutex);
-						ring_adds_over(r, buf, ret);
+						ring_adds_over(&r, buf, ret);
 						//__dump(r);
 						pthread_mutex_unlock(&ring_mutex);
 					}
 				}
 		}
 	}
+	debug(3, "<==\n");
 }
 
 //发送喂狗信息
 void* thr_watchdog(void* para)
 {
+	debug(3, "==>\n");
 	unsigned char buf[3];
 	buf[0] = 0xC1;
 	buf[1] = 0xAB;
@@ -308,6 +316,7 @@ void* thr_watchdog(void* para)
 		printf("thr_watchdog:ret=%d:%#x %#x %#x\n", ret, buf[0], buf[1], buf[2]);
 		usleep(5*1000*1000);
 	}	
+	debug(3, "<==\n");
 }
 
 //通过串口发送命令
@@ -322,6 +331,7 @@ int serial_command(unsigned char* buf, int size)
 
 int init_serial(char* dev)
 {
+	debug(3, "==>\n");
 	int ret = 0;
 
 	g_fd_serial = open_port(dev);
@@ -335,9 +345,9 @@ int init_serial(char* dev)
 		return -1;
 	}
 
-	printf("g_fd_serial=%d\n", g_fd_serial);
+	//printf("g_fd_serial=%d\n", g_fd_serial);
 
-	ring_buf r;
+	//ring_buf r;
 	init_ring(&r);
 
 	pthread_create(&g_tid_watchdog, NULL, thr_watchdog, NULL);
@@ -346,6 +356,7 @@ int init_serial(char* dev)
 	//pthread_create(&g_tid_test_send, NULL, thr_test_send, &r);
 	//pthread_create(&g_tid_write, NULL, thr_write, NULL);
 	//pthread_create(&g_tid_det, NULL, thr_det, NULL);
+	debug(3, "<==\n");
 	return 0;
 }
 

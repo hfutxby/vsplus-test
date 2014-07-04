@@ -13,6 +13,7 @@
 
 #include "tsc.h"
 #include "sg_track.h"
+#include "prg_track.h"
 //#include "sim.h"
 #include "drive.h"
 #include "if626bas.h"
@@ -158,10 +159,10 @@ void tsc_close_back(void)
 }
 
 /****************** 定时器 ***************************/
-int g_timer[MAXTIMER];//最低位做开关标志
+static int g_timer[MAXTIMER];//最低位做开关标志
 pthread_t g_tid_timer;//定时器计时线程
 pthread_mutex_t mutex_timer = PTHREAD_MUTEX_INITIALIZER;
-int g_exit_timer = 0;
+static int g_exit_timer = 0;
 
 void time_go(void)
 {
@@ -187,6 +188,7 @@ int us_sleep(long us)
 
 void* thr_timer(void* arg)
 {
+	debug(3, "==>\n");
 	struct timeval tv1, tv2;
 	long us;
 	while(!g_exit_timer){
@@ -199,6 +201,7 @@ void* thr_timer(void* arg)
 		//printf("time_go:%dus\n", us);
 		us_sleep(1000000 - us);
 	}
+	debug(3, "<==\n");
 }
 
 /* 定时器 */
@@ -250,6 +253,7 @@ int init_timers(void)
 		debug(1, "pthread_create error: %s\n", __func__, __LINE__, strerror(errno));
 		return -1;
 	}
+	sleep(1);
 
 	debug(3, "<==\n");
 
@@ -268,76 +272,71 @@ void deinit_timers(void)
 }
 
 /****************** 配时方案 ***************************/
-prg_def* g_prg = NULL;
+static prg_def* g_prg = NULL;
 
 int init_prg(void)
 {
-	int size = sizeof(prg_def) * 6;
-	prg_def = (prg_def*)malloc(size);
-	drv_prg_para(prg_def, size);
+	debug(3, "==>\n");
+	int size = sizeof(prg_def) * PRGMAX;
+	g_prg = (prg_def*)malloc(size);
+	if(!g_prg){
+		debug(1, "malloc fail\n");
+		return -1;
+	}
+	drv_prg_para(g_prg, size);
+	prg_track_cur_set(2);//init prg
+	debug(3, "<==\n");
 
 	return 0;
 }
 
 void deinit_prg(void)
 {
-	if(prg_def)
-		free(prg_def);
+	if(g_prg)
+		free(g_prg);
 }
 
-/* FIXME
+/* 
  * 当前执行的配时方案 */
 int tsc_prog_actual(void)
 {
 	int ret;
-#ifdef _SIM_TEST_
-	ret = sim_prog_actual();
-	//printf("actual prog:%d\n", ret);
-#else
-	ret = drv_prg_cur();
-#endif
+	ret = prg_track_cur();
+
 	return ret;
 }
 
-/* FIXME
+/* 
  * 选择新的配时方案 */
 int tsc_prog_select(void)
 {
-#ifdef _SIM_TEST_
-	int ret = sim_prog_select();
-	//printf("select prog:%d\n", ret);
+	int ret;
+	ret = prg_track_next();
+
 	return ret;
-#else
-	return 0;
-#endif
 }
 
-/* FIXME
+/* 
  * 当前配时方案，运行处于方案内的时间点
  */
 int tsc_prog_tx(void)
 {
-#ifdef _SIM_TEST_
-	int ret = sim_prog_tx();
-	//printf("tx:%d\n", ret);
-	return ret;
-#else
+	int ret;
+	ret = prg_track_tx();
 
-#endif
+	return ret;
 }
 
-/* FIXME
+/* 
  * 当前配时方案，总的时长
  */
 int tsc_prog_tu(void)
 {
-#ifdef _SIM_TEST_
-	int ret = sim_prog_tu();
-	//printf("tu:%d\n", ret);
-	return ret;
-#else
+	int ret;
+	int index = prg_track_cur();
+	ret = g_prg[index].tu;
 
-#endif
+	return ret;
 }
 
 /* FIXME:当前只有本地指令，没有网络功能
@@ -345,11 +344,7 @@ int tsc_prog_tu(void)
  */
 int tsc_prog_src(void)
 {
-#ifdef _SIM_TEST_
 	return 0;
-#else
-
-#endif
 }
 
 /* FIXME
@@ -501,6 +496,7 @@ void* thr_det(void* arg)
 //初始化检测器
 int init_det(void)
 {
+	debug(3, "==>\n");
 	open_det();//分配空间用于det状态跟踪
 	
 	//分配空间用于读取det配置
@@ -510,6 +506,7 @@ int init_det(void)
 
 	//开始处理det数据
 	pthread_create(&g_tid_det, NULL, thr_det, NULL);
+	debug(3, "<==\n");
 
 	return 0;
 }
@@ -669,7 +666,7 @@ int tsc_det_exist(int index)
 #ifdef _SIM_TEST_
 	return sim_det_exist(index);
 #else
-	ret = g_det_def[index].fault;
+	ret = g_det_def[index].exist;
 	return ret;
 #endif
 }
@@ -756,7 +753,7 @@ void* thr_sg(void* arg)
 		gettimeofday(&tv1, NULL);
 		//open,close操作
 		for(i = 0; i < SGMAX; i++){
-			if(g_sg[i].fault)//信号灯故障
+			if(!g_sg[i].exist)//信号灯故障
 				continue;
 
 			switch(g_sg[i].ext){
@@ -776,7 +773,7 @@ void* thr_sg(void* arg)
 		}
 		//amber->min->ext操作
 		for(i = 0; i < SGMAX; i++){
-			if(g_sg[i].fault)//信号灯故障
+			if(!g_sg[i].exist)//信号灯故障
 				continue;
 
 			if((ret = sg_track_chk(i, 1)) != -1){//处于amber
@@ -823,15 +820,23 @@ void tsc_sg_close(int sg)
 
 int init_tsc_sg(void)
 {
-	int ret;
-	g_sg = (sg_def*)malloc(sizeof(sg_def) * SGMAX);
+	debug(3, "==>\n");
+	int ret = -1;
+	int size = SGMAX * sizeof(sg_def);
+	g_sg = (sg_def*)malloc(size);
 	if(!g_sg){
-		printf("%s(%d),malloc for sg_def fail,%s\n", __func__, __LINE__, strerror(errno));
+		debug(1, "malloc fail\n");
 		return -1;
 	}
-	ret = drv_sg_para(g_sg);//读入参数
-	drv_sg_para_dump(g_sg);//FIXME:test confirm
+	ret = drv_sg_para(g_sg, size);//读入参数
+	//drv_sg_para_dump(g_sg);//FIXME:test confirm
+	int i;
+	for(i = 0; i < SGMAX; i++){
+		if(g_sg[i].exist)
+			drv_sg_switch(i, 1);//amber
+	}
 	pthread_create(&g_tid_sg, NULL, thr_sg, NULL);
+	debug(3, "<==\n");
 
 	return ret;
 }
@@ -848,10 +853,7 @@ void deinit_tsc_sg(void)
 /* 测试指定的signal group是否存在 */
 int tsc_sg_exist(int sg)
 {
-	if(g_sg[sg].fault != 1)
-		return 1;
-	else 
-		return 0;
+	return g_sg[sg].exist;
 }
 
 /* 测试指定的signal group是否故障 */
@@ -1119,7 +1121,7 @@ int tsc_init()
     }
 
 	ret = init_det(); //初始化检测器信号跟踪记录
-	if(ret |= 0){
+	if(ret != 0){
 		debug(1, "init_det() error\n");
 		return -1;
 	}

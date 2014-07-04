@@ -110,16 +110,32 @@ void* thr_ein(void* arg)
 //成功返回0
 int vs_init(void)
 {
+	debug(3, "==>\n");
 	int i, ret = 0;
 
-	g_xml_para = (xml_para*)open_xml_para();
-	if(g_xml_para == NULL){
-		debug(1, "open_xml_para() error\n");
+//	g_xml_para = (xml_para*)open_xml_para();
+//	if(g_xml_para == NULL){
+//		debug(1, "open_xml_para() error\n");
+//		return -1;
+//	}
+//	parse_xml(g_xml_para);
+//	//dump_xml(g_xml_para);
+
+//prg_track
+	ret = init_prg_track();
+	if(ret == -1){
+		debug(1, "call init_prg_track() fail\n");
 		return -1;
 	}
-	parse_xml(g_xml_para);
-	//dump_xml(g_xml_para);
 
+//sg_track
+	ret = init_sg_track();
+	if(ret == -1){
+		debug(1, "call init_sg_track() fail\n");
+		return -1;
+	}
+
+//tsc.c
 	ret = tsc_init(); //控制器初始化，FIXME，分解
 	if(ret == -1){
 		debug(1, "tsc_init() error\n");
@@ -171,13 +187,16 @@ int vs_init(void)
 
 #if 10
 	//VSP_AUS
+printf("%s:%d\n", __func__, __LINE__);
 	for(i = 0; i < GERAET_TEILKNOTEN_MAX; i++)
 		g_vs_para.vsp_soll[i] = VSP_AUS;
 	for(i = 0; i < SGMAX; i++)
 		g_vs_para.sg_mode[i] = 0;
 	for(i = 0; i < GERAET_TEILKNOTEN_MAX; i++)
 		g_vs_para.wb_ready[i] = 0;
+printf("%s:%d\n", __func__, __LINE__);
 	ret = VSPLUS(g_vs_para.vsp_soll, g_vs_para.sg_mode, g_vs_para.wb_ready);
+printf("%s:%d\n", __func__, __LINE__);
 	if(ret >= 0){
 		printf("%s(%d):call VSPLUS(VSP_AUS) success, ret=%d\n", __func__, __LINE__, ret);
 	}
@@ -186,6 +205,7 @@ int vs_init(void)
 		return -1;
 	}
 #endif
+	debug(3, "<==\n");
 
 	return 0;
 }

@@ -9,17 +9,16 @@
 ARMCC = arm-none-linux-gnueabi-gcc
 CC = gcc
 
-#CFLAGS += -D_PROZESSOR_INTEL_ -D_HELPER_MACROS_ -D_ADVANCED_MEMORY_
-CFLAGS += -D_PROZESSOR_INTEL_ -D_HELPER_MACROS_ -D_ADVANCED_MEMORY_ -DDEBUG=1
-#CFLAGS += -D_PROZESSOR_INTEL_ -D_HELPER_MACROS_ -DDEBUG=3
+CFLAGS += -D_PROZESSOR_INTEL_ -D_HELPER_MACROS_ -D_ADVANCED_MEMORY_ -DDEBUG=3
+#CFLAGS += -D_PROZESSOR_INTEL_ -D_HELPER_MACROS_ -D_ADVANCED_MEMORY_ -DDEBUG=1
 
-all: main test sim_ctrl decode
+all: main serial_test sg_view decode
 main: main.c tsc.c VSP_Interface.c
-	$(CC) $(CFLAGS) tsc.c VSP_Interface.c parse_xml.c vs_main.c main.c ring_buf.c serial_pack.c drive.c vsp_core.lib -pthread -o main.x86.out
+	$(CC) $(CFLAGS) VSP_Interface.c tsc.c drive.c ring_buf.c serial_pack.c prg_track.c sg_track.c parse_xml.c vs_main.c main.c vsp_core.lib -pthread -o main.x86.out
 	#$(CC) $(CFLAGS) tsc.c sim.c VSP_Interface.c parse_xml.c vs_main.c main.c vsp_core.lib -pthread -o main.x86.out
 	#$(ARMCC) $(CFLAGS) tsc.c sim.c VSP_Interface.c parse_xml.c main.c vsp_core_arm.lib -pthread -o main.arm.out
 
-test: test.c tsc.c
+#test: test.c tsc.c
 	#$(CC) $(CFLAGS) test.c tsc.c sim.c -pthread -o test.x86.out
 
 #用来测试发送模拟的检测器数据
@@ -32,12 +31,12 @@ serial_test: ring_buf.c serial_test.c serial_read.c
 sg_view: sg_view.c
 	$(CC) sg_view.c -o sg_view.x86.out
 
-sim_ctrl: sim_ctrl_det_2.c sim_ctrl_sg.c sim_ctrl.c
+#sim_ctrl: sim_ctrl_det_2.c sim_ctrl_sg.c sim_ctrl.c
 	#$(CC) tsc.c sim_ctrl_det_2.c -pthread -o sim_ctrl_det_2.x86.out
 #	$(ARMCC) sim_ctrl_det.c -pthread -o sim_ctrl_det.arm.out
-	$(CC) sim_ctrl_sg.c -pthread -o sim_ctrl_sg.x86.out
+#	$(CC) sim_ctrl_sg.c -pthread -o sim_ctrl_sg.x86.out
 #	$(ARMCC) sim_ctrl_sg.c -pthread -o sim_ctrl_sg.arm.out
-	$(CC) sim_ctrl.c -pthread -o sim_ctrl.x86.out
+#	$(CC) sim_ctrl.c -pthread -o sim_ctrl.x86.out
 #	$(ARMCC) sim_ctrl.c -pthread -o sim_ctrl.arm.out
 
 decode: base64.c

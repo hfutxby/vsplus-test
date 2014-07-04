@@ -59,6 +59,7 @@ int drv_sg_stat_code(int stat)
 //切换信号灯并记录状态
 void drv_sg_switch(int sg, int stat)
 {
+	printf("==========drv_sg_switch(%d, %d)===========\n", sg, stat);
 	unsigned char msg[4];
 	msg[0] = 0x96; msg[3] = 0x69;
 	msg[1] = drv_sg_code(sg);
@@ -81,32 +82,34 @@ int drv_sg_chk(int sg, int stat)
 #endif
 
 //获取信号灯配置
+//ptr为sg_def结构
 int drv_sg_para(void* ptr, int size)
 {
 #if 0
 	int xml_sg_para(void* ptr, int size);
 #else
 	int i;
-	int min_red[16] = {40,40,40,40,40,40,40,80,80,80,80,40,40,40,40,60};
-	int min_green[16] = {20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20};
+	int min_red[16] = {0,40,40,40,40,40,40,80,80,80,80,40,40,40,40,60};
+	int min_green[16] = {0,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20};
 	sg_def* sg = NULL;	
 	int num = size / sizeof(sg_def);
-	for(i = 0; i < num; i++){
-		sg = (sg_def*)(ptr + i * sizeof(sg_def));
-		memset(sg, 0, sizeof(sg_def));
-		sg->fault = 1;//sg不存在
-	}
+	//for(i = 0; i < num; i++){
+	//	sg = (sg_def*)(ptr + i * sizeof(sg_def));
+	//	memset(sg, 0, sizeof(sg_def));
+	//	sg->fault = 1;//sg不存在
+	//}
 	num = (num > 16) ? 16 : num;
-	for(i = 0; i < num; i++){
+	for(i = 1; i <= num; i++){
 		sg = (sg_def*)(ptr + i * sizeof(sg_def));
 		sg->min_red = min_red[i];
 		sg->min_green = min_green[i];
 		sg->prep = 30;
 		sg->amber = 30;
 		sg->ext = 0;
-		sg->fault = 0;
+		sg->exist = 1;
 	}
-
+	
+	return 0;
 #endif
 }
 
@@ -119,7 +122,8 @@ void drv_sg_para_dump(void* ptr)
 	sg_def* sg = NULL;
 	for(i = 0; i < 16; i++){
 		sg = (sg_def*)(ptr + i * sizeof(sg_def));
-		printf("%3d %3d %3d\n", sg->min_red, sg->min_green, sg->prep);
+		if(sg->exist)
+			printf("%2d: %3d %3d %3d\n", i, sg->min_red, sg->min_green, sg->prep);
 	}
 }
 
@@ -146,13 +150,14 @@ int drv_det_para(void* ptr, int size)
 	int xml_det_para(void* ptr, int size);
 #else
 	int num = size / sizeof(det_def);
-	memset(ptr, 1, size);
+	memset(ptr, 0, size);
 	int i;
 	det_def* det = NULL;
 	num = (num > 45) ? 45 : num;
-	for(i = 0; i < num; i++){
+	debug(3, "num:%d\n", num);
+	for(i = 1; i <= num; i++){
 		det = (det_def*)(ptr + i * sizeof(det_def));
-		det->fault = 0;
+		det->exist = 1;
 	}
 	return 0;
 #endif
@@ -174,15 +179,36 @@ int drv_prg_para(void* ptr, int size)
 	int xml_prg_para(void* ptr, int size);
 #else
 	int num = size / sizeof(prg_def);
-	memset(ptr, 1, size);
+	debug(3, "num:%d\n", num);//FIXME
+	void* p = memset(ptr, 0, size);
+	debug(3, "p=%p, ptr=%p\n", p, ptr);
 	int i;
 	prg_def* prg = NULL;
-	num = (num > 6) ? 6 : num;
-	for(i = 0; i < num; i++){
+	num = (num > 7) ? 7 : num;
+	debug(3, "ptr:%p, size:%d\n", ptr, size);//FIXME
+	debug(3, "num:%d\n", num);//FIXME
+	for(i = 1; i < num; i++){
 		prg = (prg_def*)(ptr + i * sizeof(prg_def));
-		prg->fault = 0;
+		prg->exist = 1;
 		prg->tu = 720;//72s
 	}
 	return 0;
 #endif
+}
+
+void drv_prg_para_dump(void* ptr, int size)
+{
+	int num = size / sizeof(prg_def);
+	int i;
+	prg_def* prg = NULL;
+	num = (num > 7) ? 7 : num;
+	for(i = 0; i < num; i++){
+		prg = (prg_def*)(ptr + i * sizeof(prg_def));
+		printf("%d:%d %d\n", i, prg->exist, prg->tu);
+	}
+}
+
+int drv_prg_next_set(int index)
+{
+	return prg_track_next_set(index);
 }
