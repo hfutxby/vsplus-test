@@ -187,16 +187,13 @@ int vs_init(void)
 
 #if 10
 	//VSP_AUS
-printf("%s:%d\n", __func__, __LINE__);
 	for(i = 0; i < GERAET_TEILKNOTEN_MAX; i++)
 		g_vs_para.vsp_soll[i] = VSP_AUS;
 	for(i = 0; i < SGMAX; i++)
 		g_vs_para.sg_mode[i] = 0;
 	for(i = 0; i < GERAET_TEILKNOTEN_MAX; i++)
 		g_vs_para.wb_ready[i] = 0;
-printf("%s:%d\n", __func__, __LINE__);
 	ret = VSPLUS(g_vs_para.vsp_soll, g_vs_para.sg_mode, g_vs_para.wb_ready);
-printf("%s:%d\n", __func__, __LINE__);
 	if(ret >= 0){
 		printf("%s(%d):call VSPLUS(VSP_AUS) success, ret=%d\n", __func__, __LINE__, ret);
 	}

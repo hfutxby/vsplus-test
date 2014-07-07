@@ -363,8 +363,7 @@ short int u_gelb(short int sg)
  */
 void SG_ein(short int sg)
 {
-	debug(3, "sg:%d\n", sg);
-	printf("%s(%d):sg=%d =================================\n", __func__, __LINE__, sg);
+	debug(2, "sg:%d\n", sg);
 	tsc_sg_open(sg);
 }
 
@@ -372,8 +371,7 @@ void SG_ein(short int sg)
  */
 void SG_aus(short int sg)
 {
-	debug(3, "sg:%d\n", sg);
-	printf("%s(%d):sg=%d =================================\n", __func__, __LINE__, sg);
+	debug(2, "sg:%d\n", sg);
 	tsc_sg_close(sg);
 }
 

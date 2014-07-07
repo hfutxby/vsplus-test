@@ -108,7 +108,7 @@ void* thr_sg_track(void* arg)
 	while(!g_exit_sg_track){
 		gettimeofday(&tv1, NULL);
 		for(i = 0; i < SGMAX; i++){
-			if(!g_sg_track[i].fault && g_sg_track[i].stat)
+			//if(!g_sg_track[i].fault && g_sg_track[i].stat)
 				g_sg_track[i].time++;
 		}
 		gettimeofday(&tv2, NULL);

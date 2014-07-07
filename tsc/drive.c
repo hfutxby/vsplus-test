@@ -204,7 +204,8 @@ void drv_prg_para_dump(void* ptr, int size)
 	num = (num > 7) ? 7 : num;
 	for(i = 0; i < num; i++){
 		prg = (prg_def*)(ptr + i * sizeof(prg_def));
-		printf("%d:%d %d\n", i, prg->exist, prg->tu);
+		if(prg->exist)
+			printf("%d:%d %d\n", i, prg->exist, prg->tu);
 	}
 }
 

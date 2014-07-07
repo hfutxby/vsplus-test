@@ -104,7 +104,6 @@ int prg_track_next_set(int index)
 		return -1;
 
 	int i, ret = -1;
-	prg_track* prg = NULL;
 	for(i = 0; i < PRGMAX; i++){
 		if(g_prg_track[i].stat == 2)//找到下一个prg
 			ret = i;

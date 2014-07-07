@@ -49,25 +49,25 @@ void print_signal(int stat, int time)
 {
 	switch(stat){
 	case 2:
-		printf("\033[40;31m%d:2 \033[0m", time);
+		printf("\033[40;31m%3d:2 \033[0m", time);
 		break;
 	case 3:
-		printf("\033[40;31m%d:3 \033[0m", time);
+		printf("\033[40;31m%3d:3 \033[0m", time);
 		break;
 	case 5:
-		printf("\033[40;32m%d:5 \033[0m", time);
+		printf("\033[40;32m%3d:5 \033[0m", time);
 		break;
 	case 6:
-		printf("\033[40;32m%d:6 \033[0m", time);
+		printf("\033[40;32m%3d:6 \033[0m", time);
 		break;
 	case 1:
-		printf("\033[40;33m%d:1 \033[0m", time);
+		printf("\033[40;33m%3d:1 \033[0m", time);
 		break;
 	case 4:
-		printf("\033[40;33m%d:4 \033[0m", time);
+		printf("\033[40;33m%3d:4 \033[0m", time);
 		break;
 	case 0:
-		printf("\033[0m%d:0 ", time);
+		printf("\033[0m%3d:0 ", time);
 		break;	
 	default:
 		break;
@@ -82,7 +82,7 @@ int main(void)
 	while(1){
 		//for(i = 0; i < SGMAX; i++){
 		for(i = 0; i <= 15; i++){
-			printf("[%d]", i);
+			printf("[%2d]", i);
 			print_signal(g_sg[i].stat, g_sg[i].time);
 		}
 		printf("\033[0m\r");

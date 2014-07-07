@@ -103,6 +103,7 @@ int pop_pack(ring_buf* r, pack pack_list[], int list_len, unsigned char* buf)
 
 void handle_pack(unsigned char* buf)
 {
+	debug(3, "===>\n");
 	switch(buf[0]){
 		case 0xf0:
 			printf("get a det rising slope\n");
@@ -116,6 +117,7 @@ void handle_pack(unsigned char* buf)
 			drv_handle_pack(buf);
 			printf("unknown pack\n");
 	}
+	debug(3, "<==\n");
 }
 
 //对缓存的串口数据进行解包

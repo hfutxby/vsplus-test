@@ -114,7 +114,8 @@
 /*~K*/
 /*~+:Anzahl der parallelen Eing„ngen*/
 /*~T*/
-#define DETMAX          340u
+//#define DETMAX          340u
+#define DETMAX          341u
 
 /*~K*/
 /*~+:Gesammtzahl der verwendeten Detektoren und Meldepnkte*/

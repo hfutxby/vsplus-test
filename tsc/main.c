@@ -17,7 +17,7 @@ int main(void)
 	if(ret < 0){
 		printf("vs_init() failed\n");
 	}
-	sleep(1);//FIXME:
+	sleep(10);//FIXME:
 
 	printf("\nvs_start()\n");
 	ret = vs_start();
@@ -25,7 +25,7 @@ int main(void)
 		printf("vs_start() failed\n");
 	}
 
-	//sleep(2);
+	sleep(10);
 	printf("\nvs_log()\n");
 	vs_log();
 
