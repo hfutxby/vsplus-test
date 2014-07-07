@@ -211,22 +211,26 @@ int tsc_timer(int func, int index, int count)
 	pthread_mutex_lock(&mutex_timer);
 	int ret = 0;
 	int i = 0;
-	if((index >= 0) && (index <= MAXTIMER)){
+	if((index >= 0) && (index < MAXTIMER)){
 		switch(func){
 			case 1://read
 				ret = g_timer[index]>>1;
 				break;
 			case 2://load and start
 				g_timer[index] = (count<<1) + 1;
+				ret = g_timer[index]>>1;
 				break;
 			case 3://clear
 				g_timer[index] = 1;
+				ret = g_timer[index]>>1;
 				break;
 			case 4://stop and clear
 				g_timer[index] = 0;
+				ret = g_timer[index]>>1;
 				break;
 			case 5://stop
 				g_timer[index] &= 0xfffffffe;
+				ret = g_timer[index]>>1;
 				break;
 			case 6://test
 				debug(2, "test\n");
@@ -253,7 +257,7 @@ int init_timers(void)
 		debug(1, "pthread_create error: %s\n", __func__, __LINE__, strerror(errno));
 		return -1;
 	}
-	sleep(1);
+	sleep(1);//FIXME?
 
 	debug(3, "<==\n");
 

@@ -72,7 +72,7 @@
 #define VSP_T6      VSP_T5+VSMAX                 /* Base 6 for timer                     */
 #define VSP_T7      VSP_T6+VSMAX                 /* Base 7 for timer                     */
 #define VSP_TE      VSP_T7+SPEZMAX               /* Last timer (Base 0-7)              */
-#define MAXTIMER (VSP_TE-VSP_T0)
+#define MAXTIMER (VSP_TE+1)
 
 /*~E*/
 /*~A*/
