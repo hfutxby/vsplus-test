@@ -14,7 +14,7 @@
 #include "tsc.h"
 #include "drive.h"
 
-pthread_t g_tid_prg_track;
+static pthread_t g_tid_prg_track;
 static int g_exit_prg_track = 0;
 
 static prg_track* g_prg_track = NULL;
@@ -70,7 +70,7 @@ int prg_track_tx(void)
 	int i, ret = -1;
 	for(i = 1; i < PRGMAX; i++){
 		if(g_prg_track[i].stat == 1)
-			ret = (g_prg_track[i].tx + 5) / 10;//round to second
+			ret = (g_prg_track[i].tx * 10 + 5) / 10;//round to second
 	}
 
 	return ret; 
@@ -92,7 +92,7 @@ int prg_track_next(void)
 		g_prg_track[ret2].stat = 0;
 		g_prg_track[ret].stat = 1;
 	}
-
+//FIXME:可能需要告诉控制器，方案已经切换
 	return ret;
 }
 
@@ -124,17 +124,15 @@ int init_prg_track(void)
 {
 	debug(3, "==>\n");
 	int size = PRGMAX * sizeof(prg_def);
-	debug(3, "size:%d\n", size);//FIXME
 	g_prg_def = (prg_def*)malloc(size);
 	if(!g_prg_def){
 		debug(1, "malloc fail\n");
 		return -1;
 	}
 	drv_prg_para(g_prg_def, size);//import
-	//drv_prg_para_dump(g_prg_def, size);//import
-	
+	drv_prg_para_dump(g_prg_def, size);//import
+
 	size = PRGMAX * sizeof(prg_track);
-	debug(3, "size:%d\n", size);//FIXME
 	g_prg_track = (prg_track*)malloc(size);
 	if(!g_prg_track){
 		debug(1, "malloc fail\n");

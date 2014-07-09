@@ -34,6 +34,7 @@ static int g_exit_read = 0;
 //pthread_t g_tid_write; //下发命令
 pthread_t g_tid_pop; //解析串口命令
 static int g_exit_pop = 0;
+static int g_start = 0;
 //pthread_t g_tid_test_send;
 //pthread_t g_tid_det;
 //int g_exit_det = 0;
@@ -104,6 +105,9 @@ int pop_pack(ring_buf* r, pack pack_list[], int list_len, unsigned char* buf)
 void handle_pack(unsigned char* buf)
 {
 	debug(3, "===>\n");
+	if(!g_start)
+		return;
+
 	switch(buf[0]){
 		case 0xf0:
 			printf("get a det rising slope\n");
@@ -329,6 +333,20 @@ int serial_command(unsigned char* buf, int size)
 	pthread_mutex_unlock(&serial_write_mutex);
 	
 	return ret;
+}
+
+int start_serial(void)
+{
+	g_start = 1;
+	
+	return 0;
+}
+
+int stop_serial(void)
+{
+	g_start = 0;
+
+	return 0;
 }
 
 int init_serial(char* dev)

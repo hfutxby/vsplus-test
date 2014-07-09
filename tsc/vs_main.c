@@ -66,6 +66,8 @@ int thr_vsplus(void* arg)
 			//}
 			g_vsplus_ret = ret;
 		}
+		else
+			us_sleep(100);
 	}
 }
 
@@ -106,6 +108,53 @@ void* thr_ein(void* arg)
 	}
 }
 
+int tsc_init(void)
+{
+	int ret = 0;
+	
+	ret = init_prg_track();//初始化prg_track
+    if(ret == -1){
+        debug(1, "call init_prg_track() fail\n");
+        return -1;
+    }
+
+	ret = init_sg_track();//初始化sg_track
+    if(ret == -1){
+        debug(1, "call init_sg_track() fail\n");
+		return -1;
+	}
+
+	ret = init_timers();//初始化内部定时器
+	if(ret != 0){
+		debug(1, "call init_timers() error\n");
+		return -1;
+	}
+
+	ret = init_tsc_prg();//初始化内部prg
+	if(ret != 0){
+		debug(1, "init_tsc_prg() error\n");
+		return -1;
+	}
+
+	ret = init_tsc_sg(); //初始化信号灯状态记录
+	if(ret != 0){
+		debug(1, "init_tsc_sg() error\n");
+		return -1;
+	}
+
+	ret = init_det(); //初始化检测器信号跟踪记录
+	if(ret != 0){
+		debug(1, "init_det() error\n");
+		return -1;
+	}
+
+	return 0;
+}
+
+void tsc_deinit(void)
+{
+
+}
 
 //成功返回0
 int vs_init(void)
@@ -121,22 +170,22 @@ int vs_init(void)
 //	parse_xml(g_xml_para);
 //	//dump_xml(g_xml_para);
 
-//prg_track
-	ret = init_prg_track();
-	if(ret == -1){
-		debug(1, "call init_prg_track() fail\n");
-		return -1;
-	}
-
-//sg_track
-	ret = init_sg_track();
-	if(ret == -1){
-		debug(1, "call init_sg_track() fail\n");
-		return -1;
-	}
+////prg_track
+//	ret = init_prg_track();
+//	if(ret == -1){
+//		debug(1, "call init_prg_track() fail\n");
+//		return -1;
+//	}
+//
+////sg_track
+//	ret = init_sg_track();
+//	if(ret == -1){
+//		debug(1, "call init_sg_track() fail\n");
+//		return -1;
+//	}
 
 //tsc.c
-	ret = tsc_init(); //控制器初始化，FIXME，分解
+	ret = tsc_init(); //控制器初始化
 	if(ret == -1){
 		debug(1, "tsc_init() error\n");
 		return -1;
@@ -184,7 +233,7 @@ int vs_init(void)
 		return -1;
 	}
 #endif
-
+	sleep(1);
 #if 10
 	//VSP_AUS
 	for(i = 0; i < GERAET_TEILKNOTEN_MAX; i++)
@@ -224,6 +273,7 @@ int vs_start(void)
 		printf("pthread_join(g_tid_vsplus, NULL):ret=%d\n", ret);
 	}
 #endif
+	sleep(1);
 #if 10
 	//VSP_NEU
 	for(i = 0; i < GERAET_TEILKNOTEN_MAX; i++)
@@ -241,7 +291,7 @@ int vs_start(void)
 		return -1;
 	}
 #endif
-
+	sleep(1);
 #if 1
 	//开启EIN线程
 	for(i = 0; i < GERAET_TEILKNOTEN_MAX; i++)
@@ -251,7 +301,7 @@ int vs_start(void)
 	for(i = 0; i < GERAET_TEILKNOTEN_MAX; i++)
 		g_vs_para.wb_ready[i] = 0;
 
-	g_vsplus_ret = 0;
+	g_vsplus_ret = 0;//thr_vsplus暂停中
 	ret = pthread_create(&g_tid_vsplus, NULL, thr_vsplus, NULL);
 	printf("pthread_create(&g_tid_vsplus):ret=%d\n", ret);
 	if(ret != 0){
@@ -285,8 +335,9 @@ int vs_stop(void)
 		printf("pthread_join(g_tid_vsplus, NULL):ret=%d\n", ret);
 	}
 #endif
+	sleep(1);
 #if 1
-	//开启EIN线程
+	//开启AUS线程
 	for(i = 0; i < GERAET_TEILKNOTEN_MAX; i++)
 		g_vs_para.vsp_soll[i] = VSP_AUS;
 	for(i = 0; i < SGMAX; i++)

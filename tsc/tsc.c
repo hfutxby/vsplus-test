@@ -278,7 +278,7 @@ void deinit_timers(void)
 /****************** 配时方案 ***************************/
 static prg_def* g_prg = NULL;
 
-int init_prg(void)
+int init_tsc_prg(void)
 {
 	debug(3, "==>\n");
 	int size = sizeof(prg_def) * PRGMAX;
@@ -295,7 +295,7 @@ int init_prg(void)
 	return 0;
 }
 
-void deinit_prg(void)
+void deinit_tsc_prg(void)
 {
 	if(g_prg)
 		free(g_prg);
@@ -412,8 +412,8 @@ void close_det(void)
 //  int sum_rising; //上升沿计数，驱动板信号修改
 //  int sum_falling; //下降沿计数，驱动板信号修改
 //  int state; //占用状态，驱动板信号修改
-//  int hold; //总占用计时
-//  int free; //总空闲计时
+//  int hold; //最近1s占用计时
+//  int free; //最近1s空闲计时
 //  int fault; //故障
 //  int occ1;//占用率
 //  int occ2;//平滑占用率
@@ -442,18 +442,19 @@ void update_det(void)
 			if(g_det[i].free){
 				g_det[i].hold++;
 				g_det[i].free--;
-				g_det[i].gross++;
 			}
+			g_det[i].gross++;
 		}
 		else{
 			if(g_det[i].hold){
 				g_det[i].hold--;
 				g_det[i].free++;
-				g_det[i].gross++;
-				g_det[i].net++;
 			}
+			g_det[i].gross++;
+			g_det[i].net++;
 		}
-
+if(i == 5)
+	;//debug(2, "hold:%d, free:%d, gross:%d, net:%d\n", g_det[i].hold, g_det[i].free, g_det[i].gross, g_det[i].net);
 		//计算占用率
 		g_det[i].occ1 = (double)(g_det[i].hold * 100) / (g_det[i].hold + g_det[i].free);
 		if(g_det[i].occ1 > g_det[i].occ2)
@@ -467,6 +468,7 @@ void update_det(void)
 void tsc_det_op(int index, int op)
 {
 	debug(3, "==>\n");
+	debug(2, "index:%d, op:%d\n", index, op);
 	pthread_mutex_lock(&mutex_det);
 	if(op == 1){
 		g_det[index].sum_rising++;
@@ -495,7 +497,7 @@ void* thr_det(void* arg)
 		update_det();
 		pthread_mutex_unlock(&mutex_det);
 		for(i = 0; i < DETMAX; i++){
-			if(g_det[i].gross > DET_MAXTIME)
+			if(g_det_def[i].exist && g_det[i].state && (g_det[i].gross > DET_MAXTIME))
 				tsc_det_op(i, 2);//超时，人为产生一个下降沿
 		}
 		gettimeofday(&tv2, NULL);
@@ -514,6 +516,11 @@ int init_det(void)
 	int size = sizeof(det_def) * DETMAX;
 	g_det_def = malloc(size);
 	drv_det_para(g_det_def, size);
+	//int i;
+	//for(i = 0; i < DETMAX; i++){
+	//	if(g_det_def[i].exist);
+	//		tsc_det_op(i, 2);
+	//}
 
 	//开始处理det数据
 	pthread_create(&g_tid_det, NULL, thr_det, NULL);
@@ -538,54 +545,46 @@ void deinit_det(void)
 int tsc_sum_rising(int index)
 {
 	int ret;
-#ifdef _SIM_TEST_
-	ret = sim_sum_rising(index);
-	return ret;
-#else
 	pthread_mutex_lock(&mutex_det);
 	ret = g_det[index].sum_rising;
 	pthread_mutex_unlock(&mutex_det);
+	if(index == 5)
+		;//debug(2, "index:%d, ret:%d\n", index, ret);
 	return ret;
-#endif
 }
 
 /* 清空检测器上升沿计数 */
 void tsc_clr_rising(int index)
 {
-#ifdef _SIM_TEST_
-	sim_clr_rising(index);
-#else
+	int ret = 0;
 	pthread_mutex_lock(&mutex_det);
 	g_det[index].sum_rising = 0;
 	pthread_mutex_unlock(&mutex_det);
-#endif
+	if(index == 5)
+		;//debug(2, "index:%d, ret:%d\n", index, ret);
 }
 
 /* 读取检测器下降沿计数 */
 int tsc_sum_falling(int index)
 {
 	int ret;
-#ifdef _SIM_TEST_
-	ret = sim_sum_falling(index);
-#else
 	pthread_mutex_lock(&mutex_det);
 	ret = g_det[index].sum_falling;
 	pthread_mutex_unlock(&mutex_det);
-#endif
+	if(index == 5)
+		;//debug(2, "index:%d, ret:%d\n", index, ret);
 	return ret;
 }
 
 /* 清空检测器下降沿计数 */
 int tsc_clr_falling(int index)
 {
-	int ret;
-#ifdef _SIM_TEST_
-	ret = sim_clr_falling(index);
-#else
+	int ret = 0;
 	pthread_mutex_lock(&mutex_det);
 	g_det[index].sum_falling = 0;
 	pthread_mutex_unlock(&mutex_det);
-#endif
+	if(index == 5)
+		;//debug(2, "index:%d, ret:%d\n", index, ret);
 	return 0;
 }
 
@@ -593,13 +592,11 @@ int tsc_clr_falling(int index)
 int tsc_cur_hold(int index)
 {
 	int ret;
-#ifdef _SIM_TEST_
-	ret = sim_cur_hold(index);
-#else
 	pthread_mutex_lock(&mutex_det);
 	ret = g_det[index].occ1;
 	pthread_mutex_unlock(&mutex_det);
-#endif
+	if(index == 5)
+		;//debug(2, "index:%d, ret:%d\n", index, ret);
 	return ret;
 }
 
@@ -607,13 +604,11 @@ int tsc_cur_hold(int index)
 int tsc_sm_hold(int index)
 {
 	int ret;
-#ifdef _SIM_TEST_
-	ret = sim_sm_hold(index);
-#else
 	pthread_mutex_lock(&mutex_det);
 	ret = g_det[index].occ2;
 	pthread_mutex_unlock(&mutex_det);
-#endif
+	if(index == 5)
+		;//debug(2, "index:%d, ret:%d\n", index, ret);
 	return ret;
 }
 
@@ -621,13 +616,11 @@ int tsc_sm_hold(int index)
 int tsc_hold_state(int index)
 {
 	int ret;
-#ifdef _SIM_TEST_
-	ret = sim_hold_state(index);
-#else
 	pthread_mutex_lock(&mutex_det);
 	ret = g_det[index].state;
 	pthread_mutex_unlock(&mutex_det);
-#endif
+	if(index == 5)
+		;//debug(2, "index:%d, ret:%d\n", index, ret);
 	return ret;
 }
 
@@ -637,13 +630,14 @@ int tsc_hold_state(int index)
 int tsc_hold_time(int index)
 {
 	int ret;
-#ifdef _SIM_TEST_
-	ret = sim_hold_time(index);
-#else
 	pthread_mutex_lock(&mutex_det);
-	ret = g_det[index].hold;
+	if(g_det[index].state)
+		ret = g_det[index].gross;
+	else
+		ret = 0;
 	pthread_mutex_unlock(&mutex_det);
-#endif
+	if(index == 5)
+		;//debug(2, "index:%d, ret:%d\n", index, ret);
 	return ret;
 }
 
@@ -651,13 +645,11 @@ int tsc_hold_time(int index)
 int tsc_det_fault(int index)
 {
 	int ret;
-#ifdef _SIM_TEST_
-	ret = sim_det_fault(index);
-#else 
 	pthread_mutex_lock(&mutex_det);
 	ret = g_det[index].fault;
 	pthread_mutex_unlock(&mutex_det);
-#endif
+	if(index == 5)
+		;//debug(2, "index:%d, ret:%d\n", index, ret);
 	return ret;
 }
 
@@ -667,11 +659,9 @@ int tsc_det_fault(int index)
 int tsc_det_exist(int index)
 {
 	int ret;
-#ifdef _SIM_TEST_
-	return sim_det_exist(index);
-#else
 	ret = g_det_def[index].exist;
-#endif
+	if(index == 5)
+		;//debug(2, "index:%d, ret:%d\n", index, ret);
 	return ret;
 }
 
@@ -679,13 +669,11 @@ int tsc_det_exist(int index)
 int tsc_det_net(int index)
 {
 	int ret;
-#ifdef _SIM_TEST_
-	ret = sim_det_net(index);
-#else
 	pthread_mutex_lock(&mutex_det);
 	ret = g_det[index].net;
 	pthread_mutex_unlock(&mutex_det);
-#endif
+	if(index == 5)
+		;//debug(2, "index:%d, ret:%d\n", index, ret);
 	return ret;
 }
 
@@ -693,13 +681,11 @@ int tsc_det_net(int index)
 int tsc_det_gross(int index)
 {
 	int ret;
-#ifdef _SIM_TEST_
-	ret = sim_det_gross(index);
-#else
 	pthread_mutex_lock(&mutex_det);
 	ret = g_det[index].gross;
 	pthread_mutex_unlock(&mutex_det);
-#endif
+	if(index == 5)
+		;//debug(2, "index:%d, ret:%d\n", index, ret);
 	return ret;
 }
 /***************** 其他函数 *****************************/
@@ -755,7 +741,7 @@ void* thr_sg(void* arg)
 		gettimeofday(&tv1, NULL);
 		//open,close操作
 		for(i = 0; i < SGMAX; i++){
-			if(!g_sg[i].exist)//信号灯故障
+			if(!g_sg[i].exist)//信号灯不存在
 				continue;
 
 			switch(g_sg[i].ext){
@@ -775,30 +761,34 @@ void* thr_sg(void* arg)
 		}
 		//amber->min->ext操作
 		for(i = 0; i < SGMAX; i++){
-			if(!g_sg[i].exist)//信号灯故障
+			if(!g_sg[i].exist)//信号灯不存在
 				continue;
 
 			if((ret = sg_track_chk(i, 1)) != -1){//处于amber
 				if(ret >= g_sg[i].amber){//amber超时
 					drv_sg_switch(i, 2);//切换到min_red
+					continue;
 				}
 			}
 
 			if((ret = sg_track_chk(i, 2)) != -1){//处于min_red
 				if(ret >= g_sg[i].min_red){//min_red超时
 					drv_sg_switch(i, 3);//切换到ext_red
+					continue;
 				}
 			}
 
 			if((ret = sg_track_chk(i, 4)) != -1){//处于prep
 				if(ret >= g_sg[i].prep){//prep超时
 					drv_sg_switch(i, 5);//切换到min_green
+					continue;
 				}
 			}
 
 			if((ret = sg_track_chk(i, 5)) != -1){//处于min_green
 				if(ret >= g_sg[i].min_green){//min_green超时
 					drv_sg_switch(i, 6);//切换到ext_green
+					continue;
 				}
 			}
 		}
@@ -831,7 +821,8 @@ int init_tsc_sg(void)
 		return -1;
 	}
 	ret = drv_sg_para(g_sg, size);//读入参数
-	drv_sg_para_dump(g_sg);//FIXME:test confirm
+	drv_sg_para_dump(g_sg, size);
+
 	int i;
 	for(i = 0; i < SGMAX; i++){
 		if(g_sg[i].exist)
@@ -879,7 +870,9 @@ int tsc_sg_enabled(int sg)
 /* 检查灯组是否处于红灯状态 */
 int tsc_chk_red(int sg)
 {
-    if((sg_track_chk(sg, 2) != -1) || (sg_track_chk(sg, 3) != -1))
+    int ret = (sg_track_chk(sg, 2) != -1) || (sg_track_chk(sg, 3) != -1);
+	//debug(2, "sg:%d, ret:%d\n", sg, ret);
+    if(ret)
         return 1;
     else
         return 0;
@@ -888,7 +881,9 @@ int tsc_chk_red(int sg)
 /* 检查灯组是否处于最小红灯状态 */
 int tsc_chk_min_red(int sg)
 {
-    if(sg_track_chk(sg, 2) != -1)
+    int ret = (sg_track_chk(sg, 2) != -1);
+	//debug(2, "sg:%d, ret:%d\n", sg, ret);
+    if(ret)
         return 1;
     else
         return 0;
@@ -897,7 +892,9 @@ int tsc_chk_min_red(int sg)
 /* 检查信号灯是否处于amber状态 */
 int tsc_chk_amber(int sg)
 {
-    if(sg_track_chk(sg, 1) != -1)
+    int ret = (sg_track_chk(sg, 1) != -1);
+	//debug(2, "sg:%d, ret:%d\n", sg, ret);
+    if(ret)
         return 1;
     else
         return 0;
@@ -906,7 +903,9 @@ int tsc_chk_amber(int sg)
 /* 检查信号灯是否处于green状态 */
 int tsc_chk_green(int sg)
 {
-    if((sg_track_chk(sg, 5) != -1) || (sg_track_chk(sg, 6) != -1))
+    int ret =(sg_track_chk(sg, 5) != -1) || (sg_track_chk(sg, 6) != -1);
+	//debug(2, "sg:%d, ret:%d\n", sg, ret);
+    if(ret)
         return 1;
     else
         return 0;
@@ -915,7 +914,9 @@ int tsc_chk_green(int sg)
 /* 检查信号灯是否处于最小green状态 */
 int tsc_chk_min_green(int sg)
 {
-    if(sg_track_chk(sg, 5) != -1)
+    int ret = (sg_track_chk(sg, 5) != -1);
+	//debug(2, "sg:%d, ret:%d\n", sg, ret);
+    if(ret)
         return 1;
     else
         return 0;
@@ -924,7 +925,9 @@ int tsc_chk_min_green(int sg)
 /* 检查信号灯是否处于prep状态 */
 int tsc_chk_prep(int sg)
 {
-    if(sg_track_chk(sg, 4) != -1)
+    int ret = (sg_track_chk(sg, 4) != -1);
+	//debug(2, "sg:%d, ret:%d\n", sg, ret);
+    if(ret)
         return 1;
     else
         return 0;
@@ -1100,7 +1103,7 @@ int tsc_read_pt(void* arg)
 }
 
 /********************* 初始化 ************************/
-int tsc_init()
+int __tsc_init()
 {
     int ret = 0;
 
@@ -1110,9 +1113,9 @@ int tsc_init()
         return -1;
     }
 
-	ret = init_prg();
+	ret = init_tsc_prg();
 	if(ret != 0){
-		debug(1, "init_prg() error\n");
+		debug(1, "init_tsc_prg() error\n");
 		return -1;
 	}
 
@@ -1131,13 +1134,13 @@ int tsc_init()
     return 0;
 }
 
-void tsc_deinit()
+void __tsc_deinit()
 {
     deinit_det();
 
     deinit_tsc_sg();
 
-	deinit_prg();
+	deinit_tsc_prg();
 
 	deinit_timers();
 }

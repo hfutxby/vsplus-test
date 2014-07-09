@@ -20,19 +20,17 @@ pack pack_list[] = {
     {0x96, 0x69, 2},//sg switch
     };
 
-//int g_exit_serial = 0; //线程退出
 int g_fd_serial = -1; //串口
-ring_buf r;
+ring_buf g_ring;
+
 pthread_mutex_t serial_write_mutex = PTHREAD_MUTEX_INITIALIZER;//写串口保护
 pthread_mutex_t serial_read_mutex = PTHREAD_MUTEX_INITIALIZER;//读串口保护
 pthread_mutex_t ring_mutex = PTHREAD_MUTEX_INITIALIZER;//ring_buf读写保护
-//pthread_t g_tid_watchdog; //下发喂狗信息
+
 pthread_t g_tid_read; //读取串口
 int g_exit_read = 0;
-//pthread_t g_tid_write; //下发命令
 pthread_t g_tid_pop; //解析串口命令
 int g_exit_pop = 0;
-//pthread_t g_tid_test_send;
 pthread_t g_tid_det;
 int g_exit_det = 0;
 
@@ -89,9 +87,6 @@ int pop_pack(ring_buf* r, pack pack_list[], int list_len, unsigned char* buf)
 	}
 
 	if(ret == 0){ //完全没找到,弹出一个元素,以便继续往下找
-		//printf("\033[40;31m not found \033[0m\n");
-		//__dump(r);
-		//printf("\n");
 		ring_pops(r, pre_buf, 1);//max_load_size);
 		return -1;
 	}
@@ -122,7 +117,6 @@ void handle_pack(unsigned char* buf)
 //对缓存的串口数据进行解包
 void* thr_pop(void* para)
 {
-    //ring_buf* r = (ring_buf*)para;
     int ret, i;
     unsigned char buf[100];
     struct timeval tv1, tv2;
@@ -131,19 +125,17 @@ void* thr_pop(void* para)
         memset(buf, 0, sizeof(buf));
         pthread_mutex_lock(&ring_mutex);
         gettimeofday(&tv1, NULL);
-        ret = pop_pack(&r, pack_list, list_len, buf);
+        ret = pop_pack(&g_ring, pack_list, list_len, buf);
         gettimeofday(&tv2, NULL);
-        //printf("ret:%d time diff: %ldus\n", ret, (tv2.tv_sec - tv1.tv_sec) * 1000000 + (tv2.tv_usec - tv1.tv_usec));
         pthread_mutex_unlock(&ring_mutex);
         if(ret > 0){
             printf("get a pack:");
             for(i = 0; i < ret; i++){
                 printf("0x%02x ", buf[i]);
             }
+			printf("\n");
 			handle_pack(buf);//处理串口命令
             printf("\n\n");
-           // __dump(r);
-           // printf("\n");
         }
 		else
             usleep(1000);
@@ -255,7 +247,6 @@ int set_opt(int fd, int speed, int bits, char event, int stop)
 //读串口原始数据，未解包
 void* thr_read(void* para)
 {
-	//ring_buf* r = (ring_buf*)para;
 	fd_set set_read;
 	int ret, i;
 	unsigned char buf[200] = {0};
@@ -288,48 +279,13 @@ void* thr_read(void* para)
 					printf("\n");
 					if(ret > 0){
 						pthread_mutex_lock(&ring_mutex);
-						ring_adds_over(&r, buf, ret);
-						//__dump(r);
+						ring_adds_over(&g_ring, buf, ret);
 						pthread_mutex_unlock(&ring_mutex);
 					}
 				}
 		}
 	}
 }
-
-//void* thr_read_2(void* para)
-//{
-//	int ret, i;
-//	char buf[200] = {0};
-//
-//	while(!g_exit_read){
-//		//pthread_mutex_lock(&serial_read_mutex);
-//		ret = read(g_fd_serial, buf, sizeof(buf));
-//		//pthread_mutex_unlock(&serial_read_mutex);
-//		if(ret == 0) continue;
-//		printf("thr_read:%d:", ret);
-//		for( i = 0; i < ret; i++)
-//			printf("%#x ", buf[i]);
-//		printf("\n");
-//	}
-//}
-
-////发送喂狗信息
-//void* thr_watchdog(void* para)
-//{
-//	unsigned char buf[3];
-//	buf[0] = 0xC1;
-//	buf[1] = 0xAB;
-//	buf[2] = 0x5C;
-//	int ret;
-//	while(!g_exit_watchdog){
-//		pthread_mutex_lock(&serial_write_mutex);
-//		ret = write(g_fd_serial, buf, sizeof(buf));
-//		pthread_mutex_unlock(&serial_write_mutex);
-//		printf("thr_watchdog:ret=%d:%#x %#x %#x\n", ret, buf[0], buf[1], buf[2]);
-//		usleep(5*1000*1000);
-//	}	
-//}
 
 //编号为index的检测器产生一个上升沿
 void set_rising(int index)
@@ -381,58 +337,6 @@ void* thr_det(void* para)
 	}
 }
 
-////发送测试信号
-//void* thr_write(void* para)
-//{
-//	unsigned char buf[4];
-//	int group, stat, ret;
-//	buf[0] = 0x96; buf[3] = 0x69;
-//	while(!g_exit_write){
-//		printf("input light group:");
-//		scanf("%x", &group);
-//		printf("input light stat:");
-//		scanf("%x", &stat);
-//		printf("ready to send command\n");
-//		buf[1] = group; buf[2] = stat;
-//		pthread_mutex_lock(&serial_write_mutex);
-//		ret =write(g_fd_serial, buf, sizeof(buf));
-//		pthread_mutex_unlock(&serial_write_mutex);
-//		printf("thr_write:ret=%d:%#x %#x %#x %#x\n", ret, buf[0], buf[1], buf[2], buf[3]);
-//	}
-//}
-//
-////测试用，随机发送命令
-//void* thr_test_send(void* para)
-//{
-//    ring_buf* r = (ring_buf*)para;
-//    int i, list_len, pack_index;
-//    unsigned char buf[100];
-//    struct timeval tv;
-//    list_len = sizeof(pack_list) / sizeof(pack);
-//    while(1){
-//        gettimeofday(&tv, NULL);
-//        srand(tv.tv_usec);
-//        pack_index = random() % list_len;//任意选择一个pack
-//        memset(buf, 0, sizeof(buf));
-//        i = 0;
-//        buf[i] = pack_list[pack_index].p1;
-//		if(!(random() % 5)) buf[i] = 0xa0;//error test
-//        for(i = 1; i <= pack_list[pack_index].load_size; i++)
-//            buf[i] = 0x1;
-//        buf[i] = pack_list[pack_index].p2;
-//
-//        pthread_mutex_lock(&serial_write_mutex);
-//        write(g_fd_serial, buf, i+1);
-//        printf("send a pack:");
-//        for(i = 0; i < pack_list[pack_index].load_size + 2; i++)
-//            printf("0x%02x ", buf[i]);
-//        printf("\n\n");
-//        pthread_mutex_unlock(&serial_write_mutex);
-//
-//        usleep(1000*1000);
-//    }
-//}
-
 int main(int argc, char* argv[])
 {
 	int ret = 0;
@@ -453,28 +357,27 @@ int main(int argc, char* argv[])
 
 	printf("g_fd_serial=%d\n", g_fd_serial);
 
-	//ring_buf r;
-	init_ring(&r);
+	init_ring(&g_ring);
 
-	//pthread_create(&g_tid_watchdog, NULL, thr_watchdog, NULL);
-	pthread_create(&g_tid_read, NULL, thr_read, &r);
-	pthread_create(&g_tid_pop, NULL, thr_pop, &r);
-	//pthread_create(&g_tid_test_send, NULL, thr_test_send, &r);
-	//pthread_create(&g_tid_write, NULL, thr_write, NULL);
+	pthread_create(&g_tid_read, NULL, thr_read, NULL);
+	pthread_create(&g_tid_pop, NULL, thr_pop, NULL);
 	pthread_create(&g_tid_det, NULL, thr_det, NULL);
 
 	while(1){
 		sleep(1);
 	}
 
-	//pthread_join(g_tid_watchdog, NULL);
 	g_exit_read = 1;
+	if(g_tid_read)
+		pthread_join(g_tid_read, NULL);
+
 	g_exit_pop = 1;
+	if(g_tid_pop)
+		pthread_join(g_tid_pop, NULL);
+
 	g_exit_det = 1;
-	pthread_join(g_tid_read, NULL);
-	pthread_join(g_tid_pop, NULL);
-	pthread_join(g_tid_det, NULL);
-	//pthread_join(g_tid_write, NULL);
+	if(g_tid_det)
+		pthread_join(g_tid_det, NULL);
 
 	close(g_fd_serial);
 

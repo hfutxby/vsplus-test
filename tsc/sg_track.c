@@ -39,9 +39,11 @@ int sg_track_open(void)
         debug(1, "%s\n", strerror(errno));
 		return -1;
     }
-	//init stat = 0, wait tsc.c give real init
+
 	memset(g_sg_track, 0, sizeof(sg_track) * SGMAX);
+
 	debug(3, "<==\n");
+	return 0;
 }
 
 //关闭灯组状态跟踪文件
@@ -121,9 +123,10 @@ void* thr_sg_track(void* arg)
 int init_sg_track(void)
 {
 	debug(3, "==>\n");
-	//sleep(10);//FIXME
-	sg_track_open();
-	sleep(1);//FIXME
+	int ret = sg_track_open();
+	if(ret != 0)
+		return -1;
+
 	pthread_create(&g_tid_sg_track, NULL, thr_sg_track, NULL);
 	debug(3, "<==\n");
 	return 0;

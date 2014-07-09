@@ -31,8 +31,8 @@
 #ifndef _if626max
 #define _if626max
 
-#define SGMAX 64u
-//#define SGMAX VSMAX
+//#define SGMAX 64u
+#define SGMAX VSMAX
 
 /* ¿¿¿ */
 #define NUL         0     

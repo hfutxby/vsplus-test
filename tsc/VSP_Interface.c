@@ -539,7 +539,7 @@ short int s_stoeblink(short int sg)
 unsigned short s_t_rot(short int sg)
 {
 	unsigned short int ret = tsc_red_time(sg);
-	debug(3, "sg:%d, ret:%d\n", sg, ret);
+	//debug(2, "sg:%d, ret:%d\n", sg, ret);
 	return ret;
 }
 
@@ -551,7 +551,7 @@ unsigned short s_t_rot(short int sg)
 unsigned short int s_t_gelb(short int sg)
 {
 	unsigned short int ret = tsc_amber_time(sg);
-	debug(3, "sg:%d, ret:%d\n", sg, ret);
+	//debug(2, "sg:%d, ret:%d\n", sg, ret);
 	return ret;
 }
 
@@ -562,7 +562,7 @@ unsigned short int s_t_gelb(short int sg)
 unsigned short int s_t_min_rot(short int sg)
 {
 	unsigned short int ret = tsc_min_red_time(sg);
-	debug(3, "sg:%d, ret:%d\n", sg, ret);
+	//debug(2, "sg:%d, ret:%d\n", sg, ret);
 	return ret;
 }
 
