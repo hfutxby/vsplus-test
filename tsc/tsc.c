@@ -199,7 +199,7 @@ void* thr_timer(void* arg)
 		gettimeofday(&tv2, NULL);
 		us = (tv2.tv_sec - tv1.tv_sec) * 1000000 + (tv2.tv_usec - tv1.tv_usec);
 		//printf("time_go:%dus\n", us);
-		us_sleep(1000000 - us);
+		us_sleep(100*1000 - us);
 	}
 	debug(3, "<==\n");
 }
@@ -364,7 +364,7 @@ void tsc_stream_waiting(int index, int time)
 /*************检测器函数************************/
 static double g_f1 = 0.2;//占用率上升折算因子
 static double g_f2 = 0.2;//下降因子
-#define DET_MAXTIME 600 //等待下降沿超时
+#define DET_MAXTIME 100 //等待下降沿超时
 
 static det_track* g_det = NULL; //检测器数据
 static int g_fd_det = 0; //检测器数据映射文件
@@ -398,6 +398,8 @@ int open_det(void)
 	for(i = 0; i < DETMAX; i++){
 		g_det[i].free = 10;//即时占用率计算窗口为1s
 	}
+
+	return 0;
 }
 
 /* 关闭检测器数据映射 */
@@ -409,17 +411,18 @@ void close_det(void)
 }
 
 //typedef struct {
-//  int sum_rising; //上升沿计数，驱动板信号修改
-//  int sum_falling; //下降沿计数，驱动板信号修改
-//  int state; //占用状态，驱动板信号修改
+//  int sum_rising; //上升沿计数
+//  int sum_falling; //下降沿计数
+//  int state; //占用状态，1=占用
 //  int hold; //最近1s占用计时
 //  int free; //最近1s空闲计时
-//  int fault; //故障
+//  int fault; //故障，1=故障
 //  int occ1;//占用率
 //  int occ2;//平滑占用率
-//	int net;//time gap starts at the last falling slope，驱动板信号修改
-//	int gross;
+//	int net;//下降沿后的计时
+//	int gross;//上升沿后的计时
 //}det_track;
+
 /* 更新规则
  * 100ms内要对所有检测器完成一次更新
  * 1、如果state为1，如果free>0，则相对应的hold+1，free-1
@@ -435,7 +438,7 @@ void update_det(void)
 {
 	int i;
 	for(i = 0; i < DETMAX; i++){
-		if(g_det[i].fault)//检测器故障，不用更新数据
+		if(g_det[i].fault || !g_det_def[i].exist)//检测器故障或不存在，不用更新数据
 			continue;
 
 		if(g_det[i].state){//检测器占用中
@@ -453,8 +456,10 @@ void update_det(void)
 			g_det[i].gross++;
 			g_det[i].net++;
 		}
-if(i == 5)
-	;//debug(2, "hold:%d, free:%d, gross:%d, net:%d\n", g_det[i].hold, g_det[i].free, g_det[i].gross, g_det[i].net);
+
+		if(i == 5)
+			debug(2, "id:%d, hold:%d, free:%d, gross:%d, net:%d\n", i, g_det[i].hold, g_det[i].free, g_det[i].gross, g_det[i].net);
+
 		//计算占用率
 		g_det[i].occ1 = (double)(g_det[i].hold * 100) / (g_det[i].hold + g_det[i].free);
 		if(g_det[i].occ1 > g_det[i].occ2)
@@ -468,7 +473,7 @@ if(i == 5)
 void tsc_det_op(int index, int op)
 {
 	debug(3, "==>\n");
-	debug(2, "index:%d, op:%d\n", index, op);
+	debug(2, "==>index:%d, op:%d\n", index, op);
 	pthread_mutex_lock(&mutex_det);
 	if(op == 1){
 		g_det[index].sum_rising++;
@@ -482,7 +487,7 @@ void tsc_det_op(int index, int op)
 		g_det[index].net = 0;
 	}
 	pthread_mutex_unlock(&mutex_det);
-	debug(3, "<==\n");
+	debug(2, "<==\n");
 }
 
 /* 定时更新检测器数据 */
@@ -510,7 +515,11 @@ void* thr_det(void* arg)
 int init_det(void)
 {
 	debug(3, "==>\n");
-	open_det();//分配空间用于det状态跟踪
+	int ret = open_det();//分配空间用于det状态跟踪
+	if(ret < 0){
+		debug(1, "call open_det() error\n");
+		return -1;
+	}
 	
 	//分配空间用于读取det配置
 	int size = sizeof(det_def) * DETMAX;
@@ -708,7 +717,7 @@ int tsc_get_time(int* hour, int* min, int* sec)
 	*hour = t->tm_hour;
 	*min = t->tm_min;
 	*sec = t->tm_sec;
-	debug(3, "%04d-%02d-%02d %02d:%02d:%02d\n", t->tm_year+1900,
+	debug(2, "%04d-%02d-%02d %02d:%02d:%02d\n", t->tm_year+1900,
 		t->tm_mon+1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);
 
 	return 1;

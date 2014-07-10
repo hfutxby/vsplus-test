@@ -233,7 +233,7 @@ int vs_init(void)
 		return -1;
 	}
 #endif
-	sleep(1);
+	//sleep(1);
 #if 10
 	//VSP_AUS
 	for(i = 0; i < GERAET_TEILKNOTEN_MAX; i++)
