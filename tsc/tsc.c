@@ -197,7 +197,7 @@ void* thr_timer(void* arg)
 		time_go();
 		pthread_mutex_unlock(&mutex_timer);
 		gettimeofday(&tv2, NULL);
-		us = (tv2.tv_sec - tv1.tv_sec) * 1000000 + (tv2.tv_usec - tv1.tv_usec);
+		us = (tv2.tv_sec - tv1.tv_sec) * 1000 * 1000 + (tv2.tv_usec - tv1.tv_usec);
 		//printf("time_go:%dus\n", us);
 		us_sleep(100*1000 - us);
 	}
@@ -364,7 +364,8 @@ void tsc_stream_waiting(int index, int time)
 /*************检测器函数************************/
 static double g_f1 = 0.2;//占用率上升折算因子
 static double g_f2 = 0.2;//下降因子
-#define DET_MAXTIME 100 //等待下降沿超时
+#define DET_MAXTIME 600 //等待下降沿超时
+#define TEST_ID 5
 
 static det_track* g_det = NULL; //检测器数据
 static int g_fd_det = 0; //检测器数据映射文件
@@ -457,8 +458,8 @@ void update_det(void)
 			g_det[i].net++;
 		}
 
-		if(i == 5)
-			debug(2, "id:%d, hold:%d, free:%d, gross:%d, net:%d\n", i, g_det[i].hold, g_det[i].free, g_det[i].gross, g_det[i].net);
+		if(i == TEST_ID)
+			;//debug(2, "id:%d, hold:%d, free:%d, gross:%d, net:%d, rising:%d, falling:%d\n", i, g_det[i].hold, g_det[i].free, g_det[i].gross, g_det[i].net, g_det[i].sum_rising, g_det[i].sum_falling);
 
 		//计算占用率
 		g_det[i].occ1 = (double)(g_det[i].hold * 100) / (g_det[i].hold + g_det[i].free);
@@ -557,7 +558,7 @@ int tsc_sum_rising(int index)
 	pthread_mutex_lock(&mutex_det);
 	ret = g_det[index].sum_rising;
 	pthread_mutex_unlock(&mutex_det);
-	if(index == 5)
+	if(index == TEST_ID)
 		;//debug(2, "index:%d, ret:%d\n", index, ret);
 	return ret;
 }
@@ -569,7 +570,7 @@ void tsc_clr_rising(int index)
 	pthread_mutex_lock(&mutex_det);
 	g_det[index].sum_rising = 0;
 	pthread_mutex_unlock(&mutex_det);
-	if(index == 5)
+	if(index == TEST_ID)
 		;//debug(2, "index:%d, ret:%d\n", index, ret);
 }
 
@@ -580,7 +581,7 @@ int tsc_sum_falling(int index)
 	pthread_mutex_lock(&mutex_det);
 	ret = g_det[index].sum_falling;
 	pthread_mutex_unlock(&mutex_det);
-	if(index == 5)
+	if(index == TEST_ID)
 		;//debug(2, "index:%d, ret:%d\n", index, ret);
 	return ret;
 }
@@ -592,7 +593,7 @@ int tsc_clr_falling(int index)
 	pthread_mutex_lock(&mutex_det);
 	g_det[index].sum_falling = 0;
 	pthread_mutex_unlock(&mutex_det);
-	if(index == 5)
+	if(index == TEST_ID)
 		;//debug(2, "index:%d, ret:%d\n", index, ret);
 	return 0;
 }
@@ -604,7 +605,7 @@ int tsc_cur_hold(int index)
 	pthread_mutex_lock(&mutex_det);
 	ret = g_det[index].occ1;
 	pthread_mutex_unlock(&mutex_det);
-	if(index == 5)
+	if(index == TEST_ID)
 		;//debug(2, "index:%d, ret:%d\n", index, ret);
 	return ret;
 }
@@ -616,7 +617,7 @@ int tsc_sm_hold(int index)
 	pthread_mutex_lock(&mutex_det);
 	ret = g_det[index].occ2;
 	pthread_mutex_unlock(&mutex_det);
-	if(index == 5)
+	if(index == TEST_ID)
 		;//debug(2, "index:%d, ret:%d\n", index, ret);
 	return ret;
 }
@@ -628,7 +629,7 @@ int tsc_hold_state(int index)
 	pthread_mutex_lock(&mutex_det);
 	ret = g_det[index].state;
 	pthread_mutex_unlock(&mutex_det);
-	if(index == 5)
+	if(index == TEST_ID)
 		;//debug(2, "index:%d, ret:%d\n", index, ret);
 	return ret;
 }
@@ -645,7 +646,7 @@ int tsc_hold_time(int index)
 	else
 		ret = 0;
 	pthread_mutex_unlock(&mutex_det);
-	if(index == 5)
+	if(index == TEST_ID)
 		;//debug(2, "index:%d, ret:%d\n", index, ret);
 	return ret;
 }
@@ -657,7 +658,7 @@ int tsc_det_fault(int index)
 	pthread_mutex_lock(&mutex_det);
 	ret = g_det[index].fault;
 	pthread_mutex_unlock(&mutex_det);
-	if(index == 5)
+	if(index == TEST_ID)
 		;//debug(2, "index:%d, ret:%d\n", index, ret);
 	return ret;
 }
@@ -669,7 +670,7 @@ int tsc_det_exist(int index)
 {
 	int ret;
 	ret = g_det_def[index].exist;
-	if(index == 5)
+	if(index == TEST_ID)
 		;//debug(2, "index:%d, ret:%d\n", index, ret);
 	return ret;
 }
@@ -681,7 +682,7 @@ int tsc_det_net(int index)
 	pthread_mutex_lock(&mutex_det);
 	ret = g_det[index].net;
 	pthread_mutex_unlock(&mutex_det);
-	if(index == 5)
+	if(index == TEST_ID)
 		;//debug(2, "index:%d, ret:%d\n", index, ret);
 	return ret;
 }
@@ -693,7 +694,7 @@ int tsc_det_gross(int index)
 	pthread_mutex_lock(&mutex_det);
 	ret = g_det[index].gross;
 	pthread_mutex_unlock(&mutex_det);
-	if(index == 5)
+	if(index == TEST_ID)
 		;//debug(2, "index:%d, ret:%d\n", index, ret);
 	return ret;
 }
@@ -947,13 +948,27 @@ int tsc_chk_prep(int sg)
 int tsc_red_time(int sg)
 {
     int ret;
+
+	ret = sg_track_chk(sg, 1);//红灯计时包括amber
+	if(sg == 7){
+		debug(2, "sg_track_chk(7, 1)=%d\n", ret);
+	}
+	if(ret != -1)
+		return ret;
+
     ret = sg_track_chk(sg, 2);
+	if(sg == 7){
+		debug(2, "sg_track_chk(7, 2)=%d\n", ret);
+	}
     if(ret != -1)//min_red
-        return ret;
+        return ret + g_sg[sg].amber;
 
     ret = sg_track_chk(sg, 3);
+	if(sg == 7){
+		debug(2, "sg_track_chk(7, 3)=%d\n", ret);
+	}
     if(ret != -1)//ext_red
-        return ret + g_sg[sg].min_red;
+        return ret + g_sg[sg].min_red + g_sg[sg].amber;
 
     return 0;
 }
@@ -973,13 +988,18 @@ int tsc_min_red_time(int sg)
 int tsc_green_time(int sg)
 {
     int ret;
+
+	ret = sg_track_chk(sg, 4);//绿灯计时包括prep
+	if(ret != -1)
+		return ret;
+
     ret = sg_track_chk(sg, 5);
     if(ret != -1)//min_green
-        return ret;
+        return ret + g_sg[sg].prep;
 
     ret = sg_track_chk(sg, 6);
     if(ret != -1)//ext_green
-        return ret + g_sg[sg].min_green;
+        return ret + g_sg[sg].min_green + g_sg[sg].prep;
 
     return 0;
 }
@@ -1046,7 +1066,27 @@ int tsc_amber(int sg)
  * 返回绿间隔时间 */
 int tsc_inter_green(int sgr, int sge)
 {
-    return 0;//32767;
+	int inter_green[16][16] = {
+        { 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,   0,  0,  0,  0,  0, 50},
+        { 0,  0,  0, 40,  0, 50, 50, 40,  0, 60,  60, 30, 30,  0,  0,  0},
+        { 0,  0,  0, 50, 50,  0, 40, 30, 50,  0,   0, 40, 30,  0,  0,  0},
+        { 0, 50, 50,  0, 40, 50,  0, 50, 40,  0,  60,  0,  0,  0,  0,  0},
+        { 0,  0, 50, 50,  0,  0, 40, 60, 60, 50,   0, 30, 30,  0,  0,  0},
+        { 0, 50,  0, 50,  0,  0, 60,  0,  0, 30,  60, 30, 30,  0,  0,  0},
+        { 0, 50, 50,  0, 50, 50,  0, 70, 60, 60,  40, 40, 30,  0,  0,  0},
+        { 0,100, 70,100, 90,  0, 90,  0,  0,  0,   0,  0,  0,  0,  0,  0},
+        { 0,  0,100,110,100,  0, 90,  0,  0,  0,   0, 70, 70,  0,  0,  0},
+        { 0,110,  0,  0,120, 90,110,  0,  0,  0,   0,  0,  0,  0,  0,  0},
+        { 0, 80,  0, 70,  0, 70, 90,  0,  0,  0,   0,  0,  0,  0,  0,  0},
+        { 0, 90, 70,  0, 80, 90,100,  0, 30,  0,   0,  0,  0,  0,  0,  0},
+        { 0, 50, 80,  0, 70, 60, 60,  0, 80,  0,   0,  0,  0,  0,  0,  0},
+        { 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,   0,  0,  0,  0,  0, 50},
+        { 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,   0,  0,  0,  0,  0, 50},
+        { 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,   0,  0,  0, 50, 50,  0}
+        };
+
+	return inter_green[sgr][sge];
+    //return 32767;
 }
 /******************* Digital output switching ************************/
 /* FIXME:

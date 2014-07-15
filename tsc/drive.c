@@ -88,6 +88,7 @@ int drv_sg_para(void* ptr, int size)
 #if 0
 	int xml_sg_para(void* ptr, int size);
 #else
+#if 0
 	int i;
 	int min_red[16] = {0,40,40,40,40,40,40,80,80,80,80,40,40,40,40,60};
 	int min_green[16] = {0,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20};
@@ -99,8 +100,30 @@ int drv_sg_para(void* ptr, int size)
 		sg = (sg_def*)(ptr + i * sizeof(sg_def));
 		sg->min_red = min_red[i];
 		sg->min_green = min_green[i];
-		sg->prep = 5;
-		sg->amber = 30;
+		sg->prep = 30;
+		sg->amber = 20;
+		sg->ext = 0;
+		sg->exist = 1;
+	}
+#endif
+	int i;
+	//包括prep
+	int free_sum[16] = {0, 40, 40, 40, 40, 40, 40, 80, 80, 80, 80, 40, 40, 40, 40, 60};
+	//不包括amber
+	int close_sum[16] = {0, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20};
+	int prep[16] = {0, 20, 20, 20, 20, 20, 20, 0, 0, 0, 0, 20, 20, 20, 20, 0};
+	int amber[16] = {0, 30, 30, 30, 30, 30, 30, 70, 70, 80, 60, 30, 30, 30, 30, 40};
+
+	memset(ptr, 0, size);
+	int num = size / sizeof(sg_def);
+	num = (num > 16) ? 16 : num;
+	sg_def* sg = NULL;
+	for(i = 1; i < num; i++){
+		sg = (sg_def*)(ptr + i * sizeof(sg_def));
+		sg->min_red = close_sum[i];
+		sg->min_green = free_sum[i] - prep[i];
+		sg->prep = prep[i];
+		sg->amber = amber[i];
 		sg->ext = 0;
 		sg->exist = 1;
 	}

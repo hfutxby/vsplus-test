@@ -70,6 +70,8 @@ void sg_track_switch(int sg, int stat)
 //如果sg处于stat状态，返回此状态时间，否则返回-1
 int sg_track_chk(int sg, int stat)
 {
+	if(sg == 2)
+		;//debug(2, "sg:%d stat: %d\n", sg, g_sg_track[sg].stat);
 	int ret = 0;
 	pthread_mutex_lock(&mutex_sg_track);
 	if(g_sg_track[sg].stat == stat)
@@ -114,6 +116,7 @@ void* thr_sg_track(void* arg)
 				g_sg_track[i].time++;
 		}
 		gettimeofday(&tv2, NULL);
+		debug(2, "sg:%d, stat:%d, time:%d\n", 7, g_sg_track[7].stat, g_sg_track[7].time);
 		us = (tv2.tv_sec - tv1.tv_sec) * 1000000 + (tv2.tv_usec - tv1.tv_usec);
 		us_sleep(100*1000 - us);
 	}

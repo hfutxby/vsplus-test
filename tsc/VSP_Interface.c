@@ -539,7 +539,8 @@ short int s_stoeblink(short int sg)
 unsigned short s_t_rot(short int sg)
 {
 	unsigned short int ret = tsc_red_time(sg);
-	//debug(2, "sg:%d, ret:%d\n", sg, ret);
+	if(sg == 7)
+		debug(2, "sg:%d, ret:%d\n", sg, ret);
 	return ret;
 }
 
@@ -778,24 +779,32 @@ void Schliessen_Sichern_Parameter(void)
 }
 
 //FIXME
+//Open command file
 int Oeffnen_VSP_Befehle(void)
 {
 printf("%s(%d)\n", __func__, __LINE__);
 return 0;
 }
 
+//Read command file
 int Lesen_VSP_Befehle(char* data, int _sizeof)
 {
 printf("%s(%d)\n", __func__, __LINE__);
 return 0;
 }
 
+//Close command file
 void Schliessen_VSP_Befehle(void)
 {
 printf("%s(%d)\n", __func__, __LINE__);
 return ;
 }
 
+//FIXME
+/* This function returns the value to the controller 
+ * how PT on / off is set.
+ * return value: 1 = PT off 2 = PT on
+ */
 int OePNV_Ein_Aus(void)
 {
 	//int ret = 0;//PT not set
@@ -805,6 +814,10 @@ int OePNV_Ein_Aus(void)
 }
 
 //FIXME:
+/*This function returns the value to the controller how 
+ * IT on / off is set.
+ * return value: 1 = IT off 2 = IT on
+ */
 int IV_Ein_Aus(void)
 {
 	//int ret = 0;//IT not set
@@ -880,7 +893,7 @@ int Get_OCITOutstationId(int* ZNr, int* FNr, int* Realknoten)
 int Wunsch_VSPLUS(int Wunsch, int Teiknoten)
 {
 	int ret = 0;//FIXME
-	debug(3, "Wunsch:%d, Teiknoten:%d, ret:%d\n", Wunsch, Teiknoten, ret);
+	debug(2, "Wunsch:%d, Teiknoten:%d, ret:%d\n", Wunsch, Teiknoten, ret);
 	return ret;
 }
 
