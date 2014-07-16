@@ -18,7 +18,7 @@ typedef struct{
 	WBTyp sg_mode[SGMAX];// = {0};
 	WBReadyTyp wb_ready[GERAET_TEILKNOTEN_MAX];// = {0};
 }VS_PARA;
-VS_PARA g_vs_para; //VSPLUS()调用参数
+static VS_PARA g_vs_para; //VSPLUS()调用参数
 
 typedef struct { 
 	long id; 
@@ -55,8 +55,15 @@ int thr_vsplus(void* arg)
 			//    g_vs_para.wb_ready[i] = 0;
 			gettimeofday(&tv1, NULL);
 			ret = VSPLUS(g_vs_para.vsp_soll, g_vs_para.sg_mode, g_vs_para.wb_ready);
+			if(ret > 0){	
+				printf("%s(%d):call VSPLUS() success, ret=%d\n", __func__, __LINE__, ret);
+			}
+			else{
+				printf("%s(%d):call VSPLUS() fail, ret=%d\n", __func__, __LINE__, ret);
+				return -1;
+			}
 			gettimeofday(&tv2, NULL);
-			printf("time use: %ldus\n", (tv2.tv_sec - tv1.tv_sec)*1000000 + (tv2.tv_usec - tv1.tv_usec));
+			printf("time use: %ldus\n", (tv2.tv_sec - tv1.tv_sec)*1000*1000 + (tv2.tv_usec - tv1.tv_usec));
 			printf("VSPLUS(%d):ret=%d\n", g_vs_para.vsp_soll[0], ret);
 			//if(ret == 1){
 			//    printf("%s(%d):call VSPLUS(NEU_EIN) success, ret=%d\n", __func__, __LINE__, ret);
@@ -77,7 +84,7 @@ void* thr_aus(void* arg)
 	int i;
 	while(!g_aus_exit){
 		g_vsplus_ret = -1;
-		us_sleep(1000000);
+		us_sleep(1000*1000);
 		//g_vs_para.vsp_soll[0] = VSP_AUS;
 		for(i = 0; i < GERAET_TEILKNOTEN_MAX; i++)
 			g_vs_para.vsp_soll[i] = VSP_AUS;
@@ -91,7 +98,8 @@ void* thr_ein(void* arg)
 	int i;
 	while(!g_ein_exit){//如果VSPLUS函数未能在1s内返回则关闭VSPLUS
 		g_vsplus_ret = -1;
-		us_sleep(1000000);//1s
+		us_sleep(1000*1000);//1s
+#if 0
 		if(g_vsplus_ret == -1){
 			printf("===>VSPLUS() timeout, need switch to fix run\n");
 			//g_vs_para.vsp_soll[0] = VSP_AUS;
@@ -105,6 +113,10 @@ void* thr_ein(void* arg)
 			for(i = 0; i < GERAET_TEILKNOTEN_MAX; i++)
 				g_vs_para.vsp_soll[i] = VSP_EIN;
 		}
+#else
+		for(i = 0; i < GERAET_TEILKNOTEN_MAX; i++)
+			g_vs_para.vsp_soll[i] = VSP_EIN;
+#endif
 	}
 }
 

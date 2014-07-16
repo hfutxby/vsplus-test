@@ -111,14 +111,16 @@ void* thr_sg_track(void* arg)
 	struct timeval tv1, tv2;
 	while(!g_exit_sg_track){
 		gettimeofday(&tv1, NULL);
+		pthread_mutex_lock(&mutex_sg_track);
 		for(i = 0; i < SGMAX; i++){
 			//if(!g_sg_track[i].fault && g_sg_track[i].stat)
 				g_sg_track[i].time++;
 		}
+		pthread_mutex_unlock(&mutex_sg_track);
 		gettimeofday(&tv2, NULL);
-		debug(2, "sg:%d, stat:%d, time:%d\n", 7, g_sg_track[7].stat, g_sg_track[7].time);
-		us = (tv2.tv_sec - tv1.tv_sec) * 1000000 + (tv2.tv_usec - tv1.tv_usec);
-		us_sleep(100*1000 - us);
+		//debug(2, "sg:%d, stat:%d, time:%d\n", 2, g_sg_track[2].stat, g_sg_track[2].time);
+		us = (tv2.tv_sec - tv1.tv_sec) * 1000 * 1000 + (tv2.tv_usec - tv1.tv_usec);
+		us_sleep(100 * 1000 - us);
 	}
 
 }

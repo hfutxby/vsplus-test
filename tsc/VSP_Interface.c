@@ -539,8 +539,8 @@ short int s_stoeblink(short int sg)
 unsigned short s_t_rot(short int sg)
 {
 	unsigned short int ret = tsc_red_time(sg);
-	if(sg == 7)
-		debug(2, "sg:%d, ret:%d\n", sg, ret);
+	if(sg == 2)
+		;//debug(2, "sg:%d, ret:%d\n", sg, ret);
 	return ret;
 }
 

@@ -81,7 +81,7 @@ int main(void)
 	printf("SGMAX:%d\n", SGMAX);
 	while(1){
 		//for(i = 0; i < SGMAX; i++){
-		for(i = 0; i <= 15; i++){
+		for(i = 1; i <= 15; i++){
 			printf("[%2d]", i);
 			print_signal(g_sg[i].stat, g_sg[i].time);
 		}

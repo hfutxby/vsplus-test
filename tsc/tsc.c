@@ -199,7 +199,7 @@ void* thr_timer(void* arg)
 		gettimeofday(&tv2, NULL);
 		us = (tv2.tv_sec - tv1.tv_sec) * 1000 * 1000 + (tv2.tv_usec - tv1.tv_usec);
 		//printf("time_go:%dus\n", us);
-		us_sleep(100*1000 - us);
+		us_sleep(100 * 1000 - us);
 	}
 	debug(3, "<==\n");
 }
@@ -257,7 +257,6 @@ int init_timers(void)
 		debug(1, "pthread_create error: %s\n", __func__, __LINE__, strerror(errno));
 		return -1;
 	}
-	//sleep(1);//FIXME?
 
 	debug(3, "<==\n");
 
@@ -364,7 +363,7 @@ void tsc_stream_waiting(int index, int time)
 /*************检测器函数************************/
 static double g_f1 = 0.2;//占用率上升折算因子
 static double g_f2 = 0.2;//下降因子
-#define DET_MAXTIME 600 //等待下降沿超时
+#define DET_MAXTIME 100 //等待下降沿超时
 #define TEST_ID 5
 
 static det_track* g_det = NULL; //检测器数据
@@ -507,8 +506,8 @@ void* thr_det(void* arg)
 				tsc_det_op(i, 2);//超时，人为产生一个下降沿
 		}
 		gettimeofday(&tv2, NULL);
-		us = (tv2.tv_sec - tv1.tv_sec) * 1000000 + (tv2.tv_usec - tv1.tv_usec);
-		us_sleep(100*1000 - us);//100ms更新一次检测器状态
+		us = (tv2.tv_sec - tv1.tv_sec) * 1000 * 1000 + (tv2.tv_usec - tv1.tv_usec);
+		us_sleep(100 * 1000 - us);//100ms更新一次检测器状态
 	}
 }
 
@@ -718,7 +717,7 @@ int tsc_get_time(int* hour, int* min, int* sec)
 	*hour = t->tm_hour;
 	*min = t->tm_min;
 	*sec = t->tm_sec;
-	debug(2, "%04d-%02d-%02d %02d:%02d:%02d\n", t->tm_year+1900,
+	debug(3, "%04d-%02d-%02d %02d:%02d:%02d\n", t->tm_year+1900,
 		t->tm_mon+1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);
 
 	return 1;
@@ -732,7 +731,7 @@ int tsc_get_date(int* year, int* month, int* mday, int* wday)
 	*year = t->tm_year+1900;
 	*month = t->tm_mon+1;
 	*mday = t->tm_mday;
-	*wday = t->tm_wday;
+	*wday = t->tm_wday + 1;
 
 	return 1;
 }
@@ -803,8 +802,8 @@ void* thr_sg(void* arg)
 			}
 		}
 		gettimeofday(&tv2, NULL);
-		us = (tv2.tv_sec - tv1.tv_sec) * 1000000 + (tv2.tv_usec - tv1.tv_usec);
-		us_sleep(100*1000 - us);
+		us = (tv2.tv_sec - tv1.tv_sec) * 1000 * 1000 + (tv2.tv_usec - tv1.tv_usec);
+		us_sleep(100 * 1000 - us);
 	}
 }
 
@@ -870,18 +869,17 @@ int tsc_sg_fault(int sg)
  */
 int tsc_sg_enabled(int sg)
 {
-//	return 1;
-	if((sg >=1 ) && (sg <= 15))
-		return 1;
-	else
-		return 0;
+	return 1;
+	//if((sg >=1 ) && (sg <= 15))
+	//	return 1;
+	//else
+	//	return 0;
 }
 
 /* 检查灯组是否处于红灯状态 */
 int tsc_chk_red(int sg)
 {
-    int ret = (sg_track_chk(sg, 2) != -1) || (sg_track_chk(sg, 3) != -1);
-	//debug(2, "sg:%d, ret:%d\n", sg, ret);
+    int ret = (sg_track_chk(sg, 1) != -1) || (sg_track_chk(sg, 2) != -1) || (sg_track_chk(sg, 3) != -1);
     if(ret)
         return 1;
     else
@@ -892,7 +890,6 @@ int tsc_chk_red(int sg)
 int tsc_chk_min_red(int sg)
 {
     int ret = (sg_track_chk(sg, 2) != -1);
-	//debug(2, "sg:%d, ret:%d\n", sg, ret);
     if(ret)
         return 1;
     else
@@ -903,7 +900,6 @@ int tsc_chk_min_red(int sg)
 int tsc_chk_amber(int sg)
 {
     int ret = (sg_track_chk(sg, 1) != -1);
-	//debug(2, "sg:%d, ret:%d\n", sg, ret);
     if(ret)
         return 1;
     else
@@ -913,8 +909,7 @@ int tsc_chk_amber(int sg)
 /* 检查信号灯是否处于green状态 */
 int tsc_chk_green(int sg)
 {
-    int ret =(sg_track_chk(sg, 5) != -1) || (sg_track_chk(sg, 6) != -1);
-	//debug(2, "sg:%d, ret:%d\n", sg, ret);
+    int ret = (sg_track_chk(sg, 4) != -1) || (sg_track_chk(sg, 5) != -1) || (sg_track_chk(sg, 6) != -1);
     if(ret)
         return 1;
     else
@@ -924,9 +919,8 @@ int tsc_chk_green(int sg)
 /* 检查信号灯是否处于最小green状态 */
 int tsc_chk_min_green(int sg)
 {
-    int ret = (sg_track_chk(sg, 5) != -1);
-	//debug(2, "sg:%d, ret:%d\n", sg, ret);
-    if(ret)
+    int ret = sg_track_chk(sg, 5);
+    if(ret != -1)
         return 1;
     else
         return 0;
@@ -935,9 +929,8 @@ int tsc_chk_min_green(int sg)
 /* 检查信号灯是否处于prep状态 */
 int tsc_chk_prep(int sg)
 {
-    int ret = (sg_track_chk(sg, 4) != -1);
-	//debug(2, "sg:%d, ret:%d\n", sg, ret);
-    if(ret)
+    int ret = sg_track_chk(sg, 4);
+    if(ret != -1)
         return 1;
     else
         return 0;
@@ -950,23 +943,14 @@ int tsc_red_time(int sg)
     int ret;
 
 	ret = sg_track_chk(sg, 1);//红灯计时包括amber
-	if(sg == 7){
-		debug(2, "sg_track_chk(7, 1)=%d\n", ret);
-	}
 	if(ret != -1)
 		return ret;
 
     ret = sg_track_chk(sg, 2);
-	if(sg == 7){
-		debug(2, "sg_track_chk(7, 2)=%d\n", ret);
-	}
     if(ret != -1)//min_red
         return ret + g_sg[sg].amber;
 
     ret = sg_track_chk(sg, 3);
-	if(sg == 7){
-		debug(2, "sg_track_chk(7, 3)=%d\n", ret);
-	}
     if(ret != -1)//ext_red
         return ret + g_sg[sg].min_red + g_sg[sg].amber;
 
@@ -1066,26 +1050,26 @@ int tsc_amber(int sg)
  * 返回绿间隔时间 */
 int tsc_inter_green(int sgr, int sge)
 {
-	int inter_green[16][16] = {
-        { 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,   0,  0,  0,  0,  0, 50},
-        { 0,  0,  0, 40,  0, 50, 50, 40,  0, 60,  60, 30, 30,  0,  0,  0},
-        { 0,  0,  0, 50, 50,  0, 40, 30, 50,  0,   0, 40, 30,  0,  0,  0},
-        { 0, 50, 50,  0, 40, 50,  0, 50, 40,  0,  60,  0,  0,  0,  0,  0},
-        { 0,  0, 50, 50,  0,  0, 40, 60, 60, 50,   0, 30, 30,  0,  0,  0},
-        { 0, 50,  0, 50,  0,  0, 60,  0,  0, 30,  60, 30, 30,  0,  0,  0},
-        { 0, 50, 50,  0, 50, 50,  0, 70, 60, 60,  40, 40, 30,  0,  0,  0},
-        { 0,100, 70,100, 90,  0, 90,  0,  0,  0,   0,  0,  0,  0,  0,  0},
-        { 0,  0,100,110,100,  0, 90,  0,  0,  0,   0, 70, 70,  0,  0,  0},
-        { 0,110,  0,  0,120, 90,110,  0,  0,  0,   0,  0,  0,  0,  0,  0},
-        { 0, 80,  0, 70,  0, 70, 90,  0,  0,  0,   0,  0,  0,  0,  0,  0},
-        { 0, 90, 70,  0, 80, 90,100,  0, 30,  0,   0,  0,  0,  0,  0,  0},
-        { 0, 50, 80,  0, 70, 60, 60,  0, 80,  0,   0,  0,  0,  0,  0,  0},
-        { 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,   0,  0,  0,  0,  0, 50},
-        { 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,   0,  0,  0,  0,  0, 50},
-        { 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,   0,  0,  0, 50, 50,  0}
-        };
+//	int inter_green[16][16] = {
+//        { 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,   0,  0,  0,  0,  0, 50},
+//        { 0,  0,  0, 40,  0, 50, 50, 40,  0, 60,  60, 30, 30,  0,  0,  0},
+//        { 0,  0,  0, 50, 50,  0, 40, 30, 50,  0,   0, 40, 30,  0,  0,  0},
+//        { 0, 50, 50,  0, 40, 50,  0, 50, 40,  0,  60,  0,  0,  0,  0,  0},
+//        { 0,  0, 50, 50,  0,  0, 40, 60, 60, 50,   0, 30, 30,  0,  0,  0},
+//        { 0, 50,  0, 50,  0,  0, 60,  0,  0, 30,  60, 30, 30,  0,  0,  0},
+//        { 0, 50, 50,  0, 50, 50,  0, 70, 60, 60,  40, 40, 30,  0,  0,  0},
+//        { 0,100, 70,100, 90,  0, 90,  0,  0,  0,   0,  0,  0,  0,  0,  0},
+//        { 0,  0,100,110,100,  0, 90,  0,  0,  0,   0, 70, 70,  0,  0,  0},
+//        { 0,110,  0,  0,120, 90,110,  0,  0,  0,   0,  0,  0,  0,  0,  0},
+//        { 0, 80,  0, 70,  0, 70, 90,  0,  0,  0,   0,  0,  0,  0,  0,  0},
+//        { 0, 90, 70,  0, 80, 90,100,  0, 30,  0,   0,  0,  0,  0,  0,  0},
+//        { 0, 50, 80,  0, 70, 60, 60,  0, 80,  0,   0,  0,  0,  0,  0,  0},
+//        { 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,   0,  0,  0,  0,  0, 50},
+//        { 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,   0,  0,  0,  0,  0, 50},
+//        { 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,   0,  0,  0, 50, 50,  0}
+//        };
 
-	return inter_green[sgr][sge];
+	return drv_inter_green(sgr, sge);
     //return 32767;
 }
 /******************* Digital output switching ************************/
