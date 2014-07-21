@@ -271,7 +271,7 @@ void deinit_timers(void)
 	if(g_tid_timer)
 		pthread_join(g_tid_timer, NULL);
 
-	debug(3, "<==\n");
+	debug(2, "<==\n");
 }
 
 /****************** 配时方案 ***************************/
@@ -298,6 +298,7 @@ void deinit_tsc_prg(void)
 {
 	if(g_prg)
 		free(g_prg);
+	debug(2, "<==\n");
 }
 
 /* 
@@ -363,7 +364,7 @@ void tsc_stream_waiting(int index, int time)
 /*************检测器函数************************/
 static double g_f1 = 0.2;//占用率上升折算因子
 static double g_f2 = 0.2;//下降因子
-#define DET_MAXTIME 100 //等待下降沿超时
+#define DET_MAXTIME 600 //等待下降沿超时
 #define TEST_ID 5
 
 static det_track* g_det = NULL; //检测器数据
@@ -548,6 +549,7 @@ void deinit_det(void)
 		free(g_det_def);
 
 	close_det();
+	debug(2, "<==\n");
 }
 
 /* 读取检测器上升沿计数 */
@@ -849,6 +851,7 @@ void deinit_tsc_sg(void)
 	if(g_tid_sg)
 		pthread_join(g_tid_sg, NULL);
 	free(g_sg);
+	debug(2, "<==\n");
 }
 
 /***** 信号灯测试函数 *****/

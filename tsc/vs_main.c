@@ -55,7 +55,7 @@ int thr_vsplus(void* arg)
 			//    g_vs_para.wb_ready[i] = 0;
 			gettimeofday(&tv1, NULL);
 			ret = VSPLUS(g_vs_para.vsp_soll, g_vs_para.sg_mode, g_vs_para.wb_ready);
-			if(ret > 0){	
+			if(ret >= 0){	
 				printf("%s(%d):call VSPLUS() success, ret=%d\n", __func__, __LINE__, ret);
 			}
 			else{
@@ -165,7 +165,12 @@ int tsc_init(void)
 
 void tsc_deinit(void)
 {
-
+	deinit_det();
+	deinit_tsc_sg();
+	deinit_tsc_prg();
+	deinit_timers();
+	deinit_sg_track();
+	deinit_prg_track();
 }
 
 //成功返回0
@@ -174,35 +179,12 @@ int vs_init(void)
 	debug(3, "==>\n");
 	int i, ret = 0;
 
-//	g_xml_para = (xml_para*)open_xml_para();
-//	if(g_xml_para == NULL){
-//		debug(1, "open_xml_para() error\n");
-//		return -1;
-//	}
-//	parse_xml(g_xml_para);
-//	//dump_xml(g_xml_para);
-
-////prg_track
-//	ret = init_prg_track();
-//	if(ret == -1){
-//		debug(1, "call init_prg_track() fail\n");
-//		return -1;
-//	}
-//
-////sg_track
-//	ret = init_sg_track();
-//	if(ret == -1){
-//		debug(1, "call init_sg_track() fail\n");
-//		return -1;
-//	}
-
-//tsc.c
 	ret = tsc_init(); //控制器初始化
 	if(ret == -1){
 		debug(1, "tsc_init() error\n");
 		return -1;
 	}
-
+	
 #if 1
 	//初始化参数存储区
 	ret = vs_init_parameter();
@@ -278,11 +260,13 @@ int vs_start(void)
 		g_aus_exit = 1;
 		ret = pthread_join(g_tid_aus, NULL);
 		printf("pthread_join(g_tid_aus, NULL):ret=%d\n", ret);
+		g_tid_aus = 0;
 	}
 	if(g_tid_vsplus){
 		g_vsplus_exit = 1;
 		ret = pthread_join(g_tid_vsplus, NULL);
 		printf("pthread_join(g_tid_vsplus, NULL):ret=%d\n", ret);
+		g_tid_vsplus = 0;
 	}
 #endif
 	sleep(1);
@@ -340,11 +324,13 @@ int vs_stop(void)
 		g_ein_exit = 1;
 		ret = pthread_join(g_tid_ein, NULL);
 		printf("pthread_join(g_tid_ein, NULL):ret=%d\n", ret);
+		g_tid_ein = 0;
 	}
 	if(g_tid_vsplus){
 		g_vsplus_exit = 1;
 		ret = pthread_join(g_tid_vsplus, NULL);
 		printf("pthread_join(g_tid_vsplus, NULL):ret=%d\n", ret);
+		g_tid_vsplus = 0;
 	}
 #endif
 	sleep(1);
@@ -375,119 +361,119 @@ int vs_stop(void)
 	return 0;
 }
 
-int vs_test_2(void)
-{
-	int id, inst, ret;
-	pd_t px;
-	unsigned char py[2];
-	int na, nb;
-
-	FILE* fp = fopen("all_oitd.ini", "wb+");
-	if(fp == NULL){
-		perror("can not open all_oitd.ini");
-		return -1;
-	}
-	ret = vs_read_process_data(NULL, fp);//读出vsplus库所有支持的OITD
-
-	//fclose(fp);
-	fseek(fp, 0, SEEK_SET);
-
-	typedef struct{
-		int oitd4; //oitd number
-		unsigned short range; //instance range
-		unsigned short pad;
-	}oitd;
-
-	oitd item;
-
-	while(1){
-		memset(&item, 0, sizeof(oitd));
-		ret = fread(&item, 1, sizeof(oitd), fp);
-		//printf("ret of feof: %d\n", feof(fp));
-		if(ret != sizeof(oitd)){
-			//printf("ret=%d, read data not enough\n", ret);
-			break;
-		}
-
-		na = (item.oitd4 >> 16) & 0xffff;
-		nb = item.oitd4 & 0xffff;
-		
-		if(na != 57)//只读取57.xxx
-			continue;
-
-		for(inst = 1; inst <= item.range; inst++){//分别读取instance
-			printf("%d.%d[%d]:", na, nb, inst);
-			px.id = item.oitd4;
-			px.inst = inst;
-			memset(py, 0, sizeof(py));
-			ret= vs_read_process_data(&px, &py);
-			if(ret == 0){//valid value
-				printf(" 0x%0x 0x%0x : %d\n", py[0], py[1], *(unsigned short*)py);
-			}
-			else{
-				printf("invalid value:\n");
-			}
-		}
-		if(feof(fp)){
-			//printf("end of file\n");
-			break;
-		}
-	}
-}
-
-int vs_test(void)
-{
-	typedef struct{
-		int oitd4; //四字节表示的编号
-		char sym[32]; //字符名
-		int size; //数据长度
-		int range; //范围
-	}oitd;
-
-	oitd g_oitd[] = { 
-		{(57 << 16 | 0), "OITD_VSP_VERSION", 2, 1},
-		{(57 << 16 | 1), "OITD_VSP_SYSTEM1", 2, 2},
-		{(57 << 16 | 2), "OITD_VSP_SYSTEM2", 2, 2},
-		{(57 << 16 | 3), "OITD_VSP_SYSTEM3", 2, 2},
-	};
-	printf("oitd number: %d\n", sizeof(g_oitd)/sizeof(oitd));
-
-	int id, inst, ret;
-
-	//char* vs_ocit_path(void);
-	//char *path = vs_ocit_path();
-	//printf("vs_oitd_path():%s\n", path);
-
-	pd_t px;
-	unsigned char py[2];
-	int na, nb;
-	for(id = 0; id < sizeof(g_oitd)/sizeof(oitd); id++){
-		na = (g_oitd[id].oitd4 >> 16) & 0xffff;
-		nb = g_oitd[id].oitd4 & 0xffff;
-		for(inst = 1; inst <= g_oitd[id].range; inst++){
-			px.id = g_oitd[id].oitd4;
-			px.inst = inst;
-			ret = vs_read_process_data(&px, NULL);
-			printf("%d.%d[%d]:(%s): ", na, nb, inst, g_oitd[id].sym);
-			if(ret == 0){
-				printf("instance does not exist\n");
-				continue;
-			}
-			else if( ret == 65525){
-				printf("type does not exist\n");
-				continue;
-			}
-			memset(py, 0, sizeof(py));
-			ret = vs_read_process_data(&px, py);
-			if(ret == 0){
-				printf(" 0x%0x 0x%0x : %d\n", py[0], py[1], *(unsigned short*)py);
-			}
-			else{
-				printf("invalid value:\n");
-			}
-		}
-	}
-}
+//int vs_test_2(void)
+//{
+//	int id, inst, ret;
+//	pd_t px;
+//	unsigned char py[2];
+//	int na, nb;
+//
+//	FILE* fp = fopen("all_oitd.ini", "wb+");
+//	if(fp == NULL){
+//		perror("can not open all_oitd.ini");
+//		return -1;
+//	}
+//	ret = vs_read_process_data(NULL, fp);//读出vsplus库所有支持的OITD
+//
+//	//fclose(fp);
+//	fseek(fp, 0, SEEK_SET);
+//
+//	typedef struct{
+//		int oitd4; //oitd number
+//		unsigned short range; //instance range
+//		unsigned short pad;
+//	}oitd;
+//
+//	oitd item;
+//
+//	while(1){
+//		memset(&item, 0, sizeof(oitd));
+//		ret = fread(&item, 1, sizeof(oitd), fp);
+//		//printf("ret of feof: %d\n", feof(fp));
+//		if(ret != sizeof(oitd)){
+//			//printf("ret=%d, read data not enough\n", ret);
+//			break;
+//		}
+//
+//		na = (item.oitd4 >> 16) & 0xffff;
+//		nb = item.oitd4 & 0xffff;
+//		
+//		if(na != 57)//只读取57.xxx
+//			continue;
+//
+//		for(inst = 1; inst <= item.range; inst++){//分别读取instance
+//			printf("%d.%d[%d]:", na, nb, inst);
+//			px.id = item.oitd4;
+//			px.inst = inst;
+//			memset(py, 0, sizeof(py));
+//			ret= vs_read_process_data(&px, &py);
+//			if(ret == 0){//valid value
+//				printf(" 0x%0x 0x%0x : %d\n", py[0], py[1], *(unsigned short*)py);
+//			}
+//			else{
+//				printf("invalid value:\n");
+//			}
+//		}
+//		if(feof(fp)){
+//			//printf("end of file\n");
+//			break;
+//		}
+//	}
+//}
+//
+//int vs_test(void)
+//{
+//	typedef struct{
+//		int oitd4; //四字节表示的编号
+//		char sym[32]; //字符名
+//		int size; //数据长度
+//		int range; //范围
+//	}oitd;
+//
+//	oitd g_oitd[] = { 
+//		{(57 << 16 | 0), "OITD_VSP_VERSION", 2, 1},
+//		{(57 << 16 | 1), "OITD_VSP_SYSTEM1", 2, 2},
+//		{(57 << 16 | 2), "OITD_VSP_SYSTEM2", 2, 2},
+//		{(57 << 16 | 3), "OITD_VSP_SYSTEM3", 2, 2},
+//	};
+//	printf("oitd number: %d\n", sizeof(g_oitd)/sizeof(oitd));
+//
+//	int id, inst, ret;
+//
+//	//char* vs_ocit_path(void);
+//	//char *path = vs_ocit_path();
+//	//printf("vs_oitd_path():%s\n", path);
+//
+//	pd_t px;
+//	unsigned char py[2];
+//	int na, nb;
+//	for(id = 0; id < sizeof(g_oitd)/sizeof(oitd); id++){
+//		na = (g_oitd[id].oitd4 >> 16) & 0xffff;
+//		nb = g_oitd[id].oitd4 & 0xffff;
+//		for(inst = 1; inst <= g_oitd[id].range; inst++){
+//			px.id = g_oitd[id].oitd4;
+//			px.inst = inst;
+//			ret = vs_read_process_data(&px, NULL);
+//			printf("%d.%d[%d]:(%s): ", na, nb, inst, g_oitd[id].sym);
+//			if(ret == 0){
+//				printf("instance does not exist\n");
+//				continue;
+//			}
+//			else if( ret == 65525){
+//				printf("type does not exist\n");
+//				continue;
+//			}
+//			memset(py, 0, sizeof(py));
+//			ret = vs_read_process_data(&px, py);
+//			if(ret == 0){
+//				printf(" 0x%0x 0x%0x : %d\n", py[0], py[1], *(unsigned short*)py);
+//			}
+//			else{
+//				printf("invalid value:\n");
+//			}
+//		}
+//	}
+//}
 
 typedef struct{
 	int id;
@@ -597,7 +583,6 @@ int vs_log(void)
 		return -1;
     }
 
-	printf("================================\n");
 	pthread_t tid_log;
 	pthread_create(&tid_log, NULL, thr_log, ptr);
 }
@@ -605,6 +590,34 @@ int vs_log(void)
 
 void vs_deinit(void)
 {
+	printf("================================\n");
+	int i, ret = 0;
+#if 1
+	if(g_tid_ein){
+		g_ein_exit = 1;
+		ret = pthread_join(g_tid_ein, NULL);
+		printf("pthread_join(g_tid_ein, NULL):ret=%d\n", ret);
+	}
+	if(g_tid_aus){
+		g_aus_exit = 1;
+		ret = pthread_join(g_tid_aus, NULL);
+		printf("pthread_join(g_tid_aus, NULL):ret=%d\n", ret);
+	}
+	if(g_tid_vsplus){
+		g_vsplus_exit = 1;
+		ret = pthread_join(g_tid_vsplus, NULL);
+		printf("pthread_join(g_tid_vsplus, NULL):ret=%d\n", ret);
+	}
+#endif
+	//sleep(1);
+
+	////VSP_WUNSCH_AUS_UM
+	//for(i = 0; i < GERAET_TEILKNOTEN_MAX; i++)
+	//		g_vs_para.vsp_soll[i] = VSP_WUNSCH_AUS_UM;
+	//ret = VSPLUS(g_vs_para.vsp_soll, g_vs_para.sg_mode, g_vs_para.wb_ready);
+	//if(ret >= 0){	
+	//	printf("%s(%d):call VSPLUS() success, ret=%d\n", __func__, __LINE__, ret);
+	//}
 #if 1
 	vs_free_parameter();
 #endif

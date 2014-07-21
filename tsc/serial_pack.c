@@ -228,6 +228,11 @@ int set_opt(int fd, int speed, int bits, char event, int stop)
 		cfsetispeed(&newtio, B19200);
 		cfsetospeed(&newtio, B19200);
 		break;
+	case 57600:
+		cfsetispeed(&newtio, B57600);
+		cfsetospeed(&newtio, B57600);
+		break;
+
 	case 115200:
 		cfsetispeed(&newtio, B115200);
 		cfsetospeed(&newtio, B115200);
@@ -320,7 +325,7 @@ void* thr_watchdog(void* para)
 		ret = write(g_fd_serial, buf, sizeof(buf));
 		pthread_mutex_unlock(&serial_write_mutex);
 		printf("thr_watchdog:ret=%d:%#x %#x %#x\n", ret, buf[0], buf[1], buf[2]);
-		usleep(5*1000*1000);
+		usleep(1000*1000);
 	}	
 	debug(3, "<==\n");
 }
@@ -360,7 +365,7 @@ int init_serial(char* dev)
 		return -1;
 	}
 
-	if(set_opt(g_fd_serial, 19200, 8, 'N', 1) < 0){
+	if(set_opt(g_fd_serial, 57600, 8, 'N', 1) < 0){
 		perror("set_opt() error");
 		return -1;
 	}

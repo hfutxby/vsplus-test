@@ -3,17 +3,19 @@
 vsplus <--> tsc.c <--> drive.c <--> serial_pack.c
                                <--> parse_xml.c	
 
-VSP_Interface.c: vsplus基本接口
+VSP_Interface.c: vsplus需求的基本接口定义
 tsc.c: 对vsplus接口的实现
 drive.c: 为tsc.c提供的实现，1：驱动板相关的功能；2：参数配置相关的功能
 parse_xml.c: 解析xml文件获取配置参数
-ring_buf.c, serial_pack.c: 串口通信，控制驱动板
-sg_track.c: 跟踪信号灯状态
 vs_main.c: 对vsplus功能大打包封装
 
+ring_buf.c, serial_pack.c: 串口通信，控制驱动板
 serial_test.c: 测试程序，1：模拟驱动板为主控提供检测器信号；2：接受主控向驱动板下发的信号
 serial_read.c: 测试程序，读串口数据
+
 sg_view.c: 测试程序，检查内部记录的信号灯状态
+sg_track.c: 跟踪信号灯状态
+prg_track.c：记录配时方案状态
 
 
 ===== 其它 =====
@@ -27,22 +29,22 @@ para_bak.vcb: vsplus生成的备份文件
 log.def, log.output: 生成log文件
 
 === 关于信号灯操作 ===
-在tsc.c中响应vsplus对信号灯的操作(open,close)。
-将其分解成drive.c中提供的信号灯操作(amber,min_red,ext_red,prep,min_green,ext_green)。
-
-在drive.c中进行信号灯操作必须同时调用serial_command(发送串口命令)和sg_track(同步记录信号灯状态)
+在tsc.c中响应vsplus对信号灯的操作(open,close)，将其分解成信号灯状态切换操作(amber,min_red,ext_red,prep,min_green,ext_green)。
 
 sg_track.c维护信号灯状态。sg_view.c查看信号灯状态。
+
+在drive.c中进行信号灯状态切换操作必须同时调用serial_command(发送串口命令)和sg_track(同步记录信号灯状态)
 
 维护跟踪信号灯状态使用struct sg_track；
 信号灯配置信息使用struct sg_def；
 
 === 关于检测器的操作 ===
 tsc.c获得检测器的上升沿下降沿信号，然后在内部计时算出占用率等数据。
-serial_pack.c获得串口命令。检测器信号出发tsc_det_op()函数。
-
+serial_pack.c获得串口命令，根据检测器信号调用tsc_det_op()函数。需要注意必须等tsc.c中对det的初始化完成后才能使用tsc_det_op()函数。
 
 ==== 关于配时方案 ====
+维护配时方案状态使用struct prg_track;
+配时方案配置参数struct prg_def
 drive.c:读取prg的配置
 prg_track.c:对prg进行操作
 

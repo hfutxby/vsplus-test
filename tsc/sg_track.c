@@ -144,5 +144,5 @@ void deinit_sg_track(void)
 	if(g_tid_sg_track)
 		pthread_join(g_tid_sg_track, NULL);
 	sg_track_close();
-	debug(3, "<==\n");
+	debug(2, "<==\n");
 }

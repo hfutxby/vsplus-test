@@ -256,6 +256,6 @@ int drv_inter_green(int sgr, int sge)
         { 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,   0,  0,  0, 50, 50,  0}
         };
 
-//    return inter_green[sgr][sge];
-	return 32000;
+    return inter_green[sgr][sge];
+	//return 32000;
 }

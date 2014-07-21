@@ -208,6 +208,10 @@ int set_opt(int fd, int speed, int bits, char event, int stop)
 		cfsetispeed(&newtio, B19200);
 		cfsetospeed(&newtio, B19200);
 		break;
+	case 57600:
+		cfsetispeed(&newtio, B57600);
+		cfsetospeed(&newtio, B57600);
+		break;
 	case 115200:
 		cfsetispeed(&newtio, B115200);
 		cfsetospeed(&newtio, B115200);
@@ -294,7 +298,7 @@ int main(int argc, char* argv[])
 		return -1;
 	}
 
-	if(set_opt(g_fd_serial, 19200, 8, 'N', 1) < 0){
+	if(set_opt(g_fd_serial, 57600, 8, 'N', 1) < 0){
 		perror("set_opt() error");
 		return -1;
 	}

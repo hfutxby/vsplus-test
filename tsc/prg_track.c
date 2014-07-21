@@ -156,6 +156,6 @@ void deinit_prg_track(void)
 
 	if(g_prg_track)
 		free(g_prg_track);
-	debug(3, "<==\n");
+	debug(2, "<==\n");
 }
 

@@ -371,7 +371,7 @@ void SG_ein(short int sg)
  */
 void SG_aus(short int sg)
 {
-	debug(2, "sg:%d\n", sg);
+	debug(3, "sg:%d\n", sg);
 	tsc_sg_close(sg);
 }
 
