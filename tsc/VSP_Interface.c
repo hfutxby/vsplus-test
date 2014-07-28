@@ -885,7 +885,8 @@ int AktuellesDatum(int* Jahr, int* Monat, int* Tag, int* Wochentag)
 int Get_OCITOutstationId(int* ZNr, int* FNr, int* Realknoten)
 {
 	int ret = 1;
-	*ZNr = 1; *FNr = 339; *Realknoten = 1;
+	//*ZNr = 1; *FNr = 339; *Realknoten = 1;
+	ret = drv_get_ocitid(ZNr, FNr, Realknoten);
 	debug(3, "ZNr:%d, FNr:%d, Realknoten:%d, ret:%d\n", *ZNr, *FNr, *Realknoten, ret);
 	return ret;
 }
