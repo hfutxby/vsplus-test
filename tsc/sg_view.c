@@ -60,6 +60,9 @@ void print_signal(int stat, int time)
 	case 6:
 		printf("\033[40;32m%3d:6 \033[0m", time);
 		break;
+	case 7:
+		printf("\033[40;34m%3d:7 \033[0m", time);
+		break;
 	case 1:
 		printf("\033[40;33m%3d:1 \033[0m", time);
 		break;

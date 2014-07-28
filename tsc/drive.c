@@ -113,7 +113,9 @@ int drv_sg_para(void* ptr, int size)
 	int close_sum[16] = {0, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20};
 
 	int prep[16] = {0, 20, 20, 20, 20, 20, 20, 0, 0, 0, 0, 20, 20, 20, 20, 0};
-	//int amber[16] = {0, 30, 30, 30, 30, 30, 30, 70, 70, 80, 60, 30, 30, 30, 30, 40};
+	int green_blink[16] = {0, 0, 0, 0, 0, 0, 0, 70, 70, 80, 60, 0, 0, 0, 0, 40};
+	//int prep[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+	//int green_blink[16] = {0, 30, 30, 30, 30, 30, 30, 70, 70, 80, 60, 30, 30, 30, 30, 40};
 	int amber[16] = {0, 30, 30, 30, 30, 30, 30, 0, 0, 0, 0, 30, 30, 30, 30, 0};
 
 	memset(ptr, 0, size);
@@ -123,9 +125,10 @@ int drv_sg_para(void* ptr, int size)
 	for(i = 1; i < num; i++){
 		sg = (sg_def*)(ptr + i * sizeof(sg_def));
 		sg->min_red = close_sum[i];
-		sg->min_green = free_sum[i] - prep[i];
+		sg->min_green = free_sum[i] - prep[i] - green_blink[i];//green_blink作为open
 		sg->prep = prep[i];
 		sg->amber = amber[i];
+		sg->green_blink = green_blink[i];
 		sg->ext = 0;
 		sg->exist = 1;
 	}
@@ -256,6 +259,6 @@ int drv_inter_green(int sgr, int sge)
         { 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,   0,  0,  0, 50, 50,  0}
         };
 
-    return inter_green[sgr][sge];
-	//return 32000;
+    //return inter_green[sgr][sge];
+	return 32000;
 }

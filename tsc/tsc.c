@@ -307,6 +307,7 @@ int tsc_prog_actual(void)
 {
 	int ret;
 	ret = prg_track_cur();
+	//debug(2, "ret:%d\n", ret);
 
 	return ret;
 }
@@ -317,6 +318,7 @@ int tsc_prog_select(void)
 {
 	int ret;
 	ret = prg_track_next();
+	debug(2, "ret:%d\n", ret);
 
 	return ret;
 }
@@ -618,8 +620,8 @@ int tsc_sm_hold(int index)
 	pthread_mutex_lock(&mutex_det);
 	ret = g_det[index].occ2;
 	pthread_mutex_unlock(&mutex_det);
-	if(index == TEST_ID)
-		;//debug(2, "index:%d, ret:%d\n", index, ret);
+	//if(index == TEST_ID)
+	//debug(2, "index:%d, ret:%d\n", index, ret);
 	return ret;
 }
 
@@ -733,7 +735,8 @@ int tsc_get_date(int* year, int* month, int* mday, int* wday)
 	*year = t->tm_year+1900;
 	*month = t->tm_mon+1;
 	*mday = t->tm_mday;
-	*wday = t->tm_wday + 1;
+	*wday = (t->tm_wday + 6) % 7 + 1;
+	debug(2, "%04d-%02d-%02d,%d\n", *year, *month, *mday, *wday);
 
 	return 1;
 }
@@ -762,7 +765,8 @@ void* thr_sg(void* arg)
 					break;
 
 				case 2://close操作中
-					drv_sg_switch(i, 1);//切换为amber
+					//drv_sg_switch(i, 1);//切换为amber
+					drv_sg_switch(i, 7);//切换为green_blink
 					g_sg[i].ext = 0;
 					break;
 
@@ -774,6 +778,13 @@ void* thr_sg(void* arg)
 		for(i = 0; i < SGMAX; i++){
 			if(!g_sg[i].exist)//信号灯不存在
 				continue;
+
+			if((ret = sg_track_chk(i, 7)) != -1){//处于green_blink
+				if(ret >= g_sg[i].green_blink){//green_blink超时
+					drv_sg_switch(i, 1);//切换到amber
+					continue;
+				}
+			}
 
 			if((ret = sg_track_chk(i, 1)) != -1){//处于amber
 				if(ret >= g_sg[i].amber){//amber超时
@@ -837,7 +848,7 @@ int init_tsc_sg(void)
 	int i;
 	for(i = 0; i < SGMAX; i++){
 		if(g_sg[i].exist)
-			drv_sg_switch(i, 1);//amber
+			drv_sg_switch(i, 1);//FIXME:amber
 	}
 	pthread_create(&g_tid_sg, NULL, thr_sg, NULL);
 	debug(3, "<==\n");
@@ -882,7 +893,8 @@ int tsc_sg_enabled(int sg)
 /* 检查灯组是否处于红灯状态 */
 int tsc_chk_red(int sg)
 {
-    int ret = (sg_track_chk(sg, 1) != -1) || (sg_track_chk(sg, 2) != -1) || (sg_track_chk(sg, 3) != -1);
+	//amber(+green_blink) + min_red + ext_red
+    int ret = (sg_track_chk(sg, 1) != -1) || (sg_track_chk(sg, 2) != -1) || (sg_track_chk(sg, 3) != -1) || (sg_track_chk(sg, 7) != -1);
     if(ret)
         return 1;
     else
@@ -902,7 +914,8 @@ int tsc_chk_min_red(int sg)
 /* 检查信号灯是否处于amber状态 */
 int tsc_chk_amber(int sg)
 {
-    int ret = (sg_track_chk(sg, 1) != -1);
+	//amber(+green_blink)
+    int ret = (sg_track_chk(sg, 1) != -1) || (sg_track_chk(sg, 7) != -1);
     if(ret)
         return 1;
     else
@@ -945,17 +958,21 @@ int tsc_red_time(int sg)
 {
     int ret;
 
-	ret = sg_track_chk(sg, 1);//红灯计时包括amber
+	ret = sg_track_chk(sg, 7);//green_blink属于close状态
 	if(ret != -1)
 		return ret;
 
+	ret = sg_track_chk(sg, 1);//红灯计时包括amber
+	if(ret != -1)
+		return ret + g_sg[sg].green_blink;
+
     ret = sg_track_chk(sg, 2);
     if(ret != -1)//min_red
-        return ret + g_sg[sg].amber;
+        return ret + g_sg[sg].green_blink + g_sg[sg].amber;
 
     ret = sg_track_chk(sg, 3);
     if(ret != -1)//ext_red
-        return ret + g_sg[sg].min_red + g_sg[sg].amber;
+        return ret + g_sg[sg].green_blink + g_sg[sg].amber + g_sg[sg].min_red;
 
     return 0;
 }
@@ -1005,12 +1022,16 @@ int tsc_min_green_time(int sg)
 /* 返回amber时间 */
 int tsc_amber_time(int sg)
 {
-    int ret;
-    ret = sg_track_chk(sg, 1);
-    if(ret != -1)
-        return ret;
-    else
-        return 0;
+	int ret;
+	ret = sg_track_chk(sg, 7);
+	if(ret != -1)
+		return ret;
+
+	ret = sg_track_chk(sg, 1);
+	if(ret != -1)
+		return ret + g_sg[sg].green_blink;
+
+	return 0;
 }
 
 /* 返回prep时间 */

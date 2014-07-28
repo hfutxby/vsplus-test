@@ -44,28 +44,28 @@ int main(int argc, char* argv[])
 //	printf("\nvs_log()\n");
 //	vs_log();
 
-	sleep(2);
+	//sleep(10);
 
-	//暂停vsplus
-	printf("\nvs_stop\n");
-	ret = vs_stop();
-	if(ret < 0){
-		printf("vs_stop() failed\n");
-	}
+	////暂停vsplus
+	//printf("\nvs_stop\n");
+	//ret = vs_stop();
+	//if(ret < 0){
+	//	printf("vs_stop() failed\n");
+	//}
 
-	sleep(5);
+	//sleep(10);
 
-	//运行vsplus
-	printf("\nvs_start()\n");
-	ret = vs_start();
-	if(ret < 0){
-		debug(1, "vs_start() failed\n");
-		return -1;
-	}
+	////运行vsplus
+	//printf("\nvs_start()\n");
+	//ret = vs_start();
+	//if(ret < 0){
+	//	debug(1, "vs_start() failed\n");
+	//	return -1;
+	//}
 
-//	stop_serial();
-//
-//	vs_deinit();
+	//stop_serial();
+
+	//vs_deinit();
 //
 //	sleep(20);
 //	//初始化vsplus

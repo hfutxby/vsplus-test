@@ -59,6 +59,7 @@ typedef struct{
     int prep; //红绿过渡时间
     int min_green; //最小绿灯时间
     int amber; //绿红过渡时间
+	int green_blink;
     int ext; //信号切换标志，1：open, 2:close
 }sg_def;
 
