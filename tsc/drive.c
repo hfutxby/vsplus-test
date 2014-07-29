@@ -1,6 +1,9 @@
 //驱动板功能
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
+#include <sys/time.h>
+#include <time.h>
 
 #include "drive.h"
 #include "tsc.h"
@@ -208,4 +211,34 @@ int drv_get_ocitid(int* ZNr, int* FNr, int*Realknoten)
 	*Realknoten = vcb_Realknoten;
 
 	return 1;
+}
+
+static struct timeval g_first_tv = {};
+//write ini file
+int drv_add_det(int det, int value)
+{
+	//time_t tt = time(NULL);
+	struct timeval tv;
+	gettimeofday(&tv, NULL);
+	time_t tt = tv.tv_sec;
+    struct tm *t = localtime(&tt);
+	char str[256] = {};
+	sprintf(str, "log/det/%d_%04d%02d%02d%02d%02d%02d.ini", vcb_FNr, t->tm_year+1900, 
+		t->tm_mon+1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);
+	if(access(str, F_OK) == -1){
+		debug(2, "first create file %s\n", str);
+		g_first_tv = tv;
+	}
+	FILE* fp = fopen(str, "a+");
+	if(fp == NULL){
+		debug(1, "open file %s error\n", str);
+	}
+	memset(str, 0, sizeof(str));
+	int diff = (tv.tv_usec/10000 - g_first_tv.tv_usec/10000);
+	fprintf(fp, "[%d_D_%d %d]\n", vcb_FNr, det, diff*10);
+	fprintf(fp, "Value=%d\n", value);
+	fprintf(fp, "Time=%04d%02d%02d%02d%02d%02d%03d\n\n", t->tm_year+1900, 
+        t->tm_mon+1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec, (tv.tv_usec/10000)*10);
+
+	fclose(fp);
 }

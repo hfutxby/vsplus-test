@@ -288,7 +288,7 @@ int init_tsc_prg(void)
 	}
 	drv_prg_para(g_prg, size);
 	drv_prg_para_dump(g_prg, size);
-	prg_track_cur_set(1);//init prg
+	//prg_track_cur_set(1);//init prg
 	debug(3, "<==\n");
 
 	return 0;
@@ -490,6 +490,7 @@ void tsc_det_op(int index, int op)
 		g_det[index].net = 0;
 	}
 	pthread_mutex_unlock(&mutex_det);
+	drv_add_det(index, (op == 1) ? 1 : 0);
 	debug(2, "<==\n");
 }
 
@@ -736,7 +737,7 @@ int tsc_get_date(int* year, int* month, int* mday, int* wday)
 	*month = t->tm_mon+1;
 	*mday = t->tm_mday;
 	*wday = (t->tm_wday + 6) % 7 + 1;
-	debug(2, "%04d-%02d-%02d,%d\n", *year, *month, *mday, *wday);
+	debug(3, "%04d-%02d-%02d,%d\n", *year, *month, *mday, *wday);
 
 	return 1;
 }

@@ -11,6 +11,7 @@
 #include <pthread.h>
 #include "serial_pack.h"
 #include "ring_buf.h"
+#include "vcb.h"
 
 //命令特征
 pack pack_list[] = {
@@ -318,6 +319,7 @@ void set_falling(int index)
 }
 
 //发送检测器信号
+#if 0
 void* thr_det(void* para)
 {
 	int index, op, ret;
@@ -341,6 +343,31 @@ void* thr_det(void* para)
 		}
 	}
 }
+#else
+void* thr_det(void* para)
+{
+	int index, op, ret;
+	struct timeval tv;
+	while(!g_exit_det){
+		gettimeofday(&tv, NULL);
+		srand(tv.tv_usec);
+		index = random() % (sizeof(vcb_det_exist)/sizeof(int));
+		if(vcb_det_exist[index] == 0)
+			continue;
+		gettimeofday(&tv, NULL);
+		srand(tv.tv_usec);
+		op = random() % 2;
+		printf("index:%d, op:%d\n ", index, op+1);
+		if(op == 1){
+			set_rising(index);
+		}
+		else{
+			set_falling(index);
+		}
+		usleep(10000);
+	}
+}
+#endif
 
 int main(int argc, char* argv[])
 {
