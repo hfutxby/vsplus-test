@@ -8,6 +8,7 @@
 
 #include "tsc.h"
 #include "sg_track.h"
+#include "vcb.h"
 
 int g_sg_fd;
 sg_track* g_sg = NULL;
@@ -82,16 +83,11 @@ int main(void)
 	open_sg();
 	int i;
 	printf("SGMAX:%d\n", SGMAX);
+	int num = sizeof(vcb_sg_exist)/sizeof(int);
 	while(1){
-		for(i = 1; i <= 8; i++){
-			printf("[%2d]", i);
-			print_signal(g_sg[i].stat, g_sg[i].time);
-		}
-		for(i = 13; i <= 16; i++){
-			printf("[%2d]", i);
-			print_signal(g_sg[i].stat, g_sg[i].time);
-		}
-		for(i = 21; i <= 24; i++){
+		for(i = 0; i < num; i++){
+			if(!vcb_sg_exist[i])
+				continue;
 			printf("[%2d]", i);
 			print_signal(g_sg[i].stat, g_sg[i].time);
 		}

@@ -68,9 +68,27 @@ int test_array(void)
 		printf("\n");
 }
 
+int test_access(void)
+{
+	int ret = 0b0011;
+	printf("ret:%d\n", ret);
+	ret = access("/tmp/testdir", F_OK);
+	if(ret != 0)
+		printf("%d,%s\n", __LINE__, strerror(errno));
+
+	ret = mkdir("/tmp/testdir", 0777);
+	if(ret != 0)
+		printf("%d,%s\n", __LINE__, strerror(errno));
+
+	ret = access("/tmp/testdir", F_OK);
+	if(ret != 0)
+		printf("%d,%s\n", __LINE__, strerror(errno));
+
+}
+
 int main(void)
 {
-	test_array();	
+	test_access();	
 
 	return 0;
 }

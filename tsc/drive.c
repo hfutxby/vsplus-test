@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <sys/time.h>
 #include <time.h>
+#include <errno.h>
 
 #include "drive.h"
 #include "tsc.h"
@@ -45,6 +46,7 @@ void drv_sg_switch(int sg, int stat)
 	
 	serial_command(msg, 4);//通过串口切换信号灯
 	sg_track_switch(sg, stat);//记录信号灯状态信息	
+	drv_add_sg(sg, stat);
 }
 
 #if 0
@@ -213,7 +215,7 @@ int drv_get_ocitid(int* ZNr, int* FNr, int*Realknoten)
 	return 1;
 }
 
-static struct timeval g_first_tv = {};
+static struct timeval g_first_det = {};
 //write ini file
 int drv_add_det(int det, int value)
 {
@@ -223,22 +225,92 @@ int drv_add_det(int det, int value)
 	time_t tt = tv.tv_sec;
     struct tm *t = localtime(&tt);
 	char str[256] = {};
+
+	if(access("log", F_OK) == -1){
+		mkdir("log", 0777);
+	}
+	if(access("log/det", F_OK) == -1){
+		mkdir("log/det", 0777);
+	}
+
 	sprintf(str, "log/det/%d_%04d%02d%02d%02d%02d%02d.ini", vcb_FNr, t->tm_year+1900, 
 		t->tm_mon+1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);
 	if(access(str, F_OK) == -1){
 		debug(2, "first create file %s\n", str);
-		g_first_tv = tv;
+		g_first_det = tv;
 	}
 	FILE* fp = fopen(str, "a+");
 	if(fp == NULL){
 		debug(1, "open file %s error\n", str);
 	}
 	memset(str, 0, sizeof(str));
-	int diff = (tv.tv_usec/10000 - g_first_tv.tv_usec/10000);
-	fprintf(fp, "[%d_D_%d %d]\n", vcb_FNr, det, diff*10);
+	int diff = (tv.tv_usec/1000 - g_first_det.tv_usec/1000);
+	fprintf(fp, "[%d_D_%d %d]\n", vcb_FNr, det, diff);
 	fprintf(fp, "Value=%d\n", value);
-	fprintf(fp, "Time=%04d%02d%02d%02d%02d%02d%03d\n\n", t->tm_year+1900, 
-        t->tm_mon+1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec, (tv.tv_usec/10000)*10);
+	fprintf(fp, "Time=%04d%02d%02d%02d%02d%02d%03ld\n\n", t->tm_year+1900, 
+        t->tm_mon+1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec, tv.tv_usec/1000);
+
+	fclose(fp);
+}
+
+static struct timeval g_first_sg = {};
+//write ini file
+int drv_add_sg(int sg, int stat)
+{
+	//time_t tt = time(NULL);
+	struct timeval tv;
+	gettimeofday(&tv, NULL);
+	time_t tt = tv.tv_sec;
+    struct tm *t = localtime(&tt);
+	char str[256] = {};
+
+	if(access("log", F_OK) == -1){
+		mkdir("log", 0777);
+	}
+	if(access("log/sg", F_OK) == -1){
+		mkdir("log/sg", 0777);
+	}
+
+	sprintf(str, "log/sg/%d_%04d%02d%02d%02d%02d%02d.ini", vcb_FNr, t->tm_year+1900, 
+		t->tm_mon+1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);
+	if(access(str, F_OK) == -1){
+		debug(2, "first create file %s\n", str);
+		g_first_sg = tv;
+	}
+	FILE* fp = fopen(str, "a+");
+	if(fp == NULL){
+		debug(1, "open file %s error\n", str);
+	}
+	memset(str, 0, sizeof(str));
+	int diff = (tv.tv_usec/1000- g_first_sg.tv_usec/1000);
+	fprintf(fp, "[%d_S_%d %d]\n", vcb_FNr, sg, diff);
+	int value;
+	//[7],always=0;
+	//[6],blink Hz, 0:1Hz, 1:2Hz
+	//[5:4],green mode, 11b:green, 01:dark-green, 10:green-dark
+	//[3:2],yellow mode, [1:0],red mode
+	switch(stat){
+		case 1://amber
+			value = 0b00001100;
+			break;
+		case 2://min red
+		case 3://ext red
+			value = 0b00000011;
+			break;
+		case 4://prep
+			value = 0b00001111;
+			break;
+		case 5://min greeen
+		case 6://ext green
+			value = 0b00110000;
+			break;
+		case 7://green blink
+			value = 0b0010000;
+			break;
+	}
+	fprintf(fp, "Value=%d\n", value);
+	fprintf(fp, "Time=%04d%02d%02d%02d%02d%02d%03ld\n\n", t->tm_year+1900, 
+        t->tm_mon+1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec, tv.tv_usec/1000);
 
 	fclose(fp);
 }

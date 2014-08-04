@@ -319,8 +319,7 @@ void set_falling(int index)
 }
 
 //发送检测器信号
-#if 0
-void* thr_det(void* para)
+void* thr_det_manual(void* para)
 {
 	int index, op, ret;
 	while(!g_exit_det){
@@ -343,8 +342,8 @@ void* thr_det(void* para)
 		}
 	}
 }
-#else
-void* thr_det(void* para)
+
+void* thr_det_random(void* para)
 {
 	int index, op, ret;
 	struct timeval tv;
@@ -367,20 +366,24 @@ void* thr_det(void* para)
 		usleep(10000);
 	}
 }
-#endif
 
 int main(int argc, char* argv[])
 {
+	printf("usage: %s ttyX mode\n", argv[0]);
+	printf("mode = 1, manual det op\nmode = 2, random\n");
 	int ret = 0;
-	if(argc == 2)
-		g_fd_serial = open_port(argv[1]);
-	else
-		g_fd_serial = open_port("ttyS1");
-
+	if(argc != 3){
+		printf("argument error\n");
+		return -1;
+	}
+	g_fd_serial = open_port(argv[1]);
+	//g_fd_serial = open_port("ttyS2");
 	if(g_fd_serial < 0){
 		perror("open_port() error");
 		return -1;
 	}
+
+	int mode = atoi(argv[2]);
 
 	if(set_opt(g_fd_serial, 57600, 8, 'N', 1) < 0){
 		perror("set_opt() error");
@@ -393,7 +396,10 @@ int main(int argc, char* argv[])
 
 	pthread_create(&g_tid_read, NULL, thr_read, NULL);
 	pthread_create(&g_tid_pop, NULL, thr_pop, NULL);
-	pthread_create(&g_tid_det, NULL, thr_det, NULL);
+	if(mode == 1)
+		pthread_create(&g_tid_det, NULL, thr_det_manual, NULL);
+	else
+		pthread_create(&g_tid_det, NULL, thr_det_random, NULL);
 
 	while(1){
 		sleep(1);
