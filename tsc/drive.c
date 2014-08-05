@@ -1,16 +1,19 @@
 //驱动板功能
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <sys/time.h>
 #include <time.h>
 #include <errno.h>
+#include <limits.h>
 
 #include "drive.h"
 #include "tsc.h"
 #include "serial_pack.h"
 #include "parse_xml.h"
 #include "vcb.h"
+#include "if626bas.h"
 
 /*====== 信号灯操作 =======*/
 //取得信号灯编号的代码
@@ -46,7 +49,9 @@ void drv_sg_switch(int sg, int stat)
 	
 	serial_command(msg, 4);//通过串口切换信号灯
 	sg_track_switch(sg, stat);//记录信号灯状态信息	
-	drv_add_sg(sg, stat);
+#if USE_INI
+		drv_add_sg(sg, stat);
+#endif/* USE_INI */
 }
 
 #if 0
@@ -215,75 +220,193 @@ int drv_get_ocitid(int* ZNr, int* FNr, int*Realknoten)
 	return 1;
 }
 
-static struct timeval g_first_det = {};
+#if 0
+static struct timeval g_tv_det = {};
+static int g_dir_det = 1;
+static char g_src_det[PATH_MAX] = {};
 //write ini file
 int drv_add_det(int det, int value)
 {
-	//time_t tt = time(NULL);
+	//确认目录存在,/tmp为临时目录
+	if(g_dir_det){
+		if(access("log", F_OK) == -1){
+			if(mkdir("log", 0777) == -1)
+				perror("mkdir log");
+		}
+		if(access("log/det", F_OK) == -1){
+			if(mkdir("log/det", 0777) == -1)
+				perror("mkdir log/det");
+		}
+		if(access("/tmp/log", F_OK) == -1){
+			if(mkdir("/tmp/log", 0777) == -1)
+				perror("mkdir /tmp/log");
+		}
+		if(access("/tmp/log/det", F_OK) == -1){
+			if(mkdir("/tmp/log/det", 0777) == -1)
+				perror("mkdir /tmp/log/det");
+		}
+		g_dir_det = 0;
+	}
+
+	char str[PATH_MAX] = {};
+	char dest[PATH_MAX] = {};
 	struct timeval tv;
 	gettimeofday(&tv, NULL);
 	time_t tt = tv.tv_sec;
     struct tm *t = localtime(&tt);
-	char str[256] = {};
 
-	if(access("log", F_OK) == -1){
-		mkdir("log", 0777);
-	}
-	if(access("log/det", F_OK) == -1){
-		mkdir("log/det", 0777);
-	}
-
-	sprintf(str, "log/det/%d_%04d%02d%02d%02d%02d%02d.ini", vcb_FNr, t->tm_year+1900, 
-		t->tm_mon+1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);
+	memset(str, 0, sizeof(str));
+	sprintf(str, "/tmp/log/det/%d_%04d%02d%02d%02d%02d%02d.ini", vcb_FNr, t->tm_year+1900, 
+			t->tm_mon+1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);
 	if(access(str, F_OK) == -1){
+		if(access(g_src_det, F_OK) == 0){
+			memset(dest, 0, sizeof(dest));
+			getcwd(dest, sizeof(dest));
+			sprintf(dest+strlen(dest), "/log/det/%d_%04d%02d%02d%02d%02d%02d.ini", vcb_FNr, t->tm_year+1900, 
+					t->tm_mon+1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);
+			//printf("=============dest:%s\n", dest);
+			rename(g_src_det, dest);
+		}
+		sprintf(g_src_det, "/tmp/log/det/%d_%04d%02d%02d%02d%02d%02d.ini", vcb_FNr, t->tm_year+1900, 
+				t->tm_mon+1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);
 		debug(2, "first create file %s\n", str);
-		g_first_det = tv;
+		g_tv_det = tv;
 	}
 	FILE* fp = fopen(str, "a+");
 	if(fp == NULL){
 		debug(1, "open file %s error\n", str);
 	}
-	memset(str, 0, sizeof(str));
-	int diff = (tv.tv_usec/1000 - g_first_det.tv_usec/1000);
+	int diff = (tv.tv_usec/1000 - g_tv_det.tv_usec/1000);
 	fprintf(fp, "[%d_D_%d %d]\n", vcb_FNr, det, diff);
 	fprintf(fp, "Value=%d\n", value);
 	fprintf(fp, "Time=%04d%02d%02d%02d%02d%02d%03ld\n\n", t->tm_year+1900, 
         t->tm_mon+1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec, tv.tv_usec/1000);
 
 	fclose(fp);
+	return 0;
 }
-
-static struct timeval g_first_sg = {};
+#else
+static char *ptr_det = NULL;
+static int g_size_det = 0;
+static int g_space_det = 0;
+static struct timeval g_tv_det = {};
+static int g_dir_det = 1;
+//static char g_src_det[PATH_MAX] = {};
 //write ini file
-int drv_add_sg(int sg, int stat)
+int drv_add_det(int det, int value)
 {
-	//time_t tt = time(NULL);
+	//确认目录存在,/tmp为临时目录
+	if(g_dir_det){
+		if(access("log", F_OK) == -1){
+			if(mkdir("log", 0777) == -1)
+				perror("mkdir log");
+		}
+		if(access("log/det", F_OK) == -1){
+			if(mkdir("log/det", 0777) == -1)
+				perror("mkdir log/det");
+		}
+		g_dir_det = 0;
+		ptr_det = malloc(1024);
+		memset(ptr_det, 0, sizeof(ptr_det));
+	}
+
+	char str[256] = {};
 	struct timeval tv;
 	gettimeofday(&tv, NULL);
 	time_t tt = tv.tv_sec;
     struct tm *t = localtime(&tt);
-	char str[256] = {};
 
-	if(access("log", F_OK) == -1){
-		mkdir("log", 0777);
-	}
-	if(access("log/sg", F_OK) == -1){
-		mkdir("log/sg", 0777);
+	debug(2, "g_tv_det.tv_sec:%d\ntv.tv_sec:%d\n", g_tv_det.tv_sec, tv.tv_sec);
+	if(g_tv_det.tv_sec != tv.tv_sec){
+		if(g_tv_det.tv_sec != 0){//保存文件
+			memset(str, 0, sizeof(str));
+			sprintf(str, "log/det/%d_%04d%02d%02d%02d%02d%02d.ini", vcb_FNr, t->tm_year+1900, 
+					t->tm_mon+1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);
+			debug(2, "%s\n", str);
+			FILE* fp = fopen(str, "wb");
+			if(fp == NULL){
+				debug(1, "open file %s error\n", str);
+				return -1;
+			}
+			fwrite(ptr_det, g_size_det - g_space_det, 1, fp);
+			fclose(fp);
+			memset(ptr_det, 0, g_size_det);
+			g_space_det = g_size_det;
+		}
+		g_tv_det.tv_sec = tv.tv_sec;
+		g_tv_det.tv_usec = tv.tv_usec;
 	}
 
-	sprintf(str, "log/sg/%d_%04d%02d%02d%02d%02d%02d.ini", vcb_FNr, t->tm_year+1900, 
-		t->tm_mon+1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);
-	if(access(str, F_OK) == -1){
-		debug(2, "first create file %s\n", str);
-		g_first_sg = tv;
-	}
-	FILE* fp = fopen(str, "a+");
-	if(fp == NULL){
-		debug(1, "open file %s error\n", str);
-	}
 	memset(str, 0, sizeof(str));
-	int diff = (tv.tv_usec/1000- g_first_sg.tv_usec/1000);
-	fprintf(fp, "[%d_S_%d %d]\n", vcb_FNr, sg, diff);
+	int diff = (tv.tv_usec/1000 - g_tv_det.tv_usec/1000);
+	sprintf(str, "[%d_D_%d %d]\n", vcb_FNr, det, diff);
+	sprintf(str+strlen(str), "Value=%d\n", value);
+	sprintf(str+strlen(str), "Time=%04d%02d%02d%02d%02d%02d%03ld\n\n", t->tm_year+1900, 
+        t->tm_mon+1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec, tv.tv_usec/1000);
+
+	printf("%s", str);
+	if(g_space_det < strlen(str)){//扩展存储区
+		char* ptr = malloc(g_size_det+1024);
+		memset(ptr, 0, sizeof(ptr));
+		memcpy(ptr, ptr_det, strlen(ptr_det));
+		free(ptr_det);
+		ptr_det = ptr;
+		g_size_det += 1024;
+		g_space_det += 1024;
+	}	
+	strcat(ptr_det, str);
+	g_space_det -= strlen(str);
+//	sprintf(str, "/tmp/log/det/%d_%04d%02d%02d%02d%02d%02d.ini", vcb_FNr, t->tm_year+1900, 
+//			t->tm_mon+1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);
+//	if(access(str, F_OK) == -1){
+//		if(access(g_src_det, F_OK) == 0){
+//			memset(dest, 0, sizeof(dest));
+//			getcwd(dest, sizeof(dest));
+//			sprintf(dest+strlen(dest), "/log/det/%d_%04d%02d%02d%02d%02d%02d.ini", vcb_FNr, t->tm_year+1900, 
+//					t->tm_mon+1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);
+//			//printf("=============dest:%s\n", dest);
+//			rename(g_src_det, dest);
+//		}
+//		sprintf(g_src_det, "/tmp/log/det/%d_%04d%02d%02d%02d%02d%02d.ini", vcb_FNr, t->tm_year+1900, 
+//				t->tm_mon+1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);
+//		debug(2, "first create file %s\n", str);
+//		g_tv_det = tv;
+//	}
+//	FILE* fp = fopen(str, "a+");
+//	if(fp == NULL){
+//		debug(1, "open file %s error\n", str);
+//	}
+//	int diff = (tv.tv_usec/1000 - g_tv_det.tv_usec/1000);
+//	fprintf(fp, "[%d_D_%d %d]\n", vcb_FNr, det, diff);
+//	fprintf(fp, "Value=%d\n", value);
+//	fprintf(fp, "Time=%04d%02d%02d%02d%02d%02d%03ld\n\n", t->tm_year+1900, 
+//        t->tm_mon+1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec, tv.tv_usec/1000);
+//
+//	fclose(fp);
+	return 0;
+}
+#endif
+
+static struct timeval g_tv_sg = {};
+static int g_dir_sg = 1;
+//write ini file
+int drv_add_sg(int sg, int stat)
+{
+	//ext read, ext green实际没有产生灯色变化
+	if((stat == 3) || (stat == 6))
+		return 0;
+
+	//确认目录存在
+	if(g_dir_sg){
+		if(access("log", F_OK) == -1){
+			mkdir("log", 0777);
+		}
+		if(access("log/sg", F_OK) == -1){
+			mkdir("log/sg", 0777);
+		}
+		g_dir_sg = 0;
+	}
+
 	int value;
 	//[7],always=0;
 	//[6],blink Hz, 0:1Hz, 1:2Hz
@@ -291,26 +414,122 @@ int drv_add_sg(int sg, int stat)
 	//[3:2],yellow mode, [1:0],red mode
 	switch(stat){
 		case 1://amber
-			value = 0b00001100;
+			value = 0b00001100;//12
 			break;
 		case 2://min red
-		case 3://ext red
-			value = 0b00000011;
+			value = 0b00000011;//2
 			break;
 		case 4://prep
-			value = 0b00001111;
+			value = 0b00001111;//15
 			break;
 		case 5://min greeen
-		case 6://ext green
-			value = 0b00110000;
+			value = 0b00110000;//48
 			break;
 		case 7://green blink
-			value = 0b0010000;
+			value = 0b0010000;//16
 			break;
 	}
+
+	char str[256] = {};
+	struct timeval tv;
+	gettimeofday(&tv, NULL);
+	time_t tt = tv.tv_sec;
+	struct tm *t = localtime(&tt);
+
+	sprintf(str, "log/sg/%d_%04d%02d%02d%02d%02d%02d.ini", vcb_FNr, t->tm_year+1900, 
+			t->tm_mon+1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);
+	if(access(str, F_OK) == -1){
+		debug(2, "first create file %s\n", str);
+		g_tv_sg = tv;
+	}
+	FILE* fp = fopen(str, "a+");
+	if(fp == NULL){
+		debug(1, "open file %s error\n", str);
+	}
+	int diff = (tv.tv_usec/1000- g_tv_sg.tv_usec/1000);
+	fprintf(fp, "[%d_S_%d %d]\n", vcb_FNr, sg, diff);
 	fprintf(fp, "Value=%d\n", value);
 	fprintf(fp, "Time=%04d%02d%02d%02d%02d%02d%03ld\n\n", t->tm_year+1900, 
         t->tm_mon+1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec, tv.tv_usec/1000);
 
 	fclose(fp);
+	return 0;
 }
+
+typedef struct {
+    long id;
+    unsigned short inst;
+    unsigned char KmpInd;
+    unsigned char ErgLaenge;
+}pd_t;
+
+#if 0
+static int g_dir_ap = 1;
+static struct timeval g_tv_ap = {};
+int drv_add_ap(void)
+{
+//	FILE* fp = fopen("ap.dat", "wb");
+//	int ret = vs_read_process_data(NULL, fp);
+//	fclose(fp);
+//	return 0;
+
+	//确认目录存在
+	if(g_dir_ap){
+		if(access("log", F_OK) == -1){
+			mkdir("log", 0777);
+		}
+		if(access("log/ap", F_OK) == -1){
+			mkdir("log/ap", 0777);
+		}
+		g_dir_ap = 0;
+	}
+
+	char str[256] = {};
+	struct timeval tv;
+	gettimeofday(&tv, NULL);
+	time_t tt = tv.tv_sec;
+	struct tm *t = localtime(&tt);
+
+	sprintf(str, "log/ap/%d_%04d%02d%02d%02d%02d%02d.ini", vcb_FNr, t->tm_year+1900, 
+			t->tm_mon+1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);
+	if(access(str, F_OK) == -1){
+		debug(2, "first create file %s\n", str);
+		g_tv_sg = tv;
+	}
+	FILE* fp = fopen(str, "a+");
+	if(fp == NULL){
+
+		debug(1, "open file %s error\n", str);
+	}
+	int diff = (tv.tv_usec/1000- g_tv_sg.tv_usec/1000);
+	fprintf(fp, "[%d_S_%d %d]\n", vcb_FNr, sg, diff);
+	fprintf(fp, "Value=%d\n", value);
+	fprintf(fp, "Time=%04d%02d%02d%02d%02d%02d%03ld\n\n", t->tm_year+1900, 
+			t->tm_mon+1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec, tv.tv_usec/1000);
+
+	fclose(fp);
+
+#if 0
+	int i, ret;
+	unsigned char py[2];
+	while(!g_exit){
+		for(i = 0; i < log_count; i++){
+			item = arg + i*sizeof(log_oitd);
+			px.id = item->id;
+			px.inst = item->inst;
+			//printf("id:%ld, inst:%d\n", px.id, px.inst);
+			memset(py, 0, sizeof(py));
+			ret = vs_read_process_data(&px, py);
+			if(ret == 0)
+				//fprintf(fp, "%ld.%ld[%d]:%-3d ", (px.id >> 16) & 0xffff, px.id & 0xffff, px.inst, *(unsigned short*)py);
+				fprintf(fp, "%-3d ", *(unsigned short*)py);
+			else
+				fprintf(fp, "#   ");//invalid value
+		}
+		fprintf(fp, "\n");
+		fflush(fp);
+		us_sleep(1000000);
+	}
+#endif
+}
+#endif

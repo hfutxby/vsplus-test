@@ -11,15 +11,16 @@ int main(int argc, char* argv[])
 {
 	int i, ret;
 
+#if USE_TTY
 	//打开串口
 	if(argc != 2)
 		debug(1, "tty? port not found\n");
-	//ret = init_serial("ttyUSB0");
 	ret = init_serial(argv[1]);
 	if(ret < 0){
 		debug(1, "init_serial() failed\n");
 		return -1;
 	}
+#endif/* USE_TTY */
 
 	//初始化vsplus
 	printf("\nvs_init()\n");
@@ -29,8 +30,12 @@ int main(int argc, char* argv[])
 		return -1;
 	}
 
+#if USE_TTY
 	//开始接受串口发送的指令，在此之前发送的指令丢失
 	start_serial();
+#else
+	det_read_init();
+#endif/* USE_TTY */
 
 	//运行vsplus
 	printf("\nvs_start()\n");
@@ -40,6 +45,7 @@ int main(int argc, char* argv[])
 		return -1;
 	}
 
+	//drv_add_ap();
 	//记录日志
 //	printf("\nvs_log()\n");
 //	vs_log();

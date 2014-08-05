@@ -5,48 +5,9 @@
 #include <sys/types.h>
 #include <errno.h>
 #include <stdlib.h>
-
-#include "tsc.h"
-#include "if626max.h"
+#include <limits.h>
 
 extern int us_sleep(long us);
-
-static int g_test_timer = 0;
-static pthread_t g_tid_test_timer;
-
-void* thr_test_timer(void* arg)
-{
-	while(!g_test_timer){
-		tsc_timer(6, 0, 0);
-		sleep(1);
-	}
-}
-
-int test_timer(void)
-{
-	int ret;
-	ret = init_timers();
-	if(ret == -1){
-		printf("call init_timers() error\n");
-		return -1;
-	}
-
-	//pthread_create(&g_tid_test_timer, NULL, thr_test_timer, NULL);
-
-	int func = 6, index = 1, count = 0;
-	while(!g_test_timer){
-		//printf("func index count\n");
-		//scanf("%d %d %d\n", &func, &index, &count);
-		//ret = tsc_timer(func, index, count);
-		ret = tsc_timer(2, 1, 0);
-		printf("ret=%d\n", ret);
-		sleep(1);
-		tsc_timer(6, 0, 0);
-		sleep(100);
-	}
-
-	deinit_timers();
-}
 
 int test_array(void)
 {
@@ -86,9 +47,24 @@ int test_access(void)
 
 }
 
+int test_mv(void)
+{
+	int ret;
+	char buf[PATH_MAX] = {};
+	printf("PATH_MAX:%d\n", PATH_MAX);
+	if(getcwd(buf, sizeof(buf)) == NULL)
+		printf("call getcwd error:%s\n", strerror(errno));
+	printf("cwd: %s\n", buf);
+	//strcat(buf, "/testlog");
+	printf("target: %s\n", buf);
+	ret = rename("/tmp/testlog", "testlog");
+	if(ret == -1)
+		printf("call rename error:%s\n", strerror(errno));
+}
+
 int main(void)
 {
-	test_access();	
+	test_mv();	
 
 	return 0;
 }

@@ -490,7 +490,9 @@ void tsc_det_op(int index, int op)
 		g_det[index].net = 0;
 	}
 	pthread_mutex_unlock(&mutex_det);
+#if USE_INI
 	drv_add_det(index, (op == 1) ? 1 : 0);
+#endif/* USE_INI */
 	debug(2, "<==\n");
 }
 
