@@ -62,9 +62,33 @@ int test_mv(void)
 		printf("call rename error:%s\n", strerror(errno));
 }
 
+int test_ap(void)
+{
+	printf("===line:%d===\n", __LINE__);
+	FILE* fp = fopen("ap.def", "rb");
+	if(fp == NULL){
+		perror("open file ap.det error");
+		return -1;
+	}
+	char *line = NULL;
+	int n, size;
+	size = getline(&line, &n, fp);
+	printf("size:%d, n:%d, line:%s\n", size, n, line);
+	int a = atoi(line);
+	int i = 0;
+	for(i = 0; i < size; i++){
+		if(line[i] == '.')
+			break;
+	}
+	printf("i:%d\n", i);
+	int b = atoi(line+i+1);
+	printf("a=%d, b=%d\n", a, b);
+
+}
+
 int main(void)
 {
-	test_mv();	
+	test_ap();	
 
 	return 0;
 }

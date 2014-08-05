@@ -287,7 +287,7 @@ int init_tsc_prg(void)
 		return -1;
 	}
 	drv_prg_para(g_prg, size);
-	drv_prg_para_dump(g_prg, size);
+	//drv_prg_para_dump(g_prg, size);
 	//prg_track_cur_set(1);//init prg
 	debug(3, "<==\n");
 
@@ -846,7 +846,7 @@ int init_tsc_sg(void)
 		return -1;
 	}
 	ret = drv_sg_para(g_sg, size);//读入参数
-	drv_sg_para_dump(g_sg, size);
+	//drv_sg_para_dump(g_sg, size);
 
 	int i;
 	for(i = 0; i < SGMAX; i++){

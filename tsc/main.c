@@ -45,7 +45,7 @@ int main(int argc, char* argv[])
 		return -1;
 	}
 
-	//drv_add_ap();
+
 	//记录日志
 //	printf("\nvs_log()\n");
 //	vs_log();

@@ -78,7 +78,7 @@ void set_det_auto(void)
 	
 		printf("index:%d op:%d\n", index, op);
 		g_det[index] = op + 1;
-		usleep(100*1000);
+		usleep(1000*1000);
 	}
 }
 

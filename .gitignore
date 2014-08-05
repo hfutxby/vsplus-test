@@ -2,6 +2,8 @@
 tags
 *.o
 .*
+*.out
+*.dat
 build/
 
 !.gitignore

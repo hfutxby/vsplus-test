@@ -130,7 +130,7 @@ int init_prg_track(void)
 		return -1;
 	}
 	drv_prg_para(g_prg_def, size);//import
-	drv_prg_para_dump(g_prg_def, size);//import
+	//drv_prg_para_dump(g_prg_def, size);//import
 
 	size = PRGMAX * sizeof(prg_track);
 	g_prg_track = (prg_track*)malloc(size);
