@@ -15,8 +15,7 @@
 #include "vcb.h"
 #include "if626bas.h"
 
-/*====== 信号灯操作 =======*/
-//取得信号灯编号的代码
+//取得vsplus定义的信号灯在信号机控制器中的编号
 int drv_sg_code(int sg)
 {
 #if 0
@@ -29,7 +28,7 @@ int drv_sg_code(int sg)
 #endif
 }
 
-//取得信号灯状态的代码
+//取得vsplus信号灯状态在信号机控制器中的编码
 int drv_sg_stat_code(int stat)
 {
 	if(stat < (sizeof(vcb_sg_stat_code) / sizeof(int)))
@@ -41,7 +40,6 @@ int drv_sg_stat_code(int stat)
 //切换信号灯并记录状态
 void drv_sg_switch(int sg, int stat)
 {
-	//printf("==========drv_sg_switch(%d, %d)===========\n", sg, stat);
 	unsigned char msg[4];
 	msg[0] = 0x96; msg[3] = 0x69;
 	msg[1] = drv_sg_code(sg);
@@ -53,18 +51,6 @@ void drv_sg_switch(int sg, int stat)
 		drv_add_sg(sg, stat);
 #endif/* USE_INI */
 }
-
-#if 0
-//检查信号灯的状态
-//如果sg处于stat状态，返回此状态时间，否则返回-1
-int drv_sg_chk(int sg, int stat)
-{
-	int ret;
-	ret = sg_track_chk(sg, stat);
-
-	return ret;
-}
-#endif
 
 //获取信号灯配置
 //ptr为sg_def结构
@@ -94,13 +80,13 @@ int drv_sg_para(void* ptr, int size)
 #endif
 }
 
+//打印信号灯配置
 void drv_sg_para_dump(void* ptr, int size)
 {
 	int i;
 	int num = size / sizeof(sg_def);
 	sg_def* sg = NULL;
 	printf("===%s===\n", __func__);
-	//printf("sg_id\t min_red\t min_green\t prep\n");
 	printf("%9s %9s %9s %9s\n", "sg_id", "min_red", "min_green", "prep");
 	for(i = 0; i < num; i++){
 		sg = (sg_def*)(ptr + i * sizeof(sg_def));
@@ -109,23 +95,7 @@ void drv_sg_para_dump(void* ptr, int size)
 	}
 }
 
-#if 0
-//检查信号灯是否故障
-int drv_sg_fault(int index)
-{
-	return sg_track_fault(index);
-}
-#endif
-
-/*===== 检测器操作 ======*/
-#if 0
-void drv_det_op(int index, int op)
-{
-	tsc_det_op(index, op);
-}
-#endif
-
-//获取检测器配置参数
+//获取检测器配置
 int drv_det_para(void* ptr, int size)
 {
 #if 0
@@ -155,7 +125,7 @@ int drv_handle_pack(unsigned char* buf)
 	return 0;
 }
 
-/*===== 配时方案 ====*/
+//获取配时方案配置
 //prg_def参数
 int drv_prg_para(void* ptr, int size)
 {
@@ -192,11 +162,13 @@ void drv_prg_para_dump(void* ptr, int size)
 	}
 }
 
+//设置下一个配时方案
 int drv_prg_next_set(int index)
 {
 	return prg_track_next_set(index);
 }
 
+//获得绿间隔配置
 int drv_inter_green(int sgr, int sge)
 {
 	int num = sizeof(vcb_inter_green) / (sizeof(int)*3);
@@ -208,9 +180,9 @@ int drv_inter_green(int sgr, int sge)
 	}
 
 	return 0;
-	//return 32000;
 }
 
+//获得ocit编号配置
 int drv_get_ocitid(int* ZNr, int* FNr, int*Realknoten)
 {
 	*ZNr = vcb_ZNr;
@@ -220,12 +192,22 @@ int drv_get_ocitid(int* ZNr, int* FNr, int*Realknoten)
 	return 1;
 }
 
+/* ========== 输出ini文件 ============== */
+//打印det状态
 static char *ptr_det = NULL;
 static int g_size_det = 0;
 static int g_space_det = 0;
 static struct timeval g_tv_det = {};
 static int g_dir_det = 1;
-//write ini file
+
+void free_det(void)
+{
+	if(ptr_det != NULL){
+		free(ptr_det);
+		ptr_det = NULL;
+	}
+}
+
 int drv_add_det(int det, int value)
 {
 	//首次确认目录存在
@@ -292,12 +274,22 @@ int drv_add_det(int det, int value)
 	return 0;
 }
 
-char *ptr_sg = NULL;
+
+//打印sg状态
+static char *ptr_sg = NULL;//写入文件前数据
 static int g_size_sg = 0;
 static int g_space_sg = 0;
-static struct timeval g_tv_sg = {};
-static int g_dir_sg = 1;
-//write ini file
+static struct timeval g_tv_sg = {};//每秒首次产生记录时的时间
+static int g_dir_sg = 1;//首次调用标志
+
+void free_sg(void)
+{
+	if(ptr_sg != NULL){
+		free(ptr_sg);
+		ptr_sg = NULL;
+	}
+}
+
 int drv_add_sg(int sg, int stat)
 {
 	//首次确认目录存在
@@ -320,6 +312,7 @@ int drv_add_sg(int sg, int stat)
 	//ext read, ext green实际没有产生灯色变化
 	if((stat == 3) || (stat == 6))
 		return 0;
+
 	int value;
 	//[7],always=0;
 	//[6],blink Hz, 0:1Hz, 1:2Hz
@@ -390,6 +383,7 @@ int drv_add_sg(int sg, int stat)
 	return 0;
 }
 
+//打印ap
 typedef struct {
     long id;
     unsigned short inst;
@@ -397,21 +391,29 @@ typedef struct {
     unsigned char ErgLaenge;
 }pd_t;
 
-#if 1
-
-
-//打印所有ap
 static int g_dir_ap = 1; //首次调用标志
 static pd_t *ptr_pd = NULL;//所有可供调用ap
 static int ptr_pd_size = 0;//所有可供调用ap数量
-static int g_ap_def[120] = {};//实际需要的ap
-static int g_ap_def_num = 0;//实际需要的ap数量
-static int g_ap_def_inst = 0;//实际需要的inst数量
+static int g_ap_def[120] = {};//实际需要打印的ap
+static int g_ap_def_num = 0;//实际需要的打印的ap数量
+static int g_ap_def_inst = 0;//实际需要打印的inst数量
 static char* ptr_ap = NULL;//写入文件前的数据
 static int g_size_ap = 0;
 static int g_space_ap = 0;
 
 static struct timeval g_tv_ap = {};
+
+void free_ap(void)
+{
+	if(ptr_pd != NULL){
+		free(ptr_pd);
+		ptr_pd = NULL;
+	}
+	if(ptr_ap != NULL){
+		free(ptr_ap);
+		ptr_ap = NULL;
+	}
+}
 
 int getid(char* line)
 {
@@ -482,8 +484,8 @@ int drv_add_ap(void)
 		fp = fopen("ap.def", "rb");
 		if(fp == NULL){
 			printf("open file ap.def error\n");
-			g_ap_def_num = 1;//默认
-			g_ap_def[0] = (57 << 16) | 0;
+			//g_ap_def_num = 1;//默认
+			//g_ap_def[0] = (57 << 16) | 0;
 		}
 		char *line = NULL;
 		int size, n, i = 0;
@@ -496,7 +498,7 @@ int drv_add_ap(void)
 		fclose(fp);
 		g_size_ap = g_ap_def_inst * 64;
 		g_space_ap = g_size_ap;
-		ptr_ap = malloc(g_size_ap);
+		ptr_ap = malloc(g_size_ap);//初次分配空间
 		memset(ptr_ap, 0, g_size_ap);
 	}
 
@@ -536,12 +538,7 @@ int drv_add_ap(void)
 			memset(str, 0, sizeof(str));
 			px.id = g_ap_def[i];
 			px.inst = j;
-			//memset(py, 0, sizeof(py));
-			vs_read_process_data(&px, &py);
-			//if(ret == 0)
-			//    printf("%-3d ", *(unsigned short*)py);
-			//else
-			//    printf("#   ");//invalid value
+			vs_read_process_data(&px, &py);//
 			sprintf(str, "[%d_%d.%d_%d %d]\n", vcb_FNr, g_ap_def[i] >> 16 & 0xffff, 
 					g_ap_def[i] & 0xffff, j, diff);
 			sprintf(str+strlen(str), "Value=%d\n", py);
@@ -564,108 +561,10 @@ int drv_add_ap(void)
 	}
 	return 0;
 }
-#endif
 
-
-#if 0
-//按需打印ap
-static int g_dir_ap = 1;
-static struct timeval g_tv_ap = {};
-static int g_num_ap = 0;
-static pd_t *ptr_ap = NULL;
-int drv_add_ap(void)
+void free_all(void)
 {
-//	FILE* fp = fopen("ap.dat", "wb");
-//	int ret = vs_read_process_data(NULL, fp);
-//	fclose(fp);
-//	return 0;
-
-	//确认目录存在
-	if(g_dir_ap){
-		g_dir_ap = 0;
-		if(access("log", F_OK) == -1){
-			mkdir("log", 0777);
-		}
-		if(access("log/ap", F_OK) == -1){
-			mkdir("log/ap", 0777);
-		}
-		FILE *fp = fopen("ap.def", "rb");
-		if(fp == NULL){
-			printf("open file ap.def error\n");
-			g_num_ap = 1;//默认
-			ptr = malloc(sizeof(pd_t));
-			memset(ptr, 0, sizeof(pd_t));
-			ptr[0].id = 57 << 16 | 0;
-		}
-		char *line = NULL;
-		int size, n;
-		int a, b, i;
-		while((size = getline(&line, &n, fp)) != -1){
-			g_num_ap++;
-		}
-		ptr_ap = malloc(sizeof(pd_t) * g_num_ap);
-		memset(ptr_ap, 0, sizeof(pd_t) * g_num_ap);
-		debug(2, "=======================g_num_ap:%d\n", g_num_ap);
-		fseek(fp, 0, SEEK_SET);
-		while((size = getline(&line, &n, fp)) != -1){
-			a = atoi(line);
-			for(i = 0; i < size; i++){
-				if(line[i] == '.')
-					break;
-			}
-			if(i != (size-1))
-				b = atoi(line+i+1);
-			else
-				b = 0;
-		}
-	}
-
-	char str[256] = {};
-	struct timeval tv;
-	gettimeofday(&tv, NULL);
-	time_t tt = tv.tv_sec;
-	struct tm *t = localtime(&tt);
-
-	sprintf(str, "log/ap/%d_%04d%02d%02d%02d%02d%02d.ini", vcb_FNr, t->tm_year+1900, 
-			t->tm_mon+1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);
-	if(access(str, F_OK) == -1){
-		debug(2, "first create file %s\n", str);
-		g_tv_sg = tv;
-	}
-	FILE* fp = fopen(str, "a+");
-	if(fp == NULL){
-
-		debug(1, "open file %s error\n", str);
-	}
-	int diff = (tv.tv_usec/1000- g_tv_sg.tv_usec/1000);
-	fprintf(fp, "[%d_S_%d %d]\n", vcb_FNr, sg, diff);
-	fprintf(fp, "Value=%d\n", value);
-	fprintf(fp, "Time=%04d%02d%02d%02d%02d%02d%03ld\n\n", t->tm_year+1900, 
-			t->tm_mon+1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec, tv.tv_usec/1000);
-
-	fclose(fp);
-
-#if 0
-	int i, ret;
-	unsigned char py[2];
-	while(!g_exit){
-		for(i = 0; i < log_count; i++){
-			item = arg + i*sizeof(log_oitd);
-			px.id = item->id;
-			px.inst = item->inst;
-			//printf("id:%ld, inst:%d\n", px.id, px.inst);
-			memset(py, 0, sizeof(py));
-			ret = vs_read_process_data(&px, py);
-			if(ret == 0)
-				//fprintf(fp, "%ld.%ld[%d]:%-3d ", (px.id >> 16) & 0xffff, px.id & 0xffff, px.inst, *(unsigned short*)py);
-				fprintf(fp, "%-3d ", *(unsigned short*)py);
-			else
-				fprintf(fp, "#   ");//invalid value
-		}
-		fprintf(fp, "\n");
-		fflush(fp);
-		us_sleep(1000000);
-	}
-#endif
+	free_det();
+	free_sg();
+	free_ap();
 }
-#endif

@@ -763,7 +763,10 @@ void* thr_sg(void* arg)
 
 			switch(g_sg[i].ext){
 				case 1://open操作中
-					drv_sg_switch(i, 4);//切换为prep
+					if(g_sg[i].prep)
+						drv_sg_switch(i, 4);//切换为prep
+					else
+						drv_sg_switch(i, 5);//prep=0
 					g_sg[i].ext = 0;//open相应完成
 					break;
 
@@ -784,7 +787,10 @@ void* thr_sg(void* arg)
 
 			if((ret = sg_track_chk(i, 7)) != -1){//处于green_blink
 				if(ret >= g_sg[i].green_blink){//green_blink超时
-					drv_sg_switch(i, 1);//切换到amber
+					if(g_sg[i].amber)
+						drv_sg_switch(i, 1);//切换到amber
+					else
+						drv_sg_switch(i, 2);//amber=0
 					continue;
 				}
 			}
