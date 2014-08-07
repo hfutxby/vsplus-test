@@ -198,3 +198,19 @@ int ring_pre_reads(ring_buf *r, unsigned char *c, int len)
 
 	return len;
 }
+
+//所有元素求和
+int ring_sum(ring_buf *r)
+{
+	if(r->head == r->tail)
+		return 0;
+
+	int sum = 0;
+	int index = r->head;
+	do{
+		sum += r->buf[index];
+		index = (index + r->size + 1) % r->size;
+	}while(index != r->tail);
+
+	return sum;
+}

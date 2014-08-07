@@ -30,7 +30,7 @@ static int g_exit_read = 0;
 static pthread_t g_tid_pop; //解析串口命令
 static int g_exit_pop = 0;
 
-ring_buf g_ring;
+ring_buf* g_ring = NULL;
 
 //检查元素串c是否和pack匹配,
 //c的长度应该和pack是一样，至少不能比他短
@@ -120,7 +120,7 @@ void* thr_pop(void* para)
         memset(buf, 0, sizeof(buf));
         pthread_mutex_lock(&ring_mutex);
         gettimeofday(&tv1, NULL);
-        ret = pop_pack(&g_ring, pack_list, list_len, buf);
+        ret = pop_pack(g_ring, pack_list, list_len, buf);
         gettimeofday(&tv2, NULL);
         pthread_mutex_unlock(&ring_mutex);
         if(ret > 0){
@@ -277,7 +277,7 @@ void* thr_read(void* para)
 					printf("\n");
 					if(ret > 0){
 						pthread_mutex_lock(&ring_mutex);
-						ring_adds_over(&g_ring, buf, ret);
+						ring_adds_over(g_ring, buf, ret);
 						pthread_mutex_unlock(&ring_mutex);
 					}
 				}
@@ -305,7 +305,8 @@ int main(int argc, char* argv[])
 
 	printf("g_fd_serial=%d\n", g_fd_serial);
 
-	init_ring(&g_ring);
+	//init_ring(&g_ring);
+	g_ring = alloc_ring(100);
 
 	pthread_create(&g_tid_read, NULL, thr_read, NULL);
 	pthread_create(&g_tid_pop, NULL, thr_pop, NULL);
@@ -321,6 +322,9 @@ int main(int argc, char* argv[])
 	g_exit_pop = 1;
 	if(g_tid_pop)
 		pthread_join(g_tid_pop, NULL);
+
+	if(g_ring != NULL)
+		free_ring(g_ring);
 
 	close(g_fd_serial);
 

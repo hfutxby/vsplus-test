@@ -86,9 +86,29 @@ int test_ap(void)
 
 }
 
+#include "ring_buf.h"
+int test_ring(void)
+{
+	ring_buf *r = alloc_ring(10);
+	struct timeval tv;
+	int c = 0;
+	__dump(r);
+	while(1){
+		gettimeofday(&tv, NULL);
+		srandom(tv.tv_usec);
+		//c = random() % 255;
+		c++;
+		ring_add_over(r, 0);
+		__dump(r);
+		printf("sum:%d\n\n", ring_sum(r));
+		usleep(1000*1000);
+	}
+	free_ring(r);
+	return 0;
+}
 int main(void)
 {
-	test_ap();	
+	test_ring();
 
 	return 0;
 }

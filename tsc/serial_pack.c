@@ -23,7 +23,7 @@ pack pack_list[] = {
     };
 
 static int g_fd_serial = -1; //串口
-ring_buf r;
+ring_buf *g_ring = NULL;
 pthread_mutex_t serial_write_mutex = PTHREAD_MUTEX_INITIALIZER;//写串口保护
 pthread_mutex_t serial_read_mutex = PTHREAD_MUTEX_INITIALIZER;//读串口保护
 pthread_mutex_t ring_mutex = PTHREAD_MUTEX_INITIALIZER;//ring_buf读写保护
@@ -137,7 +137,7 @@ void* thr_pop(void* para)
         memset(buf, 0, sizeof(buf));
         pthread_mutex_lock(&ring_mutex);
         gettimeofday(&tv1, NULL);
-        ret = pop_pack(&r, pack_list, list_len, buf);
+        ret = pop_pack(g_ring, pack_list, list_len, buf);
         gettimeofday(&tv2, NULL);
         //printf("ret:%d time diff: %ldus\n", ret, (tv2.tv_sec - tv1.tv_sec) * 1000000 + (tv2.tv_usec - tv1.tv_usec));
         pthread_mutex_unlock(&ring_mutex);
@@ -268,7 +268,6 @@ int set_opt(int fd, int speed, int bits, char event, int stop)
 void* thr_read(void* para)
 {
 	debug(3, "==>\n");
-	//ring_buf* r = (ring_buf*)para;
 	fd_set set_read;
 	int ret, i;
 	unsigned char buf[200] = {0};
@@ -295,14 +294,15 @@ void* thr_read(void* para)
 					//usleep(1000);
 					ret = read(g_fd_serial, buf, sizeof(buf));
 					pthread_mutex_unlock(&serial_read_mutex);
-					printf("thr_read:%d:", ret);
-					for( i = 0; i < ret; i++)
-						printf("0x%02x ", 0xff&buf[i]);
-					printf("\n");
+					if(ret > 0){
+						printf("thr_read:%d:", ret);
+						for( i = 0; i < ret; i++)
+							printf("0x%02x ", 0xff&buf[i]);
+						printf("\n");
+					}
 					if(ret > 0){
 						pthread_mutex_lock(&ring_mutex);
-						ring_adds_over(&r, buf, ret);
-						//__dump(r);
+						ring_adds_over(g_ring, buf, ret);
 						pthread_mutex_unlock(&ring_mutex);
 					}
 				}
@@ -373,14 +373,12 @@ int init_serial(char* dev)
 	//printf("g_fd_serial=%d\n", g_fd_serial);
 
 	//ring_buf r;
-	init_ring(&r);
+	//init_ring(&r);
+	g_ring = alloc_ring(100);
 
 	pthread_create(&g_tid_watchdog, NULL, thr_watchdog, NULL);
-	pthread_create(&g_tid_read, NULL, thr_read, &r);
-	pthread_create(&g_tid_pop, NULL, thr_pop, &r);
-	//pthread_create(&g_tid_test_send, NULL, thr_test_send, &r);
-	//pthread_create(&g_tid_write, NULL, thr_write, NULL);
-	//pthread_create(&g_tid_det, NULL, thr_det, NULL);
+	pthread_create(&g_tid_read, NULL, thr_read, NULL);
+	pthread_create(&g_tid_pop, NULL, thr_pop, NULL);
 	debug(3, "<==\n");
 	return 0;
 }
@@ -390,12 +388,16 @@ void deinit_serial(void)
 	g_exit_watchdog = 1;
 	g_exit_read = 1;
 	g_exit_pop = 1;
-	//g_exit_det = 1;
-	pthread_join(g_tid_watchdog, NULL);
-	pthread_join(g_tid_read, NULL);
-	pthread_join(g_tid_pop, NULL);
-	//pthread_join(g_tid_det, NULL);
-	//pthread_join(g_tid_write, NULL);
+
+	if(g_tid_watchdog)
+		pthread_join(g_tid_watchdog, NULL);
+	if(g_tid_read)
+		pthread_join(g_tid_read, NULL);
+	if(g_tid_pop)
+		pthread_join(g_tid_pop, NULL);
+
+	if(g_ring != NULL)
+		free_ring(g_ring);
 
 	close(g_fd_serial);
 }

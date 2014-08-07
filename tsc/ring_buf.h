@@ -1,7 +1,7 @@
 #ifndef __RING_BUF_H
 #define __RING_BUF_H
 
-//#define FREE_LEN //动态分配的ringbuf
+#define FREE_LEN //动态分配的ringbuf
 #ifndef FREE_LEN
 //固定分配形式
 #define RINGBUF_SIZE 100
@@ -22,8 +22,8 @@ typedef struct{
 	unsigned char *buf;
 }ring_buf;//分配最大容量为size的环存储
 
-ring_buf* alloc_ring(int size)
-void free_ring(ring_buf* r)
+ring_buf* alloc_ring(int size);
+void free_ring(ring_buf* r);
 #endif
 
 void __dump(ring_buf* r);

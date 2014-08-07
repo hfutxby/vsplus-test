@@ -5,5 +5,7 @@ tags
 *.out
 *.dat
 build/
+para_bak.vcb
+log/
 
 !.gitignore

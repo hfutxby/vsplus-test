@@ -74,6 +74,7 @@ typedef struct{
 	int exist; //1：存在
 }det_def;
 
+#include "ring_buf.h"
 //检测器记录信息
 typedef struct {
   int sum_rising; //上升沿计数，驱动板信号修改
@@ -86,6 +87,7 @@ typedef struct {
   int occ2;//平滑占用率
   int net;//time gap starts at the last falling slope，驱动>板信号修改
   int gross;
+  ring_buf* rh;
 }det_track;
 
 typedef struct{

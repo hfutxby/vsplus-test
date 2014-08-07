@@ -400,6 +400,7 @@ int open_det(void)
     memset(g_det, 0, sizeof(det_track) * DETMAX);
 	for(i = 0; i < DETMAX; i++){
 		g_det[i].free = 10;//即时占用率计算窗口为1s
+		g_det[i].rh = alloc_ring(11);
 	}
 
 	return 0;
@@ -408,6 +409,11 @@ int open_det(void)
 /* 关闭检测器数据映射 */
 void close_det(void)
 {
+	int i;
+	for(i = 0; i < DETMAX; i++){
+		free_ring(g_det[i].rh);
+		g_det[i].rh = NULL;
+	}
 	munmap(g_det, sizeof(det_track) * DETMAX);
     close(g_fd_det);
     g_fd_det = 0;
@@ -445,26 +451,29 @@ void update_det(void)
 			continue;
 
 		if(g_det[i].state){//检测器占用中
-			if(g_det[i].free){
-				g_det[i].hold++;
-				g_det[i].free--;
-			}
+			//if(g_det[i].free){
+			//	g_det[i].hold++;
+			//	g_det[i].free--;
+			//}
 			g_det[i].gross++;
+			ring_add_over(g_det[i].rh, 1);
 		}
 		else{
-			if(g_det[i].hold){
-				g_det[i].hold--;
-				g_det[i].free++;
-			}
+			//if(g_det[i].hold){
+			//	g_det[i].hold--;
+			//	g_det[i].free++;
+			//}
 			g_det[i].gross++;
 			g_det[i].net++;
+			ring_add_over(g_det[i].rh, 0);
 		}
 
 		if(i == TEST_ID)
 			;//debug(2, "id:%d, hold:%d, free:%d, gross:%d, net:%d, rising:%d, falling:%d\n", i, g_det[i].hold, g_det[i].free, g_det[i].gross, g_det[i].net, g_det[i].sum_rising, g_det[i].sum_falling);
 
 		//计算占用率
-		g_det[i].occ1 = (double)(g_det[i].hold * 100) / (g_det[i].hold + g_det[i].free);
+		//g_det[i].occ1 = (double)(g_det[i].hold * 100) / (g_det[i].hold + g_det[i].free);
+		g_det[i].occ1 = (double)(ring_sum(g_det[i].rh) * 10);
 		if(g_det[i].occ1 > g_det[i].occ2)
 			g_det[i].occ2 = g_det[i].occ2 + g_f1 * (g_det[i].occ1 - g_det[i].occ2);
 		else

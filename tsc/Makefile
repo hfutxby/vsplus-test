@@ -9,7 +9,7 @@
 ARMCC = arm-none-linux-gnueabi-gcc
 CC = gcc
 
-CFLAGS += -D_PROZESSOR_INTEL_ -D_HELPER_MACROS_ -D_ADVANCED_MEMORY_ -DDEBUG=2
+CFLAGS += -D_PROZESSOR_INTEL_ -D_HELPER_MACROS_ -D_ADVANCED_MEMORY_ -DDEBUG=2 -DUSE_TTY
 #CFLAGS += -D_PROZESSOR_INTEL_ -D_HELPER_MACROS_ -D_ADVANCED_MEMORY_ -DDEBUG=1 -DUSE_TTY -DUSE_INI -g
 
 all: main serial_test sg_view det_ctrl decode
@@ -41,7 +41,7 @@ clean:
 	$(RM) *.x86 *.arm *.o *.out
 
 test: test.c
-	$(CC) $(CFLAGS) test.c -o test.x86.out
+	$(CC) $(CFLAGS) test.c ring_buf.c -o test.x86.out
 
 
 
