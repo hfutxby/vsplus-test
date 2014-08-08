@@ -365,120 +365,7 @@ int vs_stop(void)
 	return 0;
 }
 
-//int vs_test_2(void)
-//{
-//	int id, inst, ret;
-//	pd_t px;
-//	unsigned char py[2];
-//	int na, nb;
-//
-//	FILE* fp = fopen("all_oitd.ini", "wb+");
-//	if(fp == NULL){
-//		perror("can not open all_oitd.ini");
-//		return -1;
-//	}
-//	ret = vs_read_process_data(NULL, fp);//读出vsplus库所有支持的OITD
-//
-//	//fclose(fp);
-//	fseek(fp, 0, SEEK_SET);
-//
-//	typedef struct{
-//		int oitd4; //oitd number
-//		unsigned short range; //instance range
-//		unsigned short pad;
-//	}oitd;
-//
-//	oitd item;
-//
-//	while(1){
-//		memset(&item, 0, sizeof(oitd));
-//		ret = fread(&item, 1, sizeof(oitd), fp);
-//		//printf("ret of feof: %d\n", feof(fp));
-//		if(ret != sizeof(oitd)){
-//			//printf("ret=%d, read data not enough\n", ret);
-//			break;
-//		}
-//
-//		na = (item.oitd4 >> 16) & 0xffff;
-//		nb = item.oitd4 & 0xffff;
-//		
-//		if(na != 57)//只读取57.xxx
-//			continue;
-//
-//		for(inst = 1; inst <= item.range; inst++){//分别读取instance
-//			printf("%d.%d[%d]:", na, nb, inst);
-//			px.id = item.oitd4;
-//			px.inst = inst;
-//			memset(py, 0, sizeof(py));
-//			ret= vs_read_process_data(&px, &py);
-//			if(ret == 0){//valid value
-//				printf(" 0x%0x 0x%0x : %d\n", py[0], py[1], *(unsigned short*)py);
-//			}
-//			else{
-//				printf("invalid value:\n");
-//			}
-//		}
-//		if(feof(fp)){
-//			//printf("end of file\n");
-//			break;
-//		}
-//	}
-//}
-//
-//int vs_test(void)
-//{
-//	typedef struct{
-//		int oitd4; //四字节表示的编号
-//		char sym[32]; //字符名
-//		int size; //数据长度
-//		int range; //范围
-//	}oitd;
-//
-//	oitd g_oitd[] = { 
-//		{(57 << 16 | 0), "OITD_VSP_VERSION", 2, 1},
-//		{(57 << 16 | 1), "OITD_VSP_SYSTEM1", 2, 2},
-//		{(57 << 16 | 2), "OITD_VSP_SYSTEM2", 2, 2},
-//		{(57 << 16 | 3), "OITD_VSP_SYSTEM3", 2, 2},
-//	};
-//	printf("oitd number: %d\n", sizeof(g_oitd)/sizeof(oitd));
-//
-//	int id, inst, ret;
-//
-//	//char* vs_ocit_path(void);
-//	//char *path = vs_ocit_path();
-//	//printf("vs_oitd_path():%s\n", path);
-//
-//	pd_t px;
-//	unsigned char py[2];
-//	int na, nb;
-//	for(id = 0; id < sizeof(g_oitd)/sizeof(oitd); id++){
-//		na = (g_oitd[id].oitd4 >> 16) & 0xffff;
-//		nb = g_oitd[id].oitd4 & 0xffff;
-//		for(inst = 1; inst <= g_oitd[id].range; inst++){
-//			px.id = g_oitd[id].oitd4;
-//			px.inst = inst;
-//			ret = vs_read_process_data(&px, NULL);
-//			printf("%d.%d[%d]:(%s): ", na, nb, inst, g_oitd[id].sym);
-//			if(ret == 0){
-//				printf("instance does not exist\n");
-//				continue;
-//			}
-//			else if( ret == 65525){
-//				printf("type does not exist\n");
-//				continue;
-//			}
-//			memset(py, 0, sizeof(py));
-//			ret = vs_read_process_data(&px, py);
-//			if(ret == 0){
-//				printf(" 0x%0x 0x%0x : %d\n", py[0], py[1], *(unsigned short*)py);
-//			}
-//			else{
-//				printf("invalid value:\n");
-//			}
-//		}
-//	}
-//}
-
+#if 0
 typedef struct{
 	int id;
 	int inst;
@@ -590,7 +477,7 @@ int vs_log(void)
 	pthread_t tid_log;
 	pthread_create(&tid_log, NULL, thr_log, ptr);
 }
-
+#endif
 
 void vs_deinit(void)
 {
