@@ -254,9 +254,9 @@ int drv_add_det(int det, int value)
 
 	memset(str, 0, sizeof(str));
 	int diff = (tv.tv_usec/1000 - g_tv_det.tv_usec/1000);
-	sprintf(str, "[%d_D_%d %d]\n", vcb_FNr, det, diff);
-	sprintf(str+strlen(str), "Value=%d\n", value);
-	sprintf(str+strlen(str), "Time=%04d%02d%02d%02d%02d%02d%03ld\n\n", t->tm_year+1900, 
+	sprintf(str, "[%d_D_%d %d]\r\n", vcb_FNr, det, diff);
+	sprintf(str+strlen(str), "Value=%d\r\n", value);
+	sprintf(str+strlen(str), "Time=%04d%02d%02d%02d%02d%02d%03ld\r\n", t->tm_year+1900, 
         t->tm_mon+1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec, tv.tv_usec/1000);
 
 	if(g_space_det < strlen(str)){//扩展存储区
@@ -363,9 +363,9 @@ int drv_add_sg(int sg, int stat)
 
 	memset(str, 0, sizeof(str));
 	int diff = (tv.tv_usec/1000 - g_tv_sg.tv_usec/1000);
-	sprintf(str, "[%d_S_%d %d]\n", vcb_FNr, sg, diff);
-	sprintf(str+strlen(str), "Value=%d\n", value);
-	sprintf(str+strlen(str), "Time=%04d%02d%02d%02d%02d%02d%03ld\n\n", t->tm_year+1900, 
+	sprintf(str, "[%d_S_%d %d]\r\n", vcb_FNr, sg, diff);
+	sprintf(str+strlen(str), "Value=%d\r\n", value);
+	sprintf(str+strlen(str), "Time=%04d%02d%02d%02d%02d%02d%03ld\r\n", t->tm_year+1900, 
         t->tm_mon+1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec, tv.tv_usec/1000);
 
 	if(g_space_sg < strlen(str)){//扩展存储区
@@ -538,11 +538,12 @@ int drv_add_ap(void)
 			memset(str, 0, sizeof(str));
 			px.id = g_ap_def[i];
 			px.inst = j;
+			py = 0;
 			vs_read_process_data(&px, &py);//
-			sprintf(str, "[%d_%d.%d_%d %d]\n", vcb_FNr, g_ap_def[i] >> 16 & 0xffff, 
+			sprintf(str, "[%d_%d.%d_%d %d]\r\n", vcb_FNr, g_ap_def[i] >> 16 & 0xffff, 
 					g_ap_def[i] & 0xffff, j, diff);
-			sprintf(str+strlen(str), "Value=%d\n", py);
-			sprintf(str+strlen(str), "Time=%04d%02d%02d%02d%02d%02d%03ld\n\n", t->tm_year+1900, 
+			sprintf(str+strlen(str), "Value=%d\r\n", py);
+			sprintf(str+strlen(str), "Time=%04d%02d%02d%02d%02d%02d%03ld\r\n", t->tm_year+1900, 
 					t->tm_mon+1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec, tv.tv_usec/1000);
 
 			if(g_space_ap < strlen(str)){//扩展存储区

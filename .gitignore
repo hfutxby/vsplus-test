@@ -7,5 +7,6 @@ tags
 build/
 para_bak.vcb
 log/
+log*
 
 !.gitignore

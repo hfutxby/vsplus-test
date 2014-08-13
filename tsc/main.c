@@ -44,50 +44,60 @@ int main(int argc, char* argv[])
 		debug(1, "vs_start() failed\n");
 		return -1;
 	}
+	sleep(10);
 
 
-	//记录日志
-//	printf("\nvs_log()\n");
-//	vs_log();
+#if 0
+	char img_off[SGMAX] = {};
+	img_off[1] = 1;
+	printf("\nvs_switch()\n");
+	ret = vs_switch(img_off);
+	printf("call vs_switch ret:%d\n", ret);
+	if(ret < 0){
+		debug(1, "vs_switch() failed\n");
+		return -1;
+	}
+#endif
+#if 0
+	printf("\nvs_stop\n");
+	ret = vs_stop();
+	if(ret < 0){
+		debug(1, "vs_stop() failed\n");
+		return -1;
+	}
+	sleep(1);
+#endif
+#if 0
+	char img_on[SGMAX] = {};
+	img_on[0] = 1;
+	for(i = 0; i < SGMAX; i++){
+		if(img_on[i])
+			drv_sg_switch(i+1, 5);
+	}
+#endif
+	sleep(5);
 
-	//sleep(10);
-
-	////暂停vsplus
-	//printf("\nvs_stop\n");
-	//ret = vs_stop();
-	//if(ret < 0){
-	//	printf("vs_stop() failed\n");
-	//}
-
-	//sleep(10);
-
-	////运行vsplus
-	//printf("\nvs_start()\n");
-	//ret = vs_start();
-	//if(ret < 0){
-	//	debug(1, "vs_start() failed\n");
-	//	return -1;
-	//}
-
-	//stop_serial();
-
-	//vs_deinit();
-//
-//	sleep(20);
-//	//初始化vsplus
-//	printf("\nvs_init()\n");
-//	ret = vs_init();
-//	if(ret < 0){
-//		debug(1, "vs_init() failed\n");
-//		return -1;
-//	}
+#if 0
 	//运行vsplus
-//	printf("\nvs_start()\n");
-//	ret = vs_start();
-//	if(ret < 0){
-//		printf("vs_start() failed\n");
-//	}
-//
+	printf("\nvs_start()\n");
+	ret = vs_start();
+	if(ret < 0){
+		debug(1, "vs_start() failed\n");
+		return -1;
+	}
+	sleep(1);
+#endif
+
+#if 0
+	sleep(5);
+	printf("\nvs_start()\n");
+	ret = vs_start();
+	if(ret < 0){
+		debug(1, "vs_start() failed\n");
+		return -1;
+	}
+#endif
+
 	while(1) 
 		sleep(1);
 

@@ -83,8 +83,8 @@ typedef struct {
   int hold; //总占用计时
   int free; //总空闲计时
   int fault; //1:故障,0:正常
-  int occ1;//占用率
-  int occ2;//平滑占用率
+  double occ1;//占用率
+  double occ2;//平滑占用率
   int net;//time gap starts at the last falling slope，驱动>板信号修改
   int gross;
   ring_buf* rh;

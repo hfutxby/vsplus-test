@@ -10,6 +10,7 @@
 #include <unistd.h>
 #include <termios.h>
 #include <pthread.h>
+#include <math.h>
 
 #include "tsc.h"
 #include "sg_track.h"
@@ -361,8 +362,8 @@ void tsc_stream_waiting(int index, int time)
 }
 
 /*************检测器函数************************/
-static double g_f1 = 0.2;//占用率上升折算因子
-static double g_f2 = 0.2;//下降因子
+static double g_f1 = 0.5;//占用率上升折算因子
+static double g_f2 = 0.125;//下降因子
 #define DET_MAXTIME 600 //等待下降沿超时
 #define TEST_ID 5
 
@@ -436,7 +437,7 @@ void update_det(void)
 
 
 		//计算占用率
-		g_det[i].occ1 = (double)(ring_sum(g_det[i].rh) * 10);
+		g_det[i].occ1 = (ring_sum(g_det[i].rh) * 10);
 		if(g_det[i].occ1 > g_det[i].occ2)
 			g_det[i].occ2 = g_det[i].occ2 + g_f1 * (g_det[i].occ1 - g_det[i].occ2);
 		else
@@ -479,6 +480,8 @@ void* thr_det(void* arg)
 		pthread_mutex_lock(&mutex_det);
 		update_det();
 		pthread_mutex_unlock(&mutex_det);
+		//i = 2;
+		//debug(1, "det %2d occ1 %2.3f~%2d occ2 %2.3f~%2d\n", i, g_det[i].occ1, (int)g_det[i].occ1, g_det[i].occ2, (int)round(g_det[i].occ2));
 		for(i = 0; i < DETMAX; i++){
 			if(g_det_def[i].exist && g_det[i].state && (g_det[i].gross > DET_MAXTIME))
 				tsc_det_op(i, 2);//超时，人为产生一个下降沿
@@ -568,7 +571,7 @@ int tsc_cur_hold(int index)
 {
 	int ret;
 	pthread_mutex_lock(&mutex_det);
-	ret = g_det[index].occ1;
+	ret = (int)g_det[index].occ1;
 	pthread_mutex_unlock(&mutex_det);
 	return ret;
 }
@@ -578,7 +581,7 @@ int tsc_sm_hold(int index)
 {
 	int ret;
 	pthread_mutex_lock(&mutex_det);
-	ret = g_det[index].occ2;
+	ret = (int)(round(g_det[index].occ2));
 	pthread_mutex_unlock(&mutex_det);
 	return ret;
 }

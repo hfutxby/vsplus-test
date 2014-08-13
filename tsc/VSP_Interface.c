@@ -371,7 +371,7 @@ void SG_ein(short int sg)
  */
 void SG_aus(short int sg)
 {
-	debug(3, "sg:%d\n", sg);
+	debug(2, "sg:%d\n", sg);
 	tsc_sg_close(sg);
 }
 
@@ -807,8 +807,8 @@ return ;
  */
 int OePNV_Ein_Aus(void)
 {
-	//int ret = 0;//PT not set
-	int ret = 1;//PT off
+	int ret = 0;//PT not set
+	//int ret = 1;//PT off
 	debug(3, "ret:%d\n", ret);
 	return ret;
 }
@@ -820,8 +820,8 @@ int OePNV_Ein_Aus(void)
  */
 int IV_Ein_Aus(void)
 {
-	//int ret = 0;//IT not set
-	int ret = 1;//IT off
+	int ret = 0;//IT not set
+	//int ret = 1;//IT off
 	debug(3, "ret:%d\n", ret);
 	return ret;
 }

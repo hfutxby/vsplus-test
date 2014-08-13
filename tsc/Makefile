@@ -9,13 +9,13 @@
 ARMCC = arm-none-linux-gnueabi-gcc
 CC = gcc
 
-CFLAGS += -D_PROZESSOR_INTEL_ -D_HELPER_MACROS_ -D_ADVANCED_MEMORY_ -DDEBUG=2 
+CFLAGS += -D_PROZESSOR_INTEL_ -D_HELPER_MACROS_ -D_ADVANCED_MEMORY_ -DDEBUG=2 -DUSE_INI 
 #CFLAGS += -D_PROZESSOR_INTEL_ -D_HELPER_MACROS_ -D_ADVANCED_MEMORY_ -DDEBUG=1 -DUSE_TTY -DUSE_INI -g
 
 all: main serial_test sg_view det_ctrl decode
 main: main.c tsc.c VSP_Interface.c
-	$(CC) $(CFLAGS) VSP_Interface.c tsc.c drive.c ring_buf.c serial_pack.c prg_track.c sg_track.c parse_xml.c det_read.c vs_main.c main.c vsp_core.lib -pthread -o main.x86.out
-	$(ARMCC) $(CFLAGS) VSP_Interface.c tsc.c drive.c ring_buf.c serial_pack.c prg_track.c sg_track.c parse_xml.c det_read.c vs_main.c main.c vsp_core_arm.lib -pthread -o main.arm.out
+	$(CC) $(CFLAGS) VSP_Interface.c tsc.c drive.c ring_buf.c serial_pack.c prg_track.c sg_track.c parse_xml.c det_read.c vs_main.c main.c vsp_core.lib -pthread -lm -o main.x86.out
+	$(ARMCC) $(CFLAGS) VSP_Interface.c tsc.c drive.c ring_buf.c serial_pack.c prg_track.c sg_track.c parse_xml.c det_read.c vs_main.c main.c vsp_core_arm.lib -pthread -lm -o main.arm.out
 
 #用来测试发送模拟的检测器数据
 serial_test: ring_buf.c serial_test.c serial_read.c

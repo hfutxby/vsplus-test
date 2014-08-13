@@ -27,11 +27,9 @@ void* thr_prg_track(void* arg)
 	int i;
 	while(!g_exit_prg_track){
 		for(i = 1; i < PRGMAX; i++){
-			//debug(3, "prg:%d, stat:%d, tx:%d, tu:%d\n", i, g_prg_track[i].stat, g_prg_track[i].tx, g_prg_def[i].tu);
 			if(g_prg_track[i].stat == 1){
 				us_sleep(100*1000);
 				g_prg_track[i].tx++;//对当前prg计时
-				//debug(3, "prg:%d, tx:%d\n", i, g_prg_track[i].tx);
 				if(g_prg_track[i].tx >= g_prg_def[i].tu){
 					g_prg_track[i].tx = 0;
 				}
@@ -70,8 +68,11 @@ int prg_track_tx(void)
 	int i, ret = -1;
 	for(i = 1; i < PRGMAX; i++){
 		if(g_prg_track[i].stat == 1)
-			ret = (g_prg_track[i].tx * 10 + 5) / 10;//round to second
+			//ret = (g_prg_track[i].tx * 10 + 5) / 10;//round to second
+			ret = ((g_prg_track[i].tx + 9) / 10) * 10;//ceil round to second
 	}
+	//i = 1;
+	//debug(3, "prg %d tx: %d %d \n", i, ret, g_prg_track[i].tx);
 
 	return ret; 
 }

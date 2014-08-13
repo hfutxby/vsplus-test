@@ -41,6 +41,12 @@ int g_ein_exit = 0;
 pthread_t g_tid_aus;
 int g_aus_exit = 0;
 
+pthread_t g_tid_wunsch;
+int g_wunsch_exit = 0;
+int g_wunsch_count = 1;
+
+int g_img_test[SGMAX] = {};//switch signal image
+
 //循环调用VSPLUS()
 int thr_vsplus(void* arg)
 {
@@ -89,8 +95,32 @@ void* thr_aus(void* arg)
 		g_vsplus_ret = -1;
 		us_sleep(1000*1000);
 		//g_vs_para.vsp_soll[0] = VSP_AUS;
+		for(i = 0; i < SGMAX; i++)
+			g_vs_para.sg_mode[i] = 0;
 		for(i = 0; i < GERAET_TEILKNOTEN_MAX; i++)
 			g_vs_para.vsp_soll[i] = VSP_AUS;
+	}
+}
+
+void* thr_wunsch(void* arg)
+{
+	g_wunsch_exit = 0;
+	g_wunsch_count = 0;
+	int i;
+	while(!g_aus_exit){
+		printf("g_vs_para.wb_ready[0]=%d\n", g_vs_para.wb_ready[0]);
+		if(!g_vs_para.wb_ready[0])
+			g_wunsch_count++;
+		else{
+			g_wunsch_count = 0;
+			g_aus_exit = 1;
+			break;
+		}
+		g_vsplus_ret = -1;
+		us_sleep(1000*1000);
+		//g_vs_para.vsp_soll[0] = VSP_AUS;
+		for(i = 0; i < GERAET_TEILKNOTEN_MAX; i++)
+			g_vs_para.vsp_soll[i] = VSP_WUNSCH_AUS_UM;
 	}
 }
 
@@ -117,6 +147,9 @@ void* thr_ein(void* arg)
 				g_vs_para.vsp_soll[i] = VSP_EIN;
 		}
 #else
+		for(i = 0; i < SGMAX; i++)
+			g_vs_para.sg_mode[i] = 0;
+
 		for(i = 0; i < GERAET_TEILKNOTEN_MAX; i++)
 			g_vs_para.vsp_soll[i] = VSP_EIN;
 #endif
@@ -280,6 +313,7 @@ int vs_start(void)
 		g_vs_para.vsp_soll[i] = VSP_NEU;
 	for(i = 0; i < SGMAX; i++)
 		g_vs_para.sg_mode[i] = 0;
+	//g_vs_para.sg_mode[15] = 1;
 	for(i = 0; i < GERAET_TEILKNOTEN_MAX; i++)
 		g_vs_para.wb_ready[i] = 0;
 	ret = VSPLUS(g_vs_para.vsp_soll, g_vs_para.sg_mode, g_vs_para.wb_ready);
@@ -365,119 +399,65 @@ int vs_stop(void)
 	return 0;
 }
 
-#if 0
-typedef struct{
-	int id;
-	int inst;
-}log_oitd;
-
-int log_count = 0;
-
-void title_print(void* arg, FILE* fp, int count)
+int vs_switch(char *img)
 {
-	log_oitd* item = NULL;
-	int cw = 4;//默认列宽3
-	int cl = 12;//默认列长12
-	int line_size = log_count * cw;
-	char *tl = malloc(line_size * cl);
-	memset(tl, ' ', line_size * cl);
-	char *buf = malloc(log_count * cl);
-	memset(buf, 0, log_count * cl);
-
-	int i, j;
-	for(i = 0; i < log_count; i++){
-		item = (arg + i * sizeof(log_oitd));
-		sprintf((buf + i * cl), "%3d.%3d-%4d", (item->id >> 16) & 0xffff, item->id & 0xffff, item->inst);
-	}
-	//printf("%s\n", buf);
-	for(i = 0; i < cl; i++){
-		for(j = 0; j < log_count; j++){
-			*(tl + i * line_size + j * cw) = *(buf + j * cl + i);
-			if(j == log_count -1)
-				*(tl + (i + 1) * line_size - 1) = '\n'; 
-		}
-	}
-	//for(i = 0; i < line_size * cl; i++){
-	//	printf("%c ", *(tl + i));
-	//}
-	fwrite(tl, line_size * cl, 1, fp);
-	fprintf(fp, "\n\n");
-	fflush(fp);
-}
-
-void* thr_log(void* arg)
-{
-	FILE* fp = fopen("log.output", "wb+");
-	if(fp == NULL){
-		printf("fopen log.output error:%s\n", strerror(errno));
-		return;
-	}
-
-	title_print(arg, fp, log_count);
-
-	log_oitd* item = NULL;
-
-	pd_t px;
 	int i, ret;
-	unsigned char py[2];
-	while(!g_exit){
-		for(i = 0; i < log_count; i++){
-			item = arg + i*sizeof(log_oitd);
-			px.id = item->id;
-			px.inst = item->inst;
-			//printf("id:%ld, inst:%d\n", px.id, px.inst);
-			memset(py, 0, sizeof(py));
-			ret = vs_read_process_data(&px, py);
-			if(ret == 0)
-				//fprintf(fp, "%ld.%ld[%d]:%-3d ", (px.id >> 16) & 0xffff, px.id & 0xffff, px.inst, *(unsigned short*)py);
-				fprintf(fp, "%-3d ", *(unsigned short*)py);
-			else
-				fprintf(fp, "#   ");//invalid value
-		}
-		fprintf(fp, "\n");
-		fflush(fp);
-		us_sleep(1000000);
+
+	for(i = 0; i < SGMAX; i++)
+		printf("%d ", img[i]);
+	printf("\n");
+
+#if 1
+	//关闭EIN线程
+	if(g_tid_ein){
+		g_ein_exit = 1;
+		ret = pthread_join(g_tid_ein, NULL);
+		printf("pthread_join(g_tid_ein, NULL):ret=%d\n", ret);
+		g_tid_ein = 0;
 	}
-}
-
-int vs_log(void)
-{
-	int id, inst, ret;
-	pd_t px;
-	unsigned char py[2];
-	int na, nb;
-	int len;
-
-	
-	log_oitd* item = NULL;
-
-	FILE* fp = fopen("log.def", "rb");
-	if(fp == NULL){
-		printf("fopen log.def error:%s\n", strerror(errno));
-		return -1;
+	if(g_tid_vsplus){
+		g_vsplus_exit = 1;
+		ret = pthread_join(g_tid_vsplus, NULL);
+		printf("pthread_join(g_tid_vsplus, NULL):ret=%d\n", ret);
+		g_tid_vsplus = 0;
 	}
-	fseek(fp, 0, SEEK_END);
-	len = ftell(fp);
-	log_count = len / sizeof(log_oitd);
-	printf("file log.def len:%d, items:%d\n", len, log_count);
-	fclose(fp);
-
-	int fd = open("log.def", O_RDWR);
-	if(fd < 0){
-		printf("open log.def error:%s\n", strerror(errno));
-		return -1;
-	}
-	void *ptr;
-	ptr = mmap(NULL, len,  PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
-    if(ptr ==  MAP_FAILED){
-        printf("mmap error:%s\n", strerror(errno));
-		return -1;
-    }
-
-	pthread_t tid_log;
-	pthread_create(&tid_log, NULL, thr_log, ptr);
-}
 #endif
+	sleep(1);
+#if 1
+	//开启WUNSCH线程
+	for(i = 0; i < GERAET_TEILKNOTEN_MAX; i++)
+		g_vs_para.vsp_soll[i] = VSP_WUNSCH_AUS_UM;
+	for(i = 0; i < SGMAX; i++)
+		g_vs_para.sg_mode[i] = img[i];
+
+	g_vsplus_ret = 0;
+	ret = pthread_create(&g_tid_vsplus, NULL, thr_vsplus, NULL);
+	printf("pthread_create(&g_tid_vsplus):ret=%d\n", ret);
+	if(ret != 0){
+		return -1;
+	}
+	ret = pthread_create(&g_tid_aus, NULL, thr_wunsch, NULL);
+	printf("pthread_create(&g_tid_aus):ret=%d\n", ret);
+	if(ret != 0){
+		g_vsplus_exit = 1;
+		pthread_join(g_tid_vsplus, NULL);
+		return -1;
+	}
+#endif
+	while(1){
+		if(g_wunsch_count == 0){//success
+			ret = 0;
+			break;
+		}
+		else if(g_wunsch_count > 30){//overtime
+			ret = -1;
+			break;
+		}
+		usleep(500 * 1000);
+	}
+
+	return ret;
+}
 
 void vs_deinit(void)
 {
