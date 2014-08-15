@@ -49,7 +49,7 @@ int main(int argc, char* argv[])
 
 #if 0
 	char img_off[SGMAX] = {};
-	img_off[1] = 1;
+	//img_off[1] = 1;
 	printf("\nvs_switch()\n");
 	ret = vs_switch(img_off);
 	printf("call vs_switch ret:%d\n", ret);

@@ -45,12 +45,12 @@ void* thr_det_read(void)
 	while(!g_exit_det_read){
 		for(i = 0; i < DETMAX; i++){
 			if(g_det[i] == 1){
-				printf("rising slope:%d\n", i);
+				//printf("rising slope:%d\n", i);
 				tsc_det_op(i, 1);
 				g_det[i] = 0;
 			}
 			else if(g_det[i] == 2){
-				printf("falling slope:%d\n", i);
+				//printf("falling slope:%d\n", i);
 				tsc_det_op(i, 2);
 				g_det[i] = 0;
 			}

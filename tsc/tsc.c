@@ -25,8 +25,10 @@
 void* g_mem[3]; //VSPLUS内部分配用于存储参数
 FILE* g_vcb_file = NULL; //配置参数vcb文件
 FILE* g_vcb_back = NULL; //备份参数vcb文件
+FILE* g_cmd_vcb_file = NULL;
 #define VCB_FILE "para.vcb" //配置参数vcb文件
 #define VCB_BACK "para_bak.vcb" //备份参数vcb文件
+#define CMD_VCB "newcmd.vcb"	//command vcb file
 
 /* 分配存储区  */
 void* tsc_alloc_mem(int size, int id)
@@ -159,6 +161,60 @@ void tsc_close_back(void)
     g_vcb_back = 0;
 }
 
+/* 检查command vcb文件是否存在 */
+int tsc_chk_cmd_vcb(void)
+{
+	if(access(CMD_VCB, F_OK) == 0)
+		return 1;
+	else
+		return 0;
+}
+
+/* 打开command VCB文件 */
+int tsc_open_cmd_vcb(void)
+{
+	if(g_cmd_vcb_file != NULL){
+		debug(2, "cmd vcb file already opened\n");
+		return 1;
+	}
+	else{
+		g_cmd_vcb_file = fopen(CMD_VCB, "rb");
+		if(g_cmd_vcb_file == NULL){
+			debug(1, "%s\n", strerror(errno));
+			return 0;
+		}
+		return 1;
+	}
+}
+
+/* 关闭command VCB文件 */
+void tsc_close_cmd_vcb(void)
+{
+	if(g_cmd_vcb_file == NULL){
+		debug(2, "cmd vcb file not opened\n");
+		return;
+	}
+	else{
+		if(fclose(g_cmd_vcb_file) != 0){
+			debug(1, "%s\n", strerror(errno));
+		}
+		//remove(CMD_VCB);
+		rename(CMD_VCB, "oldcmd.vcb");
+		g_cmd_vcb_file = NULL;
+	}
+}
+
+/* 读配置command VCB数据 */
+int tsc_read_cmd_vcb(char *data, int size)
+{
+	if(g_cmd_vcb_file == NULL){
+		debug(1, "cmd vcb file not opened\n");
+		return -1;
+	}
+	memset(data, 0, size);
+	return fread(data, 1, size, g_cmd_vcb_file);
+
+}
 /****************** 定时器 ***************************/
 static int g_timer[MAXTIMER];//最低位做开关标志
 pthread_t g_tid_timer;//定时器计时线程
@@ -349,7 +405,7 @@ int tsc_prog_tu(void)
  */
 int tsc_prog_src(void)
 {
-	return 0;
+	return 1;
 }
 
 /* FIXME
@@ -449,7 +505,7 @@ void update_det(void)
 void tsc_det_op(int index, int op)
 {
 	debug(3, "==>\n");
-	debug(2, "==>index:%d, op:%d\n", index, op);
+	//debug(2, "==>index:%d, op:%d\n", index, op);
 	pthread_mutex_lock(&mutex_det);
 	if(op == 1){
 		g_det[index].sum_rising++;
@@ -466,7 +522,7 @@ void tsc_det_op(int index, int op)
 #if USE_INI
 	drv_add_det(index, (op == 1) ? 1 : 0);
 #endif/* USE_INI */
-	debug(2, "<==\n");
+	//debug(2, "<==\n");
 }
 
 /* 定时更新检测器数据 */
@@ -717,8 +773,10 @@ void* thr_sg(void* arg)
 					break;
 
 				case 2://close操作中
-					//drv_sg_switch(i, 1);//切换为amber
-					drv_sg_switch(i, 7);//切换为green_blink
+					if(g_sg[i].green_blink)
+						drv_sg_switch(i, 7);//切换为green_blink
+					else
+						drv_sg_switch(i, 1);
 					g_sg[i].ext = 0;
 					break;
 
@@ -803,7 +861,7 @@ int init_tsc_sg(void)
 	int i;
 	for(i = 0; i < SGMAX; i++){
 		if(g_sg[i].exist)
-			drv_sg_switch(i, 1);//FIXME:amber
+			drv_sg_switch(i, 2);//FIXME:amber
 	}
 	pthread_create(&g_tid_sg, NULL, thr_sg, NULL);
 	debug(3, "<==\n");

@@ -42,12 +42,12 @@ void set_det(void)
 {
     int index, op;
     while(1){
-        printf("input det num (1-45): ");
+        printf("input det num ");
         scanf("%d", &index);
-        if((index <= 0) || (index > 45)){
-            printf("input num exceed\n");
-            continue;
-        }
+        //if((index <= 0) || (index > 45)){
+        //    printf("input num exceed\n");
+        //    continue;
+        //}
         printf("select op type: 1 = set a rising slope, 2 = set a falling slope\n");
         scanf("%d", &op);
         if((op != 1) && (op != 2)){
@@ -58,7 +58,7 @@ void set_det(void)
     }
 }
 
-void set_det_auto(void)
+void set_det_auto(int t)
 {
 	int index, op;
 	struct timeval tv;
@@ -78,7 +78,7 @@ void set_det_auto(void)
 	
 		printf("index:%d op:%d\n", index, op);
 		g_det[index] = op + 1;
-		usleep(200*1000);
+		usleep(1000 * 1000 / t);
 	}
 }
 
@@ -86,10 +86,16 @@ int main(int argc, char* argv[])
 {
 	open_det();
 
+	int t = 0;
+	if(argc == 2)
+		t = atoi(argv[1]);
+	else
+		t = 1;
+
 	if(argc == 1)
 		set_det();	
 	else
-		set_det_auto();
+		set_det_auto(t);
 
 	close_det();
 

@@ -68,12 +68,15 @@ int thr_vsplus(void* arg)
 				printf("%s(%d):call VSPLUS() fail, ret=%d\n", __func__, __LINE__, ret);
 				return -1;
 			}
-#if USE_INI
-		drv_add_ap();
-#endif
 			gettimeofday(&tv2, NULL);
 			printf("time use: %ldus\n", (tv2.tv_sec - tv1.tv_sec)*1000*1000 + (tv2.tv_usec - tv1.tv_usec));
 			printf("VSPLUS(%d):ret=%d\n", g_vs_para.vsp_soll[0], ret);
+#if USE_INI
+			//gettimeofday(&tv1, NULL);
+			drv_add_ap();
+			//gettimeofday(&tv2, NULL);
+			//debug(1, "drv_add_ap use: %ldus\n", (tv2.tv_sec - tv1.tv_sec)*1000*1000 + (tv2.tv_usec - tv1.tv_usec));
+#endif
 			//if(ret == 1){
 			//    printf("%s(%d):call VSPLUS(NEU_EIN) success, ret=%d\n", __func__, __LINE__, ret);
 			//}

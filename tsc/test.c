@@ -106,9 +106,30 @@ int test_ring(void)
 	free_ring(r);
 	return 0;
 }
+
+int test_strlen(void)
+{
+	int inc = 128;
+	int size = 0;
+	char *str = malloc(inc);
+	size = inc;
+	sprintf(str, "hello world\r\n");
+	printf("strlen:%d\n", strlen(str));
+
+	char* ptr = malloc(size+inc);
+	size += inc;
+	memset(ptr, 0, size);
+	memcpy(ptr, str, strlen(str));
+	free(str);
+	str = ptr;
+	
+
+	return 0;
+}
+
 int main(void)
 {
-	test_ring();
+	test_strlen();
 
 	return 0;
 }

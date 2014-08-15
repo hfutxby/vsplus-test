@@ -778,29 +778,33 @@ void Schliessen_Sichern_Parameter(void)
 	tsc_close_back();
 }
 
-//FIXME
 //Open command file
 int Oeffnen_VSP_Befehle(void)
 {
-printf("%s(%d)\n", __func__, __LINE__);
-return 0;
+	int ret = tsc_open_cmd_vcb();
+	debug(3, "ret:%d\n", ret);
+
+	return ret;
 }
 
 //Read command file
 int Lesen_VSP_Befehle(char* data, int _sizeof)
 {
-printf("%s(%d)\n", __func__, __LINE__);
-return 0;
+	int ret = tsc_read_cmd_vcb(data, _sizeof);
+	debug(3, "ret:%d\n", ret);
+
+	return ret;
 }
 
 //Close command file
 void Schliessen_VSP_Befehle(void)
 {
-printf("%s(%d)\n", __func__, __LINE__);
-return ;
+	int ret = tsc_close_cmd_vcb();
+	debug(3, "ret:%d\n", ret);
+
+	return;
 }
 
-//FIXME
 /* This function returns the value to the controller 
  * how PT on / off is set.
  * return value: 1 = PT off 2 = PT on
@@ -898,9 +902,13 @@ int Wunsch_VSPLUS(int Wunsch, int Teiknoten)
 	return ret;
 }
 
+/* VS-PLUS checks whether a new command file is available from the controller
+ * return value: 	1 = new command file is present 
+ * 					0 = no file present 
+ */
 int Neue_Befehle(void)
 {
-	int ret = 0;
+	int ret = tsc_chk_cmd_vcb();
 	debug(3, "ret:%d\n", ret);
 	return ret;
 }

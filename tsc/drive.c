@@ -44,11 +44,10 @@ void drv_sg_switch(int sg, int stat)
 	msg[0] = 0x96; msg[3] = 0x69;
 	msg[1] = drv_sg_code(sg);
 	msg[2] = drv_sg_stat_code(stat);
-	
 	serial_command(msg, 4);//通过串口切换信号灯
 	sg_track_switch(sg, stat);//记录信号灯状态信息	
 #if USE_INI
-		drv_add_sg(sg, stat);
+	drv_add_sg(sg, stat);
 #endif/* USE_INI */
 }
 
@@ -216,12 +215,12 @@ int drv_add_det(int det, int value)
 			if(mkdir("log", 0777) == -1)
 				perror("mkdir log");
 		}
-		if(access("log/det", F_OK) == -1){
-			if(mkdir("log/det", 0777) == -1)
-				perror("mkdir log/det");
-		}
+		//if(access("log/det", F_OK) == -1){
+		//	if(mkdir("log/det", 0777) == -1)
+		//		perror("mkdir log/det");
+		//}
 		g_dir_det = 0;
-		g_size_det = 1024;
+		g_size_det = 512;
 		g_space_det = g_size_det;
 		ptr_det = malloc(g_size_det);//首次分配空间,FIXME:泄露风险
 		memset(ptr_det, 0, g_size_det);
@@ -236,7 +235,7 @@ int drv_add_det(int det, int value)
 	if(g_tv_det.tv_sec != tv.tv_sec){
 		if(g_tv_det.tv_sec != 0){//保存文件
 			memset(str, 0, sizeof(str));
-			sprintf(str, "log/det/%d_%04d%02d%02d%02d%02d%02d.ini", vcb_FNr, t->tm_year+1900, 
+			sprintf(str, "log/%d_%04d%02d%02d%02d%02d%02d_det.ini", vcb_FNr, t->tm_year+1900, 
 					t->tm_mon+1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);
 			FILE* fp = fopen(str, "wb");
 			if(fp == NULL){
@@ -253,13 +252,14 @@ int drv_add_det(int det, int value)
 	}
 
 	memset(str, 0, sizeof(str));
-	int diff = (tv.tv_usec/1000 - g_tv_det.tv_usec/1000);
+	int diff = (tv.tv_usec/100000 - g_tv_det.tv_usec/100000)*100;
 	sprintf(str, "[%d_D_%d %d]\r\n", vcb_FNr, det, diff);
 	sprintf(str+strlen(str), "Value=%d\r\n", value);
 	sprintf(str+strlen(str), "Time=%04d%02d%02d%02d%02d%02d%03ld\r\n", t->tm_year+1900, 
-        t->tm_mon+1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec, tv.tv_usec/1000);
+        t->tm_mon+1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec, (tv.tv_usec/1000)*100);
 
 	if(g_space_det < strlen(str)){//扩展存储区
+debug(1, "g_space_det:%d, strlen:%d\n", g_space_det, strlen(str));
 		char* ptr = malloc(g_size_det+1024);
 		memset(ptr, 0, g_size_det+1024);
 		memcpy(ptr, ptr_det, strlen(ptr_det));
@@ -292,16 +292,19 @@ void free_sg(void)
 
 int drv_add_sg(int sg, int stat)
 {
+	struct timeval tv;
+	gettimeofday(&tv, NULL);
+
 	//首次确认目录存在
 	if(g_dir_sg){
 		if(access("log", F_OK) == -1){
 			if(mkdir("log", 0777) == -1)
 				perror("mkdir log");
 		}
-		if(access("log/sg", F_OK) == -1){
-			if(mkdir("log/sg", 0777) == -1)
-				perror("mkdir log/sg");
-		}
+		//if(access("log/sg", F_OK) == -1){
+		//	if(mkdir("log/sg", 0777) == -1)
+		//		perror("mkdir log/sg");
+		//}
 		g_dir_sg = 0;
 		g_size_sg = 1024;
 		g_space_sg = g_size_sg;
@@ -309,7 +312,7 @@ int drv_add_sg(int sg, int stat)
 		memset(ptr_sg, 0, g_size_sg);
 	}
 
-	//ext read, ext green实际没有产生灯色变化
+	//ext red, ext green实际没有产生灯色变化
 	if((stat == 3) || (stat == 6))
 		return 0;
 
@@ -323,7 +326,7 @@ int drv_add_sg(int sg, int stat)
 			value = 0b00001100;//12
 			break;
 		case 2://min red
-			value = 0b00000011;//2
+			value = 0b00000011;//3
 			break;
 		case 4://prep
 			value = 0b00001111;//15
@@ -337,15 +340,13 @@ int drv_add_sg(int sg, int stat)
 	}
 
 	char str[256] = {};
-	struct timeval tv;
-	gettimeofday(&tv, NULL);
 	time_t tt = tv.tv_sec;
     struct tm *t = localtime(&tt);
 
 	if(g_tv_sg.tv_sec != tv.tv_sec){
 		if(g_tv_sg.tv_sec != 0){//保存文件
 			memset(str, 0, sizeof(str));
-			sprintf(str, "log/sg/%d_%04d%02d%02d%02d%02d%02d.ini", vcb_FNr, t->tm_year+1900, 
+			sprintf(str, "log/%d_%04d%02d%02d%02d%02d%02d_sg.ini", vcb_FNr, t->tm_year+1900, 
 					t->tm_mon+1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);
 			FILE* fp = fopen(str, "wb");
 			if(fp == NULL){
@@ -362,11 +363,11 @@ int drv_add_sg(int sg, int stat)
 	}
 
 	memset(str, 0, sizeof(str));
-	int diff = (tv.tv_usec/1000 - g_tv_sg.tv_usec/1000);
+	int diff = (tv.tv_usec/100000 - g_tv_sg.tv_usec/100000) * 100;//100ms
 	sprintf(str, "[%d_S_%d %d]\r\n", vcb_FNr, sg, diff);
 	sprintf(str+strlen(str), "Value=%d\r\n", value);
 	sprintf(str+strlen(str), "Time=%04d%02d%02d%02d%02d%02d%03ld\r\n", t->tm_year+1900, 
-        t->tm_mon+1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec, tv.tv_usec/1000);
+        t->tm_mon+1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec, (tv.tv_usec / 100000)*100);
 
 	if(g_space_sg < strlen(str)){//扩展存储区
 		char* ptr = malloc(g_size_sg+1024);
@@ -378,11 +379,14 @@ int drv_add_sg(int sg, int stat)
 		g_size_sg += 1024;
 		g_space_sg += 1024;
 	}	
+	//if((sg == 7) && ((stat == 7) || (stat == 2)))
+	//	debug(1, "%s", str);
 	strcat(ptr_sg, str);
 	g_space_sg -= strlen(str);
 	return 0;
 }
 
+#if 1
 //打印ap
 typedef struct {
     long id;
@@ -391,117 +395,130 @@ typedef struct {
     unsigned char ErgLaenge;
 }pd_t;
 
-static int g_dir_ap = 1; //首次调用标志
-static pd_t *ptr_pd = NULL;//所有可供调用ap
-static int ptr_pd_size = 0;//所有可供调用ap数量
-static int g_ap_def[120] = {};//实际需要打印的ap
-static int g_ap_def_num = 0;//实际需要的打印的ap数量
-static int g_ap_def_inst = 0;//实际需要打印的inst数量
-static char* ptr_ap = NULL;//写入文件前的数据
-static int g_size_ap = 0;
-static int g_space_ap = 0;
+typedef struct {
+    long id;
+    unsigned short inst;
+    unsigned short val;
+}ap_t;
 
-static struct timeval g_tv_ap = {};
+static int g_dir_ap = 1; //首次调用时检查日志目录是否存在
+ap_t* g_ptr_ap_all = NULL; //所有使用vs_read_process_data()可能获得的ap
+static int g_ap_all_num = 0;
+ap_t* g_ptr_ap_def = NULL; //需要检查的ap
+static int g_ap_def_num = 0;
+static int g_ap_def_inst = 0;
+static char* g_ptr_ap_diff = NULL; //输出变化ap的ini记录
+static int g_ap_diff_size = 0; 
+static struct timeval g_tv = {}; //
 
-void free_ap(void)
-{
-	if(ptr_pd != NULL){
-		free(ptr_pd);
-		ptr_pd = NULL;
-	}
-	if(ptr_ap != NULL){
-		free(ptr_ap);
-		ptr_ap = NULL;
-	}
-}
+#define INC_SIZE 4096 //动态内存增加
 
 int getid(char* line)
 {
-	int a, b, i;
-	int size = strlen(line);
-	a = atoi(line);
-	for(i = 0; i < size; i++){
-		if(line[i] == '.')
-			break;
-	}
-	if(i != (size-1))
-		b = atoi(line+i+1);
-	else
-		b = 0;
+    int a, b, i;
+    int size = strlen(line);
+    a = atoi(line);
+    for(i = 0; i < size; i++){
+        if(line[i] == '.')
+            break;
+    }
+    if(i != (size-1))
+        b = atoi(line+i+1);
+    else
+        b = 0;
 
-	return a << 16 | b;
+    return a << 16 | b;
 }
 
-int getinst(char* line)
+int getinst(int id)
 {
-	int i;
-	int id = getid(line);
-	int num = ptr_pd_size / sizeof(pd_t);
-	for(i = 0; i < num; i++){
-		if(ptr_pd[i].id == id)
-			return ptr_pd[i].inst;
-	}
+    int i;
+    for(i = 0; i < g_ap_all_num; i++){
+        if(g_ptr_ap_all[i].id == id)
+            return g_ptr_ap_all[i].inst;
+    }
 
-	return 0;
-}
-
-int getinst2(int id)
-{
-	int i;
-	int num = ptr_pd_size / sizeof(pd_t);
-	for(i = 0; i < num; i++){
-		if(ptr_pd[i].id == id)
-			return ptr_pd[i].inst;
-	}
-
-	return 0;
+    return 0;
 }
 
 int drv_add_ap(void)
 {
+	int i, j, ret;
 	//确认目录存在
 	if(g_dir_ap){
 		g_dir_ap = 0;
 		if(access("log", F_OK) == -1){
 			mkdir("log", 0777);
 		}
-		if(access("log/ap", F_OK) == -1){
-			mkdir("log/ap", 0777);
-		}
-		//所有存在的ap
+		//所有可能存在的ap
 		FILE* fp = fopen("ap.dat", "wb");
-		int ret = vs_read_process_data(NULL, fp);
-		ptr_pd_size = ftell(fp);
+		ret = vs_read_process_data(NULL, fp);
+		int file_size = ftell(fp);
+		g_ap_all_num = file_size / sizeof(pd_t);
 		fclose(fp);
-
-		ptr_pd = malloc(ptr_pd_size);
-		memset(ptr_pd, 0, ptr_pd_size);
 		fp = fopen("ap.dat", "rb");
-		fread(ptr_pd, ptr_pd_size, 1, fp);
+		g_ptr_ap_all = (pd_t*)malloc(file_size);
+		ret = fread(g_ptr_ap_all, 1, file_size, fp);
 		fclose(fp);
+		//remove("ap.dat");
+		//for(i = 0; i < 16; i++)//TEST
+		//	printf("0x%x ", *((char*)(g_ptr_ap_all) + i));
+		//printf("\n");
 
-		//需要打印的ap
+		//分配存储ap值的内存区域
 		fp = fopen("ap.def", "rb");
 		if(fp == NULL){
-			printf("open file ap.def error\n");
-			//g_ap_def_num = 1;//默认
-			//g_ap_def[0] = (57 << 16) | 0;
+			debug(1, "open file ap.def error\n");
 		}
 		char *line = NULL;
-		int size, n, i = 0;
+		int size, n;
+		int inst, id;
 		while((size = getline(&line, &n, fp)) != -1){
-			g_ap_def[i] = getid(line);
 			g_ap_def_num++;
-			g_ap_def_inst += getinst(line);
-			i++;
+			id = getid(line);
+			g_ap_def_inst += getinst(id);
 		}
 		fclose(fp);
-		g_size_ap = g_ap_def_inst * 64;
-		g_space_ap = g_size_ap;
-		ptr_ap = malloc(g_size_ap);//初次分配空间
-		memset(ptr_ap, 0, g_size_ap);
-	}
+		//debug(1, "ap.def, ap_num:%d, ap_inst:%d\n", g_ap_def_num, g_ap_def_inst);//TEST
 
+		size = g_ap_def_inst * sizeof(ap_t);
+		g_ptr_ap_def = (ap_t*)malloc(size);
+		memset(g_ptr_ap_def, 0, size);
+
+		fp = fopen("ap.def", "rb");
+		if(fp == NULL){
+			debug(1, "open file ap.def error\n");
+		}
+		i = 0;
+		while((size = getline(&line, &n, fp)) != -1){
+			id = getid(line);
+			inst = getinst(id);
+			//debug(1, "%s, id:%d, inst:%d", line, id, inst);
+			for(j = 1; j <= inst; j++){
+				g_ptr_ap_def[i].id = id;
+				g_ptr_ap_def[i].inst = j;
+				g_ptr_ap_def[i].val = 0;
+				i++;
+			}
+		}
+		fclose(fp);
+		//for(i = 0; i < 3; i++){//TEST
+		//	debug(1, "id:%ld.%ld inst:%d val:%d\n", g_ptr_ap_def[i].id >> 16 & 0xffff, g_ptr_ap_def[i].id & 0xffff, g_ptr_ap_def[i].inst, g_ptr_ap_def[i].val);
+		//}
+		//分配ini数据临时存储区
+		g_ap_diff_size = g_ap_def_inst * 64;//FIXME:应该足够大不会溢出
+		//g_ap_diff_size = INC_SIZE;//FIXME:应该足够大不会溢出
+		g_ptr_ap_diff = (unsigned char*)malloc(g_ap_diff_size);
+		if(g_ptr_ap_diff == NULL){
+			debug(1, "malloc fail\n");
+		}
+		memset(g_ptr_ap_diff, 0, g_ap_diff_size);
+
+		if(g_ptr_ap_all != NULL){
+			free(g_ptr_ap_all);
+			g_ptr_ap_all = NULL;
+		}
+	}
 
 	char str[256] = {};
 	struct timeval tv;
@@ -509,63 +526,62 @@ int drv_add_ap(void)
 	time_t tt = tv.tv_sec;
 	struct tm *t = localtime(&tt);
 
-	if(g_tv_ap.tv_sec != tv.tv_sec){
-		if(g_tv_ap.tv_sec != 0){//保存文件
-			memset(str, 0, sizeof(str));
-			sprintf(str, "log/ap/%d_%04d%02d%02d%02d%02d%02d.ini", vcb_FNr, t->tm_year+1900, 
-					t->tm_mon+1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);
-			FILE* fp = fopen(str, "wb");
-			if(fp == NULL){
-				debug(1, "open file %s error\n", str);
-				return -1;
+	//进入新的1s时区，保存前1s数据到文件
+	if(g_tv.tv_sec != tv.tv_sec){
+		if(g_tv.tv_sec != 0){//首次无数据
+			int size = strlen((unsigned char*)g_ptr_ap_diff);
+			if(size){
+				memset(str, 0, sizeof(str));
+				sprintf(str, "log/%d_%04d%02d%02d%02d%02d%02d_ap.ini", vcb_FNr, t->tm_year+1900, 
+						t->tm_mon+1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);
+				FILE* fp = fopen(str, "wb");
+				if(fp == NULL){
+					debug(1, "open file %s error\n", str);
+					return -1;
+				}
+				fwrite((unsigned char*)g_ptr_ap_diff, 1, strlen((unsigned char*)g_ptr_ap_diff), fp);
+				fclose(fp);
+				memset(g_ptr_ap_diff, 0, g_ap_def_inst * sizeof(ap_t));
 			}
-			fwrite(ptr_ap, g_size_ap - g_space_ap, 1, fp);
-			fclose(fp);
-			memset(ptr_ap, 0, g_size_ap);
-			g_space_ap = g_size_ap;
 		}
-		g_tv_ap.tv_sec = tv.tv_sec;
-		g_tv_ap.tv_usec = tv.tv_usec;
+		g_tv.tv_sec = tv.tv_sec;
+		g_tv.tv_usec = tv.tv_usec;
 	}
 
-	int diff = (tv.tv_usec/1000 - g_tv_ap.tv_usec/1000);
-	int i, j;
+	int diff = (tv.tv_usec/100000 - g_tv.tv_usec/100000)*100;
 	pd_t px;
 	unsigned short py;
-	for(i = 0; i < g_ap_def_num; i++){
-		int inst = getinst2(g_ap_def[i]);
-		for(j = 1; j <= inst; j++){
-			memset(str, 0, sizeof(str));
-			px.id = g_ap_def[i];
-			px.inst = j;
-			py = 0;
-			vs_read_process_data(&px, &py);//
-			sprintf(str, "[%d_%d.%d_%d %d]\r\n", vcb_FNr, g_ap_def[i] >> 16 & 0xffff, 
-					g_ap_def[i] & 0xffff, j, diff);
+	for(i = 0; i < g_ap_def_inst; i++){
+		memset(str, 0, sizeof(str));
+		py = 0;
+		px.id = g_ptr_ap_def[i].id;
+		px.inst = g_ptr_ap_def[i].inst;
+		//debug(1, "ap:%ld.%ld, inst:%d\n", (px.id >> 16) & 0xffff, px.id & 0xffff, px.inst);//TEST
+		vs_read_process_data(&px, &py);
+		if(py != g_ptr_ap_def[i].val){//检查ap值并打印ini记录
+			g_ptr_ap_def[i].val = py;
+			sprintf(str, "[%d_%ld.%ld_%d %d]\r\n", vcb_FNr, (px.id >> 16) & 0xffff,
+					px.id & 0xffff, px.inst, diff);
 			sprintf(str+strlen(str), "Value=%d\r\n", py);
-			sprintf(str+strlen(str), "Time=%04d%02d%02d%02d%02d%02d%03ld\r\n", t->tm_year+1900, 
-					t->tm_mon+1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec, tv.tv_usec/1000);
-
-			if(g_space_ap < strlen(str)){//扩展存储区
-				char* ptr = malloc(g_size_ap+1024);
-				memset(ptr, 0, g_size_ap+1024);
-				memcpy(ptr, ptr_ap, strlen(ptr_ap));
-				free(ptr_ap);
-				ptr_ap = ptr;
-				ptr = NULL;
-				g_size_ap += 1024;
-				g_space_ap += 1024;
-			}	
-			strcat(ptr_ap, str);
-			g_space_ap -= strlen(str);
+			sprintf(str+strlen(str), "Time=%04d%02d%02d%02d%02d%02d%03ld\r\n", t->tm_year+1900,
+					t->tm_mon+1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec, (tv.tv_usec/1000)*100);
 		}
+
+		if(g_ap_diff_size - strlen(g_ptr_ap_diff) < strlen(str)){//扩展存储区
+			debug(1, "===================mem overflow\n");//FIXME:为什么会出错?
+			int len = strlen(g_ptr_ap_diff);
+			g_ap_diff_size += INC_SIZE;
+			g_ptr_ap_diff = (char*)realloc(g_ptr_ap_diff, g_ap_diff_size);
+			if(g_ptr_ap_diff == NULL){
+				debug(1, "call realloc fail\n");
+			}
+			memset(g_ptr_ap_diff + len, 0, g_ap_diff_size - len);
+		}
+
+		strcat((unsigned char*)g_ptr_ap_diff, str);
 	}
+
 	return 0;
 }
+#endif
 
-void free_all(void)
-{
-	free_det();
-	free_sg();
-	free_ap();
-}
