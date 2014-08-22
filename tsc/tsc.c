@@ -310,7 +310,7 @@ int init_timers(void)
 
 	ret = pthread_create(&g_tid_timer, NULL, thr_timer, NULL);
 	if(ret != 0){
-		debug(1, "pthread_create error: %s\n", __func__, __LINE__, strerror(errno));
+		debug(1, "pthread_create error: %s\n", strerror(errno));
 		return -1;
 	}
 
@@ -836,13 +836,23 @@ void* thr_sg(void* arg)
 /* 打开信号灯，红->绿 */
 void tsc_sg_open(int sg)
 {
-	g_sg[sg].ext = 1;
+	//g_sg[sg].ext = 1;
+
+	if(g_sg[sg].prep)
+		drv_sg_switch(sg, 4);//切换为prep
+	else
+		drv_sg_switch(sg, 5);//prep=0
 }
  
 /* 关闭信号灯，绿->红 */
 void tsc_sg_close(int sg)
 {
-	g_sg[sg].ext = 2;
+	//g_sg[sg].ext = 2;
+
+	if(g_sg[sg].green_blink)
+		drv_sg_switch(sg, 7);//切换为green_blink
+	else
+		drv_sg_switch(sg, 1);
 }
 
 int init_tsc_sg(void)
@@ -863,7 +873,7 @@ int init_tsc_sg(void)
 		if(g_sg[i].exist)
 			drv_sg_switch(i, 2);//FIXME:amber
 	}
-	pthread_create(&g_tid_sg, NULL, thr_sg, NULL);
+	//pthread_create(&g_tid_sg, NULL, thr_sg, NULL);
 	debug(3, "<==\n");
 
 	return ret;
@@ -871,10 +881,15 @@ int init_tsc_sg(void)
 
 void deinit_tsc_sg(void)
 {
-	g_exit_sg = 1;
-	if(g_tid_sg)
-		pthread_join(g_tid_sg, NULL);
-	free(g_sg);
+	//g_exit_sg = 1;
+	//if(g_tid_sg)
+	//	pthread_join(g_tid_sg, NULL);
+
+	if(g_sg != NULL){
+		free(g_sg);
+		g_sg = NULL;
+	}
+
 	debug(2, "<==\n");
 }
 

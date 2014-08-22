@@ -630,8 +630,8 @@ void Meldung(short int degree, short int nr, short int par1, short int par2, sho
 
 void  MeldungNET(short int degree, unsigned char nr, unsigned short Anr, unsigned char par1, unsigned char par2, unsigned char par3, unsigned char par4, unsigned char par5)
 {
-	//debug(3, "degree:%d, nr:%d, Anr:%d, par1-5:%d,%d,%d,%d\n", degree, nr, Anr, par1, par2, par3, par4, par5);
-	printf("%s(%d):degree:%d, nr:%d, Anr:%d, par1-5:%d,%d,%d,%d\n", __func__, __LINE__, degree, nr, Anr, par1, par2, par3, par4, par5);
+	//debug(3, "degree:%d, nr:%d, Anr:%d, par1-5:%d,%d,%d,%d,%d\n", degree, nr, Anr, par1, par2, par3, par4, par5);
+	printf("%s(%d):degree:%d, nr:%d, Anr:%d, par1-5:%d,%d,%d,%d,%d\n", __func__, __LINE__, degree, nr, Anr, par1, par2, par3, par4, par5);
 }
 
 /* VS-PLUS tells the controller the number of the traffic 
