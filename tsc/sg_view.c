@@ -83,10 +83,10 @@ int main(void)
 	open_sg();
 	int i;
 	printf("SGMAX:%d\n", SGMAX);
-	int num = sizeof(vcb_sg_exist)/sizeof(int);
+	int num = MAX_SIG_GROUP;//sizeof(vcb_sg_exist)/sizeof(int);
 	while(1){
 		for(i = 0; i < num; i++){
-			if(!vcb_sg_exist[i])
+			if(g_sg[i].fault == 2)
 				continue;
 			printf("[%2d]", i);
 			print_signal(g_sg[i].stat, g_sg[i].time);

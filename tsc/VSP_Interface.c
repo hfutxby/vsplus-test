@@ -178,7 +178,7 @@ short int Umlaufzeit(void)
 	return ret;
 }
 
-/* returns the program number source (who has sent current valid program
+/* FIXME:returns the program number source (who has sent current valid program
  * switch command
  * return:	1 = program number comes from central;
  *			0 = comes locally from controller
@@ -363,7 +363,7 @@ short int u_gelb(short int sg)
  */
 void SG_ein(short int sg)
 {
-	debug(2, "sg:%d\n", sg);
+	debug(3, "sg:%d\n", sg);
 	tsc_sg_open(sg);
 }
 
@@ -371,11 +371,11 @@ void SG_ein(short int sg)
  */
 void SG_aus(short int sg)
 {
-	debug(2, "sg:%d\n", sg);
+	debug(3, "sg:%d\n", sg);
 	tsc_sg_close(sg);
 }
 
-/* command for switching a non-supervised output to "on"
+/* FIXME:command for switching a non-supervised output to "on"
  * return: none
  * sg: output channel number
  */
@@ -385,7 +385,7 @@ void Relais_ein(short int sg)
 	tsc_digital_on(sg);
 }
 
-/* command for switching a non-supervised output to "off"
+/* FIXME:command for switching a non-supervised output to "off"
  * return: none
  * sg: output channel number
  */
@@ -395,7 +395,7 @@ void Relais_aus(short int sg)
 	tsc_digital_off(sg);
 }
 
-/* command for switching a non-supervised blinker output(blinking digital
+/* FIXME:command for switching a non-supervised blinker output(blinking digital
  * output) to "on"
  * return: none
  * sg: output channel number
@@ -406,7 +406,7 @@ void Blinker_ein(short int sg)
 	tsc_digital_blink_on(sg);
 }
 
-/* command for switching a non-supervised blinker output(blinking digital
+/* FIXME:command for switching a non-supervised blinker output(blinking digital
  * output) to "off"
  * return: none
  * sg: output channel number
@@ -430,7 +430,7 @@ short int s_rot(short int sg)
 	return ret;
 }
 
-/* enables vsplus to check if a digital output is switched off
+/* FIXME:enables vsplus to check if a digital output is switched off
  * return:	1 = off, 0 = not off
  * re: output channel number
  */
@@ -441,7 +441,7 @@ short int s_sr_aus(short int re)
 	return ret;
 }
 
-/* enables vsplus to check if a digital blinker output is switched off
+/* FIXME:enables vsplus to check if a digital blinker output is switched off
  * return:  1 = off, 0 = not off
  * re: output channel number
  */
@@ -485,7 +485,7 @@ short int s_grun(short int sg)
 	return ret;
 }
 
-/* to check if a digital output is switched on
+/* FIXME:to check if a digital output is switched on
  */
 short int s_sr_ein(short int re)
 {
@@ -494,7 +494,7 @@ short int s_sr_ein(short int re)
 	return ret;
 }
 
-/* to check if a digital blinker output is switched on
+/* FIXME:to check if a digital blinker output is switched on
  */
 short int s_sb_ein(short int bli)
 {
@@ -523,7 +523,7 @@ short int s_vor(short int sg)
 	return ret;
 }
 
-/* indicates if the signal group is in fault blinking mode
+/* FIXME:indicates if the signal group is in fault blinking mode
  */
 short int s_stoeblink(short int sg)
 {
@@ -619,7 +619,6 @@ short s_zwi_zeit(short sgR, short sgE)
 	short int ret = tsc_inter_green(sgR, sgE);
 	debug(3, "sgR:%d, sgE:%d, ret:%d\n", sgR, sgE, ret);
 	return ret;
-//return 32767;      /* Nicht Feindlich                */
 }
 
 void Meldung(short int degree, short int nr, short int par1, short int par2, short int par3, short int par4)
@@ -646,7 +645,7 @@ void U_Kontrolle(short int vs, short int zeit)
 	tsc_stream_waiting(vs, zeit);
 }
 
-/* VS-PLUS reads the serial PT telegrams that have been
+/* FIXME:VS-PLUS reads the serial PT telegrams that have been
  * received by the controller.
  * oev_tele_poi:   pointe on a telegram
  */
@@ -805,27 +804,24 @@ void Schliessen_VSP_Befehle(void)
 	return;
 }
 
-/* This function returns the value to the controller 
+/* FIXME:This function returns the value to the controller 
  * how PT on / off is set.
- * return value: 1 = PT off 2 = PT on
+ * return value: 0 = PT not set 1 = PT off 2 = PT on
  */
 int OePNV_Ein_Aus(void)
 {
 	int ret = 0;//PT not set
-	//int ret = 1;//PT off
 	debug(3, "ret:%d\n", ret);
 	return ret;
 }
 
-//FIXME:
-/*This function returns the value to the controller how 
+/* FIXME:This function returns the value to the controller how 
  * IT on / off is set.
- * return value: 1 = IT off 2 = IT on
+ * return value: 0 = IT not set 1 = IT off 2 = IT on
  */
 int IV_Ein_Aus(void)
 {
 	int ret = 0;//IT not set
-	//int ret = 1;//IT off
 	debug(3, "ret:%d\n", ret);
 	return ret;
 }
@@ -880,7 +876,7 @@ int AktuellesDatum(int* Jahr, int* Monat, int* Tag, int* Wochentag)
 	return ret;
 }
 
-/* FIXME:Returns the OCIT Outstations node identification
+/* Returns the OCIT Outstations node identification
  * return value:  1 = id is set; 0 = not set
  *  ZNr:   area number
  * FNr:  controller number
@@ -889,15 +885,17 @@ int AktuellesDatum(int* Jahr, int* Monat, int* Tag, int* Wochentag)
 int Get_OCITOutstationId(int* ZNr, int* FNr, int* Realknoten)
 {
 	int ret = 1;
-	//*ZNr = 1; *FNr = 339; *Realknoten = 1;
 	ret = drv_get_ocitid(ZNr, FNr, Realknoten);
 	debug(3, "ZNr:%d, FNr:%d, Realknoten:%d, ret:%d\n", *ZNr, *FNr, *Realknoten, ret);
 	return ret;
 }
 
+/* FIXME:Through this function VS-PLUS can ask the controller 
+ * to be switched in a different mode.
+ */
 int Wunsch_VSPLUS(int Wunsch, int Teiknoten)
 {
-	int ret = 0;//FIXME
+	int ret = 0;
 	debug(2, "Wunsch:%d, Teiknoten:%d, ret:%d\n", Wunsch, Teiknoten, ret);
 	return ret;
 }
@@ -913,6 +911,9 @@ int Neue_Befehle(void)
 	return ret;
 }
 
+/* FIXME:VS-PLUS  reads  the  actual  command  "ZSondereingriff” 
+ * (special  program  modification)  and the corresponding job ID.
+ */
 void ZSondereingriffvn(unsigned char* Sondereingriff, unsigned long* EndZeitpunkt, unsigned long* VorgangsNummer)
 {
 	*Sondereingriff = 0;
@@ -921,6 +922,8 @@ void ZSondereingriffvn(unsigned char* Sondereingriff, unsigned long* EndZeitpunk
 	debug(3,"Sondereingriff:%s, EndZeitpunkt:%ld, VorgangsNummer:%ld\n", Sondereingriff, *EndZeitpunkt, *VorgangsNummer);
 }
 
+/* FIXME: for future use
+ */
 unsigned long UTCZeitstempel(void)
 {
 	int ret = 32767;

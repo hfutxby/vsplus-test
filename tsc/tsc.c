@@ -15,7 +15,6 @@
 #include "tsc.h"
 #include "sg_track.h"
 #include "prg_track.h"
-//#include "sim.h"
 #include "drive.h"
 #include "if626bas.h"
 #include "if626max.h"
@@ -26,8 +25,8 @@ void* g_mem[3]; //VSPLUS内部分配用于存储参数
 FILE* g_vcb_file = NULL; //配置参数vcb文件
 FILE* g_vcb_back = NULL; //备份参数vcb文件
 FILE* g_cmd_vcb_file = NULL;
-#define VCB_FILE "para.vcb" //配置参数vcb文件
-#define VCB_BACK "para_bak.vcb" //备份参数vcb文件
+#define VCB_FILE "vsp_param.vcb" //配置参数vcb文件
+#define VCB_BACK "vsp_param_bak.vcb" //备份参数vcb文件
 #define CMD_VCB "newcmd.vcb"	//command vcb file
 
 /* 分配存储区  */
@@ -865,7 +864,7 @@ int init_tsc_sg(void)
 		debug(1, "malloc fail\n");
 		return -1;
 	}
-	ret = drv_sg_para(g_sg, size);//读入参数
+	drv_sg_para(g_sg, size);//读入参数
 	//drv_sg_para_dump(g_sg, size);
 
 	int i;
@@ -876,7 +875,7 @@ int init_tsc_sg(void)
 	//pthread_create(&g_tid_sg, NULL, thr_sg, NULL);
 	debug(3, "<==\n");
 
-	return ret;
+	return 0;
 }
 
 void deinit_tsc_sg(void)

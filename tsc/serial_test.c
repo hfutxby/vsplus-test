@@ -385,7 +385,8 @@ int main(int argc, char* argv[])
 
 	int mode = atoi(argv[2]);
 
-	if(set_opt(g_fd_serial, 57600, 8, 'N', 1) < 0){
+	//if(set_opt(g_fd_serial, 57600, 8, 'N', 1) < 0){
+	if(set_opt(g_fd_serial, 19200, 8, 'N', 1) < 0){
 		perror("set_opt() error");
 		return -1;
 	}

@@ -11,15 +11,17 @@
 #include "drive.h"
 #include "tsc.h"
 #include "serial_pack.h"
-#include "parse_xml.h"
 #include "vcb.h"
 #include "if626bas.h"
 
 //取得vsplus定义的信号灯在信号机控制器中的编号
 int drv_sg_code(int sg)
 {
-#if 0
-	int xml_sg_code(int sg);
+#if 10
+	if((sg < MAX_SIG_GROUP+1) && (sg > 0))
+		return vcb_sg_code[sg];
+	else
+		return 0;
 #else
 	if(sg < (sizeof(vcb_sg_code) / sizeof(int)))
 		return vcb_sg_code[sg];
@@ -89,7 +91,7 @@ int drv_sg_para(void* ptr, int size)
 		sg->exist = vcb_sg_exist[i];
 	}
 
-	return 0;
+	return num;
 #endif
 }
 
@@ -184,15 +186,15 @@ int drv_prg_next_set(int index)
 //获得绿间隔配置
 int drv_inter_green(int sgr, int sge)
 {
-	int num = sizeof(vcb_inter_green) / (sizeof(int)*3);
-	int i;
-	for(i = 0; i < num; i++){
-		if((vcb_inter_green[i][0] == sgr) && (vcb_inter_green[i][1] == sge)){
-			return vcb_inter_green[i][2];
-		}
-	}
+	//int num = sizeof(vcb_inter_green) / (sizeof(int)*3);
+	//int i;
+	//for(i = 0; i < num; i++){
+	//	if((vcb_inter_green[i][0] == sgr) && (vcb_inter_green[i][1] == sge)){
+	//		return vcb_inter_green[i][2];
+	//	}
+	//}
 
-	return 0;
+	return vcb_inter_green[sgr-1][sge-1];
 }
 
 //获得ocit编号配置
@@ -205,6 +207,130 @@ int drv_get_ocitid(int* ZNr, int* FNr, int*Realknoten)
 	return 1;
 }
 
+int drv_read_vsp_para(void)
+{
+	int i, j, len;
+	int ret = 0;
+
+	//read
+	FILE* fp = fopen(VSP_PARAMFILE, "rb");
+	if(fp == NULL){
+		debug(1, "fopen %s error\n", VSP_PARAMFILE);
+		return -1;
+	}
+
+	if(fread(&VSPSysData, sizeof(VSPSysData), 1, fp) <= 0)
+	{
+		debug(1, "fread error\n");
+		fclose(fp);
+		ret = -1;
+	}
+
+	if(fread(&VSPDetData, sizeof(VSPDetData), 1, fp) <= 0)
+	{
+		debug(1, "fread error\n");
+		fclose(fp);
+		ret = -1;
+	}
+
+	if(fread(&VSPSigData, sizeof(VSPSigData), 1, fp) <= 0)
+	{
+		debug(1, "fread error\n");
+		fclose(fp);
+		ret = -1;
+	}
+
+	fclose(fp);
+	//vcb_sg_code[]
+#if 0
+	len = sizeof(vcb_sg_code) / sizeof(int);
+	printf("len:%d\n", len);
+	printf("%2s  %2s\n", "sg", "code");
+	for(i = 0; i < len; i++){
+		printf("%2d  0x%02x\n", i, vcb_sg_code[i]);
+	}
+	printf("\n");
+
+	//vcb_sg_stat_code
+	len = sizeof(vcb_sg_stat_code) / sizeof(int);
+	printf("len:%d\n", len);
+	printf("%2s  %2s\n", "sg_stat", "code");
+	for(i = 0; i < len; i++){
+		printf("%2d  0x%02x\n", i, vcb_sg_stat_code[i]);
+	}
+	printf("\n");
+#endif
+
+	//vcb_sg
+	for(i = 0; i < MAX_SIG_GROUP; i++){
+		vcb_sg_exist[i+1] = VSPSigData.VSPSigDataList[i].sig_valid;
+		vcb_free_sum[i+1] = VSPSigData.VSPSigDataList[i].mingreen_time + VSPSigData.VSPSigDataList[i].prep_time;
+		vcb_close_sum[i+1] = VSPSigData.VSPSigDataList[i].minred_time;
+		vcb_amber[i+1] = VSPSigData.VSPSigDataList[i].amber_time;
+		vcb_prep[i+1] = VSPSigData.VSPSigDataList[i].prep_time;
+		vcb_green_blink[i+1] = VSPSigData.VSPSigDataList[i].green_blink;
+	}
+#if 0
+	printf("%2s  %5s  %4s  %5s  %5s  %4s  %10s\n", "sg", "exist", "free", "close", "amber", "prep", "greenblink");
+	len = sizeof(vcb_sg_exist) / sizeof(int);
+	printf("len:%d\n", len);
+	for(i = 0; i < MAX_SIG_GROUP+1; i++){
+		printf("%2d  %5d  %4d  %5d  %5d  %4d  %10d\n", i, vcb_sg_exist[i], vcb_free_sum[i],
+				vcb_close_sum[i], vcb_amber[i], vcb_prep[i], vcb_green_blink[i]);
+	}
+	printf("\n");
+#endif
+	//vcb_inter_green
+	for(i = 0; i < MAX_SIG_GROUP; i++){
+		for(j = 0; j < MAX_SIG_GROUP; j++)
+			vcb_inter_green[i][j] = VSPSysData.inter_green[i][j];
+	}
+#if 0
+	printf("%3s  %3s  %3s\n", "sgr", "sge", "val");
+	for(i = 0; i < MAX_SIG_GROUP; i++){
+		for(j = 0; j < MAX_SIG_GROUP; j++)
+			if(vcb_inter_green[i][j])
+				printf("%3d  %3d  %3d\n", i+1, j+1, vcb_inter_green[i][j]);
+	}
+#endif
+
+	//vcb_det_exist
+	for(i = 0; i < MAX_DET_GROUP; i++){
+		vcb_det_exist[i+1] = VSPDetData.VSPDetDataList[i].det_valid;
+	}
+#if 0
+	printf("%3s  %5s\n", "det", "valid");
+	for(i = 0; i < MAX_DET_GROUP+1; i++){
+		if(vcb_det_exist[i])
+			printf("%3d  %5d\n", i, vcb_det_exist[i]);
+	}
+	printf("\n");
+#endif
+
+	//vcb_prg_exist
+	for(i = 0; i < MAX_VSP_PROG; i++){
+		vcb_prg_exist[i+1] = (VSPSysData.vsp_cycletime[i] > 0) ? 1 : 0;
+		vcb_prg_tu[i+1] = VSPSysData.vsp_cycletime[i];
+	}
+#if 0
+	printf("%3s  %5s  %2s\n", "prg", "exist", "tu");
+	for(i = 0; i < MAX_VSP_PROG+1; i++){
+		printf("%3d  %5d  %2d\n", i, vcb_prg_exist[i], vcb_prg_tu[i]);
+	}
+	printf("\n");
+#endif
+	//ID
+	vcb_ZNr = VSPSysData.area_num;
+	vcb_FNr = VSPSysData.con_num;
+	vcb_Realknoten = VSPSysData.node_num;
+#if 1
+	printf("ZNr:%d\nFNr:%d\nRealknoten:%d\n", vcb_ZNr, vcb_FNr, vcb_Realknoten);
+#endif
+
+	return ret;
+}
+
+
 /* ========== 输出ini文件 ============== */
 //打印det状态
 static char *ptr_det = NULL;
@@ -212,6 +338,7 @@ static int g_size_det = 0;
 static int g_space_det = 0;
 static struct timeval g_tv_det = {};
 static int g_dir_det = 1;
+#define LOGBAK 1
 
 void free_det(void)
 {
@@ -229,6 +356,12 @@ int drv_add_det(int det, int value)
 			if(mkdir("log", 0777) == -1)
 				perror("mkdir log");
 		}
+#ifdef LOGBAK
+		if(access("log_bak", F_OK) == -1){
+			if(mkdir("log_bak", 0777) == -1)
+				perror("mkdir log_bak");
+		}
+#endif
 		//if(access("log/det", F_OK) == -1){
 		//	if(mkdir("log/det", 0777) == -1)
 		//		perror("mkdir log/det");
@@ -258,6 +391,18 @@ int drv_add_det(int det, int value)
 			}
 			fwrite(ptr_det, g_size_det - g_space_det, 1, fp);
 			fclose(fp);
+#ifdef LOGBAK
+			memset(str, 0, sizeof(str));
+			sprintf(str, "log_bak/%d_%04d%02d%02d%02d%02d%02d_det.ini", vcb_FNr, t->tm_year+1900,
+					t->tm_mon+1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);
+			fp = fopen(str, "wb");
+			if(fp == NULL){
+				debug(1, "open file %s error\n", str);
+				return -1;
+			}
+			fwrite(ptr_det, g_size_det - g_space_det, 1, fp);
+			fclose(fp);
+#endif
 			memset(ptr_det, 0, g_size_det);
 			g_space_det = g_size_det;
 		}
@@ -315,6 +460,12 @@ int drv_add_sg(int sg, int stat)
 			if(mkdir("log", 0777) == -1)
 				perror("mkdir log");
 		}
+#ifdef LOGBAK
+		if(access("log_bak", F_OK) == -1){
+			if(mkdir("log_bak", 0777) == -1)
+				perror("mkdir log_bak");
+		}
+#endif
 		//if(access("log/sg", F_OK) == -1){
 		//	if(mkdir("log/sg", 0777) == -1)
 		//		perror("mkdir log/sg");
@@ -369,6 +520,18 @@ int drv_add_sg(int sg, int stat)
 			}
 			fwrite(ptr_sg, g_size_sg - g_space_sg, 1, fp);
 			fclose(fp);
+#ifdef LOGBAK
+			memset(str, 0, sizeof(str));
+			sprintf(str, "log_bak/%d_%04d%02d%02d%02d%02d%02d_sg.ini", vcb_FNr, t->tm_year+1900, 
+					t->tm_mon+1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);
+			fp = fopen(str, "wb");
+			if(fp == NULL){
+				debug(1, "open file %s error\n", str);
+				return -1;
+			}
+			fwrite(ptr_sg, g_size_sg - g_space_sg, 1, fp);
+			fclose(fp);
+#endif
 			memset(ptr_sg, 0, g_size_sg);
 			g_space_sg = g_size_sg;
 		}
@@ -480,6 +643,11 @@ int drv_add_ap(void)
 		if(access("log", F_OK) == -1){
 			mkdir("log", 0777);
 		}
+#ifdef LOGBAK
+		if(access("log_bak", F_OK) == -1){
+			mkdir("log_bak", 0777);
+		}
+#endif
 		//所有可能存在的ap
 		FILE* fp = fopen("ap.dat", "wb");
 		ret = vs_read_process_data(NULL, fp);
@@ -572,6 +740,18 @@ int drv_add_ap(void)
 				}
 				fwrite((unsigned char*)g_ptr_ap_diff, 1, strlen((unsigned char*)g_ptr_ap_diff), fp);
 				fclose(fp);
+#ifdef LOGBAK
+				memset(str, 0, sizeof(str));
+				sprintf(str, "log_bak/%d_%04d%02d%02d%02d%02d%02d_ap.ini", vcb_FNr, t->tm_year+1900, 
+						t->tm_mon+1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);
+				fp = fopen(str, "wb");
+				if(fp == NULL){
+					debug(1, "open file %s error\n", str);
+					return -1;
+				}
+				fwrite((unsigned char*)g_ptr_ap_diff, 1, strlen((unsigned char*)g_ptr_ap_diff), fp);
+				fclose(fp);
+#endif
 				memset(g_ptr_ap_diff, 0, g_ap_def_inst * sizeof(ap_t));
 			}
 		}

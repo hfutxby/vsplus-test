@@ -189,7 +189,14 @@ int init_sg_track(void)
 		debug(1, "malloc fail\n");
 		return -1;
 	}
+
+	int i;
 	ret = drv_sg_para(g_sg_def, size);//读入sg定义参数
+	debug(3, "===ret:%d====\n", ret);
+	for(i = 0; i < ret; i++){
+		if(g_sg_def[i].exist == 0)
+			g_sg_track[i].fault = 2;
+	}
 
 	pthread_create(&g_tid_sg_track, NULL, thr_sg_track, NULL);
 	debug(3, "<==\n");

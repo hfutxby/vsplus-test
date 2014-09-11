@@ -6,7 +6,9 @@ tags
 *.dat
 build/
 para_bak.vcb
+vsp_param_bak.vcb
 log/
 log*
 
 !.gitignore
+!vsp_param.dat

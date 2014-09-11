@@ -162,7 +162,13 @@ void* thr_ein(void* arg)
 int tsc_init(void)
 {
 	int ret = 0;
-	
+
+	ret = drv_read_vsp_para();//读入vsp参数，在其他初始化函数之前
+    if(ret == -1){
+        debug(1, "call drv_vsp_para() fail\n");
+        return -1;
+    }
+
 	ret = init_prg_track();//初始化prg_track
     if(ret == -1){
         debug(1, "call init_prg_track() fail\n");
@@ -189,7 +195,7 @@ int tsc_init(void)
 
 	ret = init_tsc_sg(); //初始化信号灯状态记录
 	if(ret != 0){
-		debug(1, "init_tsc_sg() error\n");
+		debug(1, "init_tsc_sg() error, %d\n", ret);
 		return -1;
 	}
 
