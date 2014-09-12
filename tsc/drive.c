@@ -796,3 +796,17 @@ int drv_add_ap(void)
 }
 #endif
 
+int drv_add_message(char* str)
+{
+	FILE *fp = fopen("message.log", "ab+");
+	if(!fp){
+		printf("open message fail\n");
+		return -1;
+	}
+
+	fwrite(str, strlen(str), 1, fp);
+
+	fclose(fp);
+
+	return 0;
+}

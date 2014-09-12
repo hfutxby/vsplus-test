@@ -1154,17 +1154,34 @@ int tsc_digital_blink_state(int sg)
  * 读取PT信息？*/
 int tsc_read_pt(void* arg)
 {
+	int ret = 0;
 	PTMSG* ptr = (PTMSG*)arg;
-	debug(3, "call point:%d\n", ptr->MP);
-	debug(3, "line:%d\n", ptr->Linie);
-	debug(3, "course:%d\n", ptr->Kurs);
-	debug(3, "route:%d\n", ptr->Route);
-	debug(3, "priority:%d\n", ptr->Prioritaet);
-	debug(3, "vehicle length:%d\n", ptr->Laenge);
-	debug(3, "direction by hand:%d\n", ptr->RichtungVonHand);
-	debug(3, "difference to schedule:%d\n", ptr->FahrplanAbweichnung);
+	FILE* fp = fopen("pt.dat", "rb");
+	if(!fp){
+		debug(1, "open pt.dat fail\n");
+		return 0;
+	}
+	char start = 0;
+	fread(&start, sizeof(char), 1, fp);
+	if(start){
+		fread(ptr, sizeof(PTMSG), 1, fp);
+		debug(2, "call point:%d\n", ptr->MP);
+		debug(2, "line:%d\n", ptr->Linie);
+		debug(2, "course:%d\n", ptr->Kurs);
+		debug(2, "route:%d\n", ptr->Route);
+		debug(2, "priority:%d\n", ptr->Prioritaet);
+		debug(2, "vehicle length:%d\n", ptr->Laenge);
+		debug(2, "direction by hand:%d\n", ptr->RichtungVonHand);
+		debug(2, "difference to schedule:%d\n", ptr->FahrplanAbweichnung);
+		ret = 1;
+	}
+	fclose(fp);
+	fp = fopen("pt.dat", "rb+");
+	start = 0;
+	fwrite(&start, sizeof(char), 1, fp);
+	fclose(fp);
 
-	return 0;
+	return ret;
 }
 
 /********************* 初始化 ************************/

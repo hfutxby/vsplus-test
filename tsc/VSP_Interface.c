@@ -624,13 +624,19 @@ short s_zwi_zeit(short sgR, short sgE)
 void Meldung(short int degree, short int nr, short int par1, short int par2, short int par3, short int par4)
 {
 	//debug(3, "degree:%d, nr:%d, par1-4:%d,%d,%d,%d\n", degree, nr, par1, par2, par3, par4);
-	printf("%s(%d): degree:%d, nr:%d, par1-4:%d,%d,%d,%d\n", __func__, __LINE__, degree, nr, par1, par2, par3, par4);
+	char str[256] = {0};
+	sprintf(str, "%s(%d): degree:%d, nr:%d, par1-4:%d,%d,%d,%d\n", __func__, __LINE__, degree, nr, par1, par2, par3, par4);
+	printf("%s", str);
+	drv_add_message(str);
 }
 
 void  MeldungNET(short int degree, unsigned char nr, unsigned short Anr, unsigned char par1, unsigned char par2, unsigned char par3, unsigned char par4, unsigned char par5)
 {
 	//debug(3, "degree:%d, nr:%d, Anr:%d, par1-5:%d,%d,%d,%d,%d\n", degree, nr, Anr, par1, par2, par3, par4, par5);
-	printf("%s(%d):degree:%d, nr:%d, Anr:%d, par1-5:%d,%d,%d,%d,%d\n", __func__, __LINE__, degree, nr, Anr, par1, par2, par3, par4, par5);
+	char str[256] = {0};
+	sprintf(str, "%s(%d):degree:%d, nr:%d, Anr:%d, par1-5:%d,%d,%d,%d,%d\n", __func__, __LINE__, degree, nr, Anr, par1, par2, par3, par4, par5);
+	printf("%s", str);
+	drv_add_message(str);
 }
 
 /* VS-PLUS tells the controller the number of the traffic 
@@ -810,7 +816,7 @@ void Schliessen_VSP_Befehle(void)
  */
 int OePNV_Ein_Aus(void)
 {
-	int ret = 0;//PT not set
+	int ret = 2;//PT not set
 	debug(3, "ret:%d\n", ret);
 	return ret;
 }
@@ -821,7 +827,7 @@ int OePNV_Ein_Aus(void)
  */
 int IV_Ein_Aus(void)
 {
-	int ret = 0;//IT not set
+	int ret = 2;//IT not set
 	debug(3, "ret:%d\n", ret);
 	return ret;
 }
