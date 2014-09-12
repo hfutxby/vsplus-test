@@ -14,8 +14,8 @@ CFLAGS += -D_CHECK_ -D_PROZESSOR_INTEL_ -D_HELPER_MACROS_ -D_ADVANCED_MEMORY_ -D
 
 all: main serial_test sg_view det_ctrl parse_xml
 main: main.c tsc.c VSP_Interface.c
-	$(CC) $(CFLAGS) VSP_Interface.c tsc.c drive.c ring_buf.c serial_pack.c prg_track.c sg_track.c det_read.c vs_main.c main.c vsp_core_check.lib -pthread -lm -o main.x86.out
-	$(ARMCC) $(CFLAGS) VSP_Interface.c tsc.c drive.c ring_buf.c serial_pack.c prg_track.c sg_track.c det_read.c vs_main.c main.c vsp_core_arm_check.lib -pthread -lm -o main.arm.out
+	$(CC) $(CFLAGS) tsc_test_server.c VSP_Interface.c tsc.c drive.c ring_buf.c serial_pack.c prg_track.c sg_track.c det_read.c vs_main.c main.c vsp_core_check.lib -pthread -lm -o main.x86.out
+	$(ARMCC) $(CFLAGS) tsc_test_server.c VSP_Interface.c tsc.c drive.c ring_buf.c serial_pack.c prg_track.c sg_track.c det_read.c vs_main.c main.c vsp_core_arm_check.lib -pthread -lm -o main.arm.out
 
 #用来测试发送模拟的检测器数据
 serial_test: ring_buf.c serial_test.c serial_read.c
@@ -39,6 +39,9 @@ decode: base64.c
 
 parse_xml:
 	$(CC) parse_vsplus.c `xml2-config --cflags --libs` -o parse_vsplus.x86.out
+
+test_client:
+	$(CC) tsc_test_client.c -o tsc_test_client.x86.out
 
 clean:
 	$(RM) *.x86 *.arm *.o *.out

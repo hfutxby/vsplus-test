@@ -35,6 +35,7 @@ int main(int argc, char* argv[])
 	start_serial();
 #else
 	det_read_init();
+	init_tsc_test_server();
 #endif/* USE_TTY */
 
 	//运行vsplus
