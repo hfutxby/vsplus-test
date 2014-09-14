@@ -34,7 +34,6 @@ int main(int argc, char* argv[])
 	//开始接受串口发送的指令，在此之前发送的指令丢失
 	start_serial();
 #else
-	det_read_init();
 	init_tsc_test_server();
 #endif/* USE_TTY */
 

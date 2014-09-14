@@ -33,6 +33,7 @@
 
 //#define SGMAX 64u
 #define SGMAX VSMAX
+#define PRGMAX 16u
 
 /* ¿¿¿ */
 #define NUL         0     
@@ -114,8 +115,8 @@
 /*~K*/
 /*~+:Anzahl der parallelen Eing„ngen*/
 /*~T*/
-//#define DETMAX          340u
-#define DETMAX          341u
+#define DETMAX          340u
+//#define DETMAX          341u
 
 /*~K*/
 /*~+:Gesammtzahl der verwendeten Detektoren und Meldepnkte*/

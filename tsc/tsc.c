@@ -420,65 +420,40 @@ void tsc_stream_waiting(int index, int time)
 static double g_f1 = 0.5;//占用率上升折算因子
 static double g_f2 = 0.125;//下降因子
 #define DET_MAXTIME 600 //等待下降沿超时
-#define TEST_ID 5
 
 static det_track* g_det = NULL; //检测器数据
-static int g_fd_det = 0; //检测器数据映射文件
 static det_def* g_det_def = NULL; //检测器配置
 
 static int g_exit_det = 0; //检测器数据维护线程退出标志
 static pthread_mutex_t mutex_det = PTHREAD_MUTEX_INITIALIZER;
 static pthread_t g_tid_det;
 
-/* 打开检测器数据映射 */
-int open_det(void)
-{   
-    int i, ret;
-    //默认保存文件
-    g_fd_det = open("det_nodes.dat", O_RDWR|O_CREAT, 0644);
-    if(g_fd_det < 0){
-        debug(1, "%s\n", strerror(errno));
-        return -1;
-    }
-    if((ret = ftruncate(g_fd_det, sizeof(det_track) * DETMAX)) < 0){
-        debug(1, "%s\n", strerror(errno));
-		return -1;
-    }
-    //映射进内存
-    g_det = mmap(NULL, sizeof(det_track) * DETMAX,  PROT_READ|PROT_WRITE, MAP_SHARED, g_fd_det, 0);
-    if(g_det ==  MAP_FAILED){
-        debug(1, "%s\n", strerror(errno));
-		return -1;
-    }
-    memset(g_det, 0, sizeof(det_track) * DETMAX);
-	for(i = 0; i < DETMAX; i++){
-		g_det[i].free = 10;//即时占用率计算窗口为1s
-		g_det[i].rh = alloc_ring(11);
-	}
-
-	return 0;
-}
-
-/* 关闭检测器数据映射 */
-void close_det(void)
+//检测器故障时把检测器的历史记录清零
+int det_in_fault(det_track* det)
 {
-	int i;
-	for(i = 0; i < DETMAX; i++){
-		free_ring(g_det[i].rh);
-		g_det[i].rh = NULL;
-	}
-	munmap(g_det, sizeof(det_track) * DETMAX);
-    close(g_fd_det);
-    g_fd_det = 0;
+	det->sum_rising = 0;
+	det->sum_falling = 0;
+	det->state = 0;
+	det->hold = 0;
+	det->free = 0; //总空闲计时
+	det->occ1 = 0.0;//占用率
+	det->occ2 = 0.0;//平滑占用率
+	det->net = 0;//time gap starts at the last falling slope，驱动>板信号修改
+	det->gross = 0;
+	ring_clr(det->rh);
 }
-
 
 void update_det(void)
 {
 	int i;
-	for(i = 0; i < DETMAX; i++){
-		if(g_det[i].fault || !g_det_def[i].exist)//检测器故障或不存在，不用更新数据
+	for(i = 1; i < DETMAX+1; i++){
+		if(!g_det_def[i].exist)//检测器故障或不存在，不用更新数据
 			continue;
+
+		if(g_det[i].fault){
+			det_in_fault(&g_det[i]);
+			continue;	
+		}
 
 		if(g_det[i].state){//检测器占用中
 			g_det[i].gross++;
@@ -489,7 +464,6 @@ void update_det(void)
 			g_det[i].net++;
 			ring_add_over(g_det[i].rh, 0);
 		}
-
 
 		//计算占用率
 		g_det[i].occ1 = (ring_sum(g_det[i].rh) * 10);
@@ -506,21 +480,30 @@ void tsc_det_op(int index, int op)
 	debug(3, "==>\n");
 	//debug(2, "==>index:%d, op:%d\n", index, op);
 	pthread_mutex_lock(&mutex_det);
-	if(op == 1){
+	if(op == 1){//上升沿
 		g_det[index].sum_rising++;
 		g_det[index].state = 1;
 		g_det[index].net = 0;
 		g_det[index].gross = 0;
+#if USE_INI
+		drv_add_det(index, 1);
+#endif/* USE_INI */
 	}
-	if(op == 2){
+	else if(op == 2){//下降沿
 		g_det[index].sum_falling++;
 		g_det[index].state = 0;
 		g_det[index].net = 0;
+#if USE_INI
+		drv_add_det(index, 0);
+#endif/* USE_INI */
+	}
+	else if(op == 3){//故障
+		g_det[index].fault = 1;
+	}
+	else if(op == 4 ){//故障恢复
+		g_det[index].fault = 0;
 	}
 	pthread_mutex_unlock(&mutex_det);
-#if USE_INI
-	drv_add_det(index, (op == 1) ? 1 : 0);
-#endif/* USE_INI */
 	//debug(2, "<==\n");
 }
 
@@ -551,14 +534,18 @@ void* thr_det(void* arg)
 int init_det(void)
 {
 	debug(3, "==>\n");
-	int ret = open_det();//分配空间用于det状态跟踪
-	if(ret < 0){
-		debug(1, "call open_det() error\n");
-		return -1;
-	}
 	
-	//分配空间用于读取det配置
-	int size = sizeof(det_def) * DETMAX;
+	int i;
+	int len = sizeof(det_track) * (DETMAX + 1);
+	g_det = (det_track*)malloc(len);
+	memset(g_det, 0, len);
+	for(i = 1; i < DETMAX + 1; i++){
+		g_det[i].free = 10;//即时占用率计算窗口为1s
+		g_det[i].rh = alloc_ring(11);
+	}
+
+	//分配空间用于读取det配置//TODO:优化读取配置参数的过程
+	int size = sizeof(det_def) * (DETMAX + 1);
 	g_det_def = malloc(size);
 	drv_det_para(g_det_def, size);
 
@@ -574,11 +561,16 @@ void deinit_det(void)
 	g_exit_det = 1;
 	if(g_tid_det)
 		pthread_join(g_tid_det, NULL);
-	
+
 	if(g_det_def)
 		free(g_det_def);
 
-	close_det();
+	int i;
+	for(i = 1; i < DETMAX + 1; i++){
+		free_ring(g_det[i].rh);
+	}
+	free(g_det);
+
 	debug(2, "<==\n");
 }
 
@@ -672,6 +664,8 @@ int tsc_det_fault(int index)
 	int ret;
 	pthread_mutex_lock(&mutex_det);
 	ret = g_det[index].fault;
+	if(ret)
+		debug(1, "det %d fault\n", index);
 	pthread_mutex_unlock(&mutex_det);
 	return ret;
 }
@@ -1152,36 +1146,31 @@ int tsc_digital_blink_state(int sg)
 /*********************************************************************/
 /* FIXME
  * 读取PT信息？*/
+PTMSG g_tsc_pt = {0};
+int g_tsc_pt_new = 0;
+int dump_pt(PTMSG* ptr)
+{
+	debug(2, "call point:%d\n", ptr->MP);
+	debug(2, "line:%d\n", ptr->Linie);
+	debug(2, "course:%d\n", ptr->Kurs);
+	debug(2, "route:%d\n", ptr->Route);
+	debug(2, "priority:%d\n", ptr->Prioritaet);
+	debug(2, "vehicle length:%d\n", ptr->Laenge);
+	debug(2, "direction by hand:%d\n", ptr->RichtungVonHand);
+	debug(2, "difference to schedule:%d\n", ptr->FahrplanAbweichnung);
+}
 int tsc_read_pt(void* arg)
 {
-	int ret = 0;
-	PTMSG* ptr = (PTMSG*)arg;
-	FILE* fp = fopen("pt.dat", "rb");
-	if(!fp){
-		debug(1, "open pt.dat fail\n");
+	if(g_tsc_pt_new){
+		g_tsc_pt_new = 0;
+		memcpy((char*)arg, (char*)&g_tsc_pt, sizeof(PTMSG));
+		dump_pt(arg);
+		return 1;
+	}
+	else{
+		memset((char*)arg, 0, sizeof(PTMSG));
 		return 0;
 	}
-	char start = 0;
-	fread(&start, sizeof(char), 1, fp);
-	if(start){
-		fread(ptr, sizeof(PTMSG), 1, fp);
-		debug(2, "call point:%d\n", ptr->MP);
-		debug(2, "line:%d\n", ptr->Linie);
-		debug(2, "course:%d\n", ptr->Kurs);
-		debug(2, "route:%d\n", ptr->Route);
-		debug(2, "priority:%d\n", ptr->Prioritaet);
-		debug(2, "vehicle length:%d\n", ptr->Laenge);
-		debug(2, "direction by hand:%d\n", ptr->RichtungVonHand);
-		debug(2, "difference to schedule:%d\n", ptr->FahrplanAbweichnung);
-		ret = 1;
-	}
-	fclose(fp);
-	fp = fopen("pt.dat", "rb+");
-	start = 0;
-	fwrite(&start, sizeof(char), 1, fp);
-	fclose(fp);
-
-	return ret;
 }
 
 /********************* 初始化 ************************/

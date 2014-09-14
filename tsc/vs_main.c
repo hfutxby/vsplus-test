@@ -55,22 +55,22 @@ int thr_vsplus(void* arg)
 	g_vsplus_exit = 0;
 	while(!g_vsplus_exit){
 		if(g_vsplus_ret == -1){
-			printf("===VSPLUS Call===\n");
+			//printf("===VSPLUS Call===\n");
 			//g_vs_para.wb_ready[0] = 0;
 			//for(i = 0; i < GERAET_TEILKNOTEN_MAX; i++)
 			//    g_vs_para.wb_ready[i] = 0;
 			gettimeofday(&tv1, NULL);
 			ret = VSPLUS(g_vs_para.vsp_soll, g_vs_para.sg_mode, g_vs_para.wb_ready);
 			if(ret >= 0){	
-				printf("%s(%d):call VSPLUS() success, ret=%d\n", __func__, __LINE__, ret);
+				;//printf("%s(%d):call VSPLUS() success, ret=%d\n", __func__, __LINE__, ret);
 			}
 			else{
 				printf("%s(%d):call VSPLUS() fail, ret=%d\n", __func__, __LINE__, ret);
 				return -1;
 			}
 			gettimeofday(&tv2, NULL);
-			printf("time use: %ldus\n", (tv2.tv_sec - tv1.tv_sec)*1000*1000 + (tv2.tv_usec - tv1.tv_usec));
-			printf("VSPLUS(%d):ret=%d\n", g_vs_para.vsp_soll[0], ret);
+			//printf("time use: %ldus\n", (tv2.tv_sec - tv1.tv_sec)*1000*1000 + (tv2.tv_usec - tv1.tv_usec));
+			//printf("VSPLUS(%d):ret=%d\n", g_vs_para.vsp_soll[0], ret);
 #if USE_INI
 			//gettimeofday(&tv1, NULL);
 			drv_add_ap();

@@ -14,20 +14,47 @@
 #include "vcb.h"
 #include "if626bas.h"
 
+//vsplus信号灯编号与底板实际信号灯编号转换
+int vcb_sg_code[] = {0,
+  0x11,//sg1
+  0x12,//sg2
+  0x13,//sg3
+  0x14,//sg4
+  0x21,//sg5
+  0x22,//sg6
+  0x23,//sg7
+  0x24,//sg8
+  0x41,//sg13
+  0x42,//sg14
+  0x43,//sg15
+  0x44,//sg15
+  0x61,//sg21
+  0x62,//sg22
+  0x63,//sg23
+  0x64//sg24 
+};
+
+//vsplus信号灯状态和底板信号灯状态对应关系
+int vcb_sg_stat_code[10] = {
+  0x00, //0:dark
+  0x02, //1:amber
+  0x01, //2:min-red
+  0x01, //3:ext-red
+  0x02, //4:prep
+  0x04, //5:min-green
+  0x04, //6:ext-green
+  0x14, //7:绿闪
+  0x11, //8:红闪
+  0x12, //9:黄闪
+};
+
 //取得vsplus定义的信号灯在信号机控制器中的编号
 int drv_sg_code(int sg)
 {
-#if 10
-	if((sg < MAX_SIG_GROUP+1) && (sg > 0))
-		return vcb_sg_code[sg];
-	else
-		return 0;
-#else
 	if(sg < (sizeof(vcb_sg_code) / sizeof(int)))
 		return vcb_sg_code[sg];
 	else
 		return 0;
-#endif
 }
 
 //取得vsplus信号灯状态在信号机控制器中的编码
@@ -295,10 +322,11 @@ int drv_read_vsp_para(void)
 #endif
 
 	//vcb_det_exist
+	memset(&vcb_det_exist, 0, sizeof(int)* (DETMAX+1));
 	for(i = 0; i < MAX_DET_GROUP; i++){
 		vcb_det_exist[i+1] = VSPDetData.VSPDetDataList[i].det_valid;
 	}
-#if 0
+#if 10
 	printf("%3s  %5s\n", "det", "valid");
 	for(i = 0; i < MAX_DET_GROUP+1; i++){
 		if(vcb_det_exist[i])

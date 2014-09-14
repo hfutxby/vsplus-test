@@ -214,3 +214,9 @@ int ring_sum(ring_buf *r)
 
 	return sum;
 }
+
+int ring_clr(ring_buf *r)
+{
+	r->head = 0;
+	r->tail = 0;	
+}
