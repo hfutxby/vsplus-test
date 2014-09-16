@@ -74,7 +74,7 @@ int main(int argc, char* argv[])
 			continue;
 		gettimeofday(&tv, NULL);
 		srandom(tv.tv_usec);
-		op = random() % 2;
+		op = random() % 2 + 1;
 
 		data->id = index+1;//检测器编号1 ~ DETMAX
 		data->stat = op;

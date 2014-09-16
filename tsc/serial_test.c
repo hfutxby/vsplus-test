@@ -301,6 +301,7 @@ void set_rising(int index)
 	buf[1] = index;
 	buf[2] = 0x5c;
 	pthread_mutex_lock(&serial_write_mutex);
+	printf("send:0x%2x 0x%2x 0x%2x\n", buf[0], buf[1], buf[2]);
 	int ret = write(g_fd_serial, buf, sizeof(buf));
 	pthread_mutex_unlock(&serial_write_mutex);
 }
@@ -314,6 +315,8 @@ void set_falling(int index)
 	buf[2] = 0; buf[3] = 0;
 	buf[4] = 0x5c;
 	pthread_mutex_lock(&serial_write_mutex);
+	printf("send:0x%2x 0x%2x 0x%2x 0x%2x 0x%2x\n", buf[0], buf[1], 
+		buf[2], buf[3], buf[4]);
 	int ret = write(g_fd_serial, buf, sizeof(buf));
 	pthread_mutex_unlock(&serial_write_mutex);
 }

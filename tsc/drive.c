@@ -374,10 +374,12 @@ void free_det(void)
 		free(ptr_det);
 		ptr_det = NULL;
 	}
+	g_dir_det = 1;
 }
 
 int drv_add_det(int det, int value)
 {
+//debug(1, "det:%d, value:%d\n", det, value);
 	//首次确认目录存在
 	if(g_dir_det){
 		if(access("log", F_OK) == -1){
@@ -404,14 +406,18 @@ int drv_add_det(int det, int value)
 	char str[256] = {};
 	struct timeval tv;
 	gettimeofday(&tv, NULL);
-	time_t tt = tv.tv_sec;
-    struct tm *t = localtime(&tt);
+	struct tm st = {0};
+	localtime_r(&tv.tv_sec, &st);
 
 	if(g_tv_det.tv_sec != tv.tv_sec){
 		if(g_tv_det.tv_sec != 0){//保存文件
+			struct tm gst = {0};
+			localtime_r(&g_tv_det.tv_sec, &gst);
 			memset(str, 0, sizeof(str));
-			sprintf(str, "log/%d_%04d%02d%02d%02d%02d%02d_det.ini", vcb_FNr, t->tm_year+1900, 
-					t->tm_mon+1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);
+			sprintf(str, "log/%d_%04d%02d%02d%02d%02d%02d_det.ini",
+					vcb_FNr, gst.tm_year+1900, gst.tm_mon+1, 
+					gst.tm_mday, gst.tm_hour, gst.tm_min, 
+					gst.tm_sec);
 			FILE* fp = fopen(str, "wb");
 			if(fp == NULL){
 				debug(1, "open file %s error\n", str);
@@ -421,8 +427,12 @@ int drv_add_det(int det, int value)
 			fclose(fp);
 #ifdef LOGBAK
 			memset(str, 0, sizeof(str));
-			sprintf(str, "log_bak/%d_%04d%02d%02d%02d%02d%02d_det.ini", vcb_FNr, t->tm_year+1900,
-					t->tm_mon+1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);
+			sprintf(str, 
+					"log_bak/%d_%04d%02d%02d%02d%02d%02d_det.ini",
+					vcb_FNr, gst.tm_year+1900, gst.tm_mon+1, 
+					gst.tm_mday, gst.tm_hour, gst.tm_min, 
+					gst.tm_sec);
+
 			fp = fopen(str, "wb");
 			if(fp == NULL){
 				debug(1, "open file %s error\n", str);
@@ -442,8 +452,11 @@ int drv_add_det(int det, int value)
 	int diff = (tv.tv_usec/100000 - g_tv_det.tv_usec/100000)*100;
 	sprintf(str, "[%d_D_%d %d]\r\n", vcb_FNr, det, diff);
 	sprintf(str+strlen(str), "Value=%d\r\n", value);
-	sprintf(str+strlen(str), "Time=%04d%02d%02d%02d%02d%02d%03ld\r\n", t->tm_year+1900, 
-        t->tm_mon+1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec, (tv.tv_usec/1000)*100);
+	sprintf(str+strlen(str), 
+			"Time=%04d%02d%02d%02d%02d%02d%03ld\r\n", 
+			st.tm_year+1900, st.tm_mon+1, st.tm_mday, st.tm_hour, 
+			st.tm_min, st.tm_sec, (tv.tv_usec/100000)*100);
+	//printf("%s", str);
 
 	if(g_space_det < strlen(str)){//扩展存储区
 		debug(2, "g_space_det:%d, strlen:%d\n", g_space_det, strlen(str));
@@ -475,13 +488,11 @@ void free_sg(void)
 		free(ptr_sg);
 		ptr_sg = NULL;
 	}
+	g_dir_sg = 1;
 }
 
 int drv_add_sg(int sg, int stat)
 {
-	struct timeval tv;
-	gettimeofday(&tv, NULL);
-
 	//首次确认目录存在
 	if(g_dir_sg){
 		if(access("log", F_OK) == -1){
@@ -494,10 +505,6 @@ int drv_add_sg(int sg, int stat)
 				perror("mkdir log_bak");
 		}
 #endif
-		//if(access("log/sg", F_OK) == -1){
-		//	if(mkdir("log/sg", 0777) == -1)
-		//		perror("mkdir log/sg");
-		//}
 		g_dir_sg = 0;
 		g_size_sg = 1024;
 		g_space_sg = g_size_sg;
@@ -533,15 +540,25 @@ int drv_add_sg(int sg, int stat)
 	}
 
 	char str[256] = {};
-	time_t tt = tv.tv_sec;
-    struct tm *t = localtime(&tt);
+	struct timeval tv;
+	gettimeofday(&tv, NULL);
+	struct tm st = {0};
+	localtime_r(&tv.tv_sec, &st);
+	//printf("Time=%04d%02d%02d%02d%02d%02d%03ld\r\n", 
+	//		st.tm_year+1900, st.tm_mon+1, st.tm_mday, st.tm_hour, 
+	//		st.tm_min, st.tm_sec, (tv.tv_usec / 100000)*100);
 
 	if(g_tv_sg.tv_sec != tv.tv_sec){
 		if(g_tv_sg.tv_sec != 0){//保存文件
+			struct tm gst = {0};
+			localtime_r(&g_tv_sg.tv_sec, &gst);
+			FILE* fp = NULL;
 			memset(str, 0, sizeof(str));
-			sprintf(str, "log/%d_%04d%02d%02d%02d%02d%02d_sg.ini", vcb_FNr, t->tm_year+1900, 
-					t->tm_mon+1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);
-			FILE* fp = fopen(str, "wb");
+			sprintf(str, "log/%d_%04d%02d%02d%02d%02d%02d_sg.ini", 
+					vcb_FNr, gst.tm_year+1900, gst.tm_mon+1, 
+					gst.tm_mday, gst.tm_hour, gst.tm_min, 
+					gst.tm_sec);
+			fp = fopen(str, "wb");
 			if(fp == NULL){
 				debug(1, "open file %s error\n", str);
 				return -1;
@@ -550,8 +567,12 @@ int drv_add_sg(int sg, int stat)
 			fclose(fp);
 #ifdef LOGBAK
 			memset(str, 0, sizeof(str));
-			sprintf(str, "log_bak/%d_%04d%02d%02d%02d%02d%02d_sg.ini", vcb_FNr, t->tm_year+1900, 
-					t->tm_mon+1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);
+			sprintf(str, 
+					"log_bak/%d_%04d%02d%02d%02d%02d%02d_sg.ini", 
+					vcb_FNr, gst.tm_year+1900, gst.tm_mon+1, 
+					gst.tm_mday, gst.tm_hour, gst.tm_min, 
+					gst.tm_sec);
+
 			fp = fopen(str, "wb");
 			if(fp == NULL){
 				debug(1, "open file %s error\n", str);
@@ -571,8 +592,10 @@ int drv_add_sg(int sg, int stat)
 	int diff = (tv.tv_usec/100000 - g_tv_sg.tv_usec/100000) * 100;//100ms
 	sprintf(str, "[%d_S_%d %d]\r\n", vcb_FNr, sg, diff);
 	sprintf(str+strlen(str), "Value=%d\r\n", value);
-	sprintf(str+strlen(str), "Time=%04d%02d%02d%02d%02d%02d%03ld\r\n", t->tm_year+1900, 
-        t->tm_mon+1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec, (tv.tv_usec / 100000)*100);
+	sprintf(str+strlen(str), 
+			"Time=%04d%02d%02d%02d%02d%02d%03ld\r\n", 
+			st.tm_year+1900, st.tm_mon+1, st.tm_mday, st.tm_hour, 
+			st.tm_min, st.tm_sec, (tv.tv_usec / 100000)*100);
 
 	if(g_space_sg < strlen(str)){//扩展存储区
 		char* ptr = malloc(g_size_sg+1024);
@@ -584,8 +607,7 @@ int drv_add_sg(int sg, int stat)
 		g_size_sg += 1024;
 		g_space_sg += 1024;
 	}	
-	//if((sg == 7) && ((stat == 7) || (stat == 2)))
-	//	debug(1, "%s", str);
+	printf("strlen(ptr_sg):%d, t1:%ld, t2:%ld\n str:\n%s\n", strlen(ptr_sg), g_tv_sg.tv_sec, tv.tv_sec, str);
 	strcat(ptr_sg, str);
 	g_space_sg -= strlen(str);
 	return 0;
@@ -632,6 +654,7 @@ void free_ap(void)
 		free(g_ptr_ap_diff);
 		g_ptr_ap_diff = NULL;
 	}
+	g_dir_ap = 1;
 }
 
 int getid(char* line)
@@ -695,6 +718,11 @@ int drv_add_ap(void)
 		fp = fopen("ap.def", "rb");
 		if(fp == NULL){
 			debug(1, "open file ap.def error\n");
+			fp = fopen("ap.def", "wb");
+			char str[] = "57.0\r\n";//default
+			fwrite(str, sizeof(str), 1, fp);
+			fclose(fp);
+			fp = fopen("ap.def", "rb");
 		}
 		char *line = NULL;
 		int size, n;
@@ -750,17 +778,22 @@ int drv_add_ap(void)
 	char str[256] = {};
 	struct timeval tv;
 	gettimeofday(&tv, NULL);
-	time_t tt = tv.tv_sec;
-	struct tm *t = localtime(&tt);
+	struct tm st = {0};
+	localtime_r(&tv.tv_sec, &st);
 
 	//进入新的1s时区，保存前1s数据到文件
 	if(g_tv_ap.tv_sec != tv.tv_sec){
 		if(g_tv_ap.tv_sec != 0){//首次无数据
+			struct tm gst = {0};
+			localtime_r(&g_tv_ap.tv_sec, &gst);	
 			int size = strlen((unsigned char*)g_ptr_ap_diff);
 			if(size){
 				memset(str, 0, sizeof(str));
-				sprintf(str, "log/%d_%04d%02d%02d%02d%02d%02d_ap.ini", vcb_FNr, t->tm_year+1900, 
-						t->tm_mon+1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);
+				sprintf(str, 
+						"log/%d_%04d%02d%02d%02d%02d%02d_ap.ini", 
+						vcb_FNr, gst.tm_year+1900, gst.tm_mon+1, 
+						gst.tm_mday, gst.tm_hour, gst.tm_min, 
+						gst.tm_sec);
 				FILE* fp = fopen(str, "wb");
 				if(fp == NULL){
 					debug(1, "open file %s error\n", str);
@@ -770,8 +803,12 @@ int drv_add_ap(void)
 				fclose(fp);
 #ifdef LOGBAK
 				memset(str, 0, sizeof(str));
-				sprintf(str, "log_bak/%d_%04d%02d%02d%02d%02d%02d_ap.ini", vcb_FNr, t->tm_year+1900, 
-						t->tm_mon+1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);
+				sprintf(str, 
+						"log_bak/%d_%04d%02d%02d%02d%02d%02d_ap.ini", 
+						vcb_FNr, gst.tm_year+1900, gst.tm_mon+1, 
+						gst.tm_mday, gst.tm_hour, gst.tm_min, 
+						gst.tm_sec);
+
 				fp = fopen(str, "wb");
 				if(fp == NULL){
 					debug(1, "open file %s error\n", str);
@@ -802,8 +839,11 @@ int drv_add_ap(void)
 			sprintf(str, "[%d_%ld.%ld_%d %d]\r\n", vcb_FNr, (px.id >> 16) & 0xffff,
 					px.id & 0xffff, px.inst, diff);
 			sprintf(str+strlen(str), "Value=%d\r\n", py);
-			sprintf(str+strlen(str), "Time=%04d%02d%02d%02d%02d%02d%03ld\r\n", t->tm_year+1900,
-					t->tm_mon+1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec, (tv.tv_usec/1000)*100);
+			sprintf(str+strlen(str), 
+					"Time=%04d%02d%02d%02d%02d%02d%03ld\r\n", 
+					st.tm_year+1900, st.tm_mon+1, st.tm_mday, 
+					st.tm_hour, st.tm_min, st.tm_sec, 
+					(tv.tv_usec/100000)*100);
 		}
 
 		if(g_ap_diff_size - strlen(g_ptr_ap_diff) < strlen(str)){//扩展存储区

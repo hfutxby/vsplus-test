@@ -27,6 +27,8 @@ static pthread_mutex_t ring_mutex = PTHREAD_MUTEX_INITIALIZER;//ring_buf读写�
 
 static pthread_t g_tid_read; //读取串口
 static int g_exit_read = 0;
+static pthread_t g_tid_send;
+static int g_exit_send = 0;
 static pthread_t g_tid_pop; //解析串口命令
 static int g_exit_pop = 0;
 
@@ -285,6 +287,34 @@ void* thr_read(void* para)
 	}
 }
 
+void* thr_send(void* para)
+{
+	fd_set set_send;
+	char buf[4];
+	buf[0] = 0xd5; buf[1] = 0x00;
+	buf[2] = 0x01; buf[3] = 0x5c;
+	struct timeval timeout;
+	int ret = 0;
+
+	while(!g_exit_send){
+		FD_ZERO(&set_send);
+		FD_SET(g_fd_serial, &set_send);
+		timeout.tv_sec = 1;
+		timeout.tv_usec = 0;
+
+		ret = select(g_fd_serial + 1, NULL, &set_send, NULL, &timeout);
+		if(ret > 0){
+			if(FD_ISSET(g_fd_serial, &set_send)){
+				printf("send: 0x%02x 0x%02x 0x%02x 0x%02x\n", buf[0], buf[1], buf[2], buf[3]);
+				pthread_mutex_lock(&serial_read_mutex);
+				write(g_fd_serial, buf, sizeof(buf));
+				pthread_mutex_unlock(&serial_read_mutex);
+				usleep(200 * 1000);
+			}
+		}
+	}
+}
+
 int main(int argc, char* argv[])
 {
 	int ret = 0;
@@ -310,6 +340,7 @@ int main(int argc, char* argv[])
 	g_ring = alloc_ring(100);
 
 	pthread_create(&g_tid_read, NULL, thr_read, NULL);
+	pthread_create(&g_tid_send, NULL, thr_send, NULL);
 	pthread_create(&g_tid_pop, NULL, thr_pop, NULL);
 	
 	while(1){
@@ -319,6 +350,10 @@ int main(int argc, char* argv[])
 	g_exit_read = 1;
 	if(g_tid_read)
 		pthread_join(g_tid_read, NULL);
+
+	g_exit_send = 1;
+	if(g_exit_send)
+		pthread_join(g_tid_send, NULL);
 
 	g_exit_pop = 1;
 	if(g_tid_pop)

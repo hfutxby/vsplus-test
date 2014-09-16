@@ -23,10 +23,10 @@ struct connect_info{
 int serve_set_det(char* data)
 {
 	struct set_det_data* set = (struct set_det_data*)data;
-	printf("====\n");
-	printf("msg:SET_DET\n");
-   	printf("id:%d stat:%d\n", set->id, set->stat);	
-	printf("====\n");
+	//printf("====\n");
+	//printf("msg:SET_DET\n");
+   	//printf("id:%d stat:%d\n", set->id, set->stat);	
+	//printf("====\n");
 	tsc_det_op(set->id, set->stat);
 
 	return 0;

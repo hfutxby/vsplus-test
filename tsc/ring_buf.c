@@ -21,13 +21,14 @@ int init_ring(ring_buf* r)
 //分配最大容量为size的环存储
 ring_buf* alloc_ring(int size)
 {
+	size++;
 	ring_buf *r = (ring_buf*)malloc(sizeof(ring_buf));
 	if(!r){
 		perror("alloc ring failed");
 		return NULL;
 	}
 	memset(r, 0, sizeof(ring_buf));
-	r->buf = (unsigned char*)malloc(size + 1);
+	r->buf = (unsigned char*)malloc(size);
 	if(!r->buf){
 		perror("alloc ring failed");
 		return NULL;
