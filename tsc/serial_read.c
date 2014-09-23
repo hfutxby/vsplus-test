@@ -17,7 +17,7 @@ pack pack_list[] = {
     {0xf0, 0x5c, 1},//det rising
     {0xf1, 0x5c, 3},//det falling
     {0xc1, 0x5c, 1},//watchdog
-    {0x96, 0x69, 2},//sg switch
+    {0xD5, 0x5C, 2},//sg switch
     };
 
 static int g_fd_serial = -1; //串口
@@ -271,6 +271,7 @@ void* thr_read(void* para)
 			default:
 				if(FD_ISSET(g_fd_serial, &set_read)){
 					pthread_mutex_lock(&serial_read_mutex);
+					memset(buf, 0, sizeof(buf));
 					ret = read(g_fd_serial, buf, sizeof(buf));
 					pthread_mutex_unlock(&serial_read_mutex);
 					printf("thr_read:%d:", ret);
@@ -291,12 +292,13 @@ void* thr_send(void* para)
 {
 	fd_set set_send;
 	char buf[4];
-	buf[0] = 0xd5; buf[1] = 0x00;
-	buf[2] = 0x01; buf[3] = 0x5c;
+	buf[0] = 0xD5; buf[1] = 0x01;
+	buf[2] = 0xE1; buf[3] = 0x5c;
 	struct timeval timeout;
 	int ret = 0;
 
 	while(!g_exit_send){
+		//printf("D5 01 E1 5C\n");
 		FD_ZERO(&set_send);
 		FD_SET(g_fd_serial, &set_send);
 		timeout.tv_sec = 1;
@@ -305,11 +307,22 @@ void* thr_send(void* para)
 		ret = select(g_fd_serial + 1, NULL, &set_send, NULL, &timeout);
 		if(ret > 0){
 			if(FD_ISSET(g_fd_serial, &set_send)){
-				printf("send: 0x%02x 0x%02x 0x%02x 0x%02x\n", buf[0], buf[1], buf[2], buf[3]);
-				pthread_mutex_lock(&serial_read_mutex);
-				write(g_fd_serial, buf, sizeof(buf));
-				pthread_mutex_unlock(&serial_read_mutex);
-				usleep(200 * 1000);
+				//pthread_mutex_lock(&serial_read_mutex);
+				//buf[0] = 0xD5; buf[1] = 0x00;
+				//buf[2] = 0x01; buf[3] = 0x5c;
+				ret = write(g_fd_serial, buf, sizeof(buf));
+				printf("===>send: 0x%02x 0x%02x 0x%02x 0x%02x, ret=%d\n", buf[0]&0xff, buf[1]&0xff, buf[2]&0xff, buf[3]&0xff, ret);
+				//pthread_mutex_unlock(&serial_read_mutex);
+				usleep(2000 * 1000);
+
+				////pthread_mutex_lock(&serial_read_mutex);
+				//buf[0] = 0xF0; buf[1] = 0x01;
+				//buf[2] = 0xE1; buf[3] = 0x5c;
+				//printf("===>send: 0x%02x 0x%02x 0x%02x 0x%02x, ret=%d\n", buf[0]&0xff, buf[1]&0xff, buf[2]&0xff, buf[3]&0xff, ret);
+				//write(g_fd_serial, buf, sizeof(buf));
+				////pthread_mutex_unlock(&serial_read_mutex);
+				//usleep(2000 * 1000);
+				////pthread_mutex_unlock(&serial_read_mutex);
 			}
 		}
 	}

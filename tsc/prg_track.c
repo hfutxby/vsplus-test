@@ -57,6 +57,13 @@ int prg_track_cur(void)
 //初始化使用
 int prg_track_cur_set(int index)
 {
+	debug(2, "prg_id=%d\n", index);
+	int i;
+	for(i = 0; i < PRGMAX; i++){
+		if(g_prg_track[i].stat == 1)//清除原有的prg
+			g_prg_track[i].stat = 0;
+	}
+
 	g_prg_track[index].stat = 1;
 
 	return 0;

@@ -650,7 +650,8 @@ int decode_vcb(char* src, int src_len)
 
 	int i, j, index;
 	unsigned buf[4];
-	for(i = 0; i != src_len/4; i++){
+	int last = 3;
+	for(i = 0; i < src_len/4; i++){
 		for(j = 0; j < sizeof(EncodeIndex); j++){
 			if(EncodeIndex[j] == *src)
 				buf[0] = j;
@@ -672,7 +673,13 @@ int decode_vcb(char* src, int src_len)
 		*(dest+2) = (buf[2] << 6) | (buf[3] & 0x3F);
 		//printf("%-6d: 0x%02x 0x%02x 0x%02x 0x%02x ==>", i*4, *(src)&0xff, *(src+1)&0xff, *(src+2)&0xff, *(src+3)&0xff);
 		//printf("0x%02x 0x%02x 0x%02x\n", *(dest)&0xff, *(dest+1)&0xff, *(dest+2)&0xff);
-		fwrite(dest, 3, 1, fp);
+		if(i == (src_len/4 - 1)){
+			if(*(src+2) == '=')
+				last = 1;
+			else if(*(src+3) == '=')
+				last = 2;
+		}
+		fwrite(dest, last, 1, fp);
 		src += 4;
 		dest += 3;
 	}
@@ -910,7 +917,7 @@ int vspconfig(void)
 		VSPSigData.VSPSigDataList[index-1].amber_time = g_sg_info.node[i].amber;
 		VSPSigData.VSPSigDataList[index-1].minred_time = g_sg_info.node[i].close_sum;
 		VSPSigData.VSPSigDataList[index-1].prep_time = g_sg_info.node[i].prep;
-		VSPSigData.VSPSigDataList[index-1].mingreen_time = g_sg_info.node[i].free_sum - g_sg_info.node[i].prep;
+		VSPSigData.VSPSigDataList[index-1].mingreen_time = g_sg_info.node[i].free_sum;
 		VSPSigData.VSPSigDataList[index-1].green_blink = g_sg_info.node[i].green_blink;
 	}
 	VSPSigData.MaxSigDataNum = max;

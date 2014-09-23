@@ -110,7 +110,7 @@ int drv_sg_para(void* ptr, int size)
 	for(i = 0; i < num; i++){
 		sg = (sg_def*)(ptr + i * sizeof(sg_def));
 		sg->min_red = vcb_close_sum[i];
-		sg->min_green = vcb_free_sum[i] - vcb_prep[i];//green_blink作为close
+		sg->min_green = vcb_free_sum[i];
 		sg->prep = vcb_prep[i];
 		sg->amber = vcb_amber[i];
 		sg->green_blink = vcb_green_blink[i];
@@ -291,7 +291,7 @@ int drv_read_vsp_para(void)
 	//vcb_sg
 	for(i = 0; i < MAX_SIG_GROUP; i++){
 		vcb_sg_exist[i+1] = VSPSigData.VSPSigDataList[i].sig_valid;
-		vcb_free_sum[i+1] = VSPSigData.VSPSigDataList[i].mingreen_time + VSPSigData.VSPSigDataList[i].prep_time;
+		vcb_free_sum[i+1] = VSPSigData.VSPSigDataList[i].mingreen_time;
 		vcb_close_sum[i+1] = VSPSigData.VSPSigDataList[i].minred_time;
 		vcb_amber[i+1] = VSPSigData.VSPSigDataList[i].amber_time;
 		vcb_prep[i+1] = VSPSigData.VSPSigDataList[i].prep_time;
@@ -607,7 +607,7 @@ int drv_add_sg(int sg, int stat)
 		g_size_sg += 1024;
 		g_space_sg += 1024;
 	}	
-	printf("strlen(ptr_sg):%d, t1:%ld, t2:%ld\n str:\n%s\n", strlen(ptr_sg), g_tv_sg.tv_sec, tv.tv_sec, str);
+	//printf("strlen(ptr_sg):%d, t1:%ld, t2:%ld\n str:\n%s\n", strlen(ptr_sg), g_tv_sg.tv_sec, tv.tv_sec, str);
 	strcat(ptr_sg, str);
 	g_space_sg -= strlen(str);
 	return 0;
@@ -709,7 +709,7 @@ int drv_add_ap(void)
 		g_ptr_ap_all = (ap_t*)malloc(file_size);
 		ret = fread(g_ptr_ap_all, 1, file_size, fp);
 		fclose(fp);
-		//remove("ap.dat");
+		remove("ap.dat");
 		//for(i = 0; i < 16; i++)//TEST
 		//	printf("0x%x ", *((char*)(g_ptr_ap_all) + i));
 		//printf("\n");

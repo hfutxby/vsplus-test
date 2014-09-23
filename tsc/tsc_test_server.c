@@ -12,6 +12,7 @@
 #include "tsc.h"
 #include "vcb.h"
 #include "test_msg.h"
+#include "if626bas.h"
 
 static int g_exit = 0;
 
@@ -55,20 +56,47 @@ int serve_det_exist(int sock_fd)
 	}
 	write(sock_fd, &head, sizeof(struct msg_head));
 	write(sock_fd, buf, DETMAX);
+	return 0;
+}
+
+int serve_test(int sock_fd)
+{
+	printf("vs_ocit_path:%s\n", vs_ocit_path());
+
+	return 0;
+}
+
+int serve_set_prg(int sock_fd, char* data)
+{
+	char prg_id = *(char*)data;
+	prg_track_cur_set(prg_id);
+
+	return 0;
 }
 
 int handle_msg(enum msg_type type, char* data, int sock_fd)
 {
-	printf("=====msg_type:%d\n", type);
+	printf("recv msg type:");
 	switch(type){
 		case SET_DET:
+			printf("SET_DET\n");
 			serve_set_det(data);
 			break;
 		case SET_PT:
+			printf("SET_PT\n");
 			serve_set_pt(data);
 			break;
 		case DET_EXIST:
+			printf("DET_EXIST\n");
 			serve_det_exist(sock_fd);
+			break;
+		case TEST:
+			printf("TEST\n");
+			serve_test(sock_fd);
+			break;
+		case SET_PRG:
+			printf("SET_PRG\n");
+			serve_set_prg(sock_fd, data);
 			break;
 		default: 
 			break;

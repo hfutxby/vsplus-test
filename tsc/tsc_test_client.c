@@ -44,46 +44,22 @@ int main(int argc, char* argv[])
 	}
 	printf("connect ok !\r\n");
 
+#if 1
 	struct msg_head head = {0};   
-	head.type = DET_EXIST;
+	head.type = SET_PRG;
+	head.len = 1;
+	int prg_id = 0;
+	printf("set prg: ");
+	scanf("%d", &prg_id);
 	write(sock_fd, &head, sizeof(struct msg_head));
-	read(sock_fd, &head, sizeof(struct msg_head));
-	char *exist = malloc(head.len);
-	memset(exist, 0, head.len);
-	read(sock_fd, exist, head.len);
-	int i;
-	printf("len:%d\n", head.len);
-	printf("det exist:");
-	for(i = 0; i < head.len; i++){
-		if(exist[i])
-			printf("%2d ", i+1);
-	}
-	printf("\n");
+	write(sock_fd, &prg_id, sizeof(prg_id));
+#endif
 
-	int len = sizeof(struct set_det_data);
-	head.type = SET_DET;
-	head.len = len;
-	struct set_det_data *data = (struct set_det_data*)malloc(len);
-	int index, op;
-	struct timeval tv;
-	while(1){
-		gettimeofday(&tv, NULL);
-		srandom(tv.tv_usec);
-		index = random() % DETMAX;
-		if(!exist[index])//没有这个检测器
-			continue;
-		gettimeofday(&tv, NULL);
-		srandom(tv.tv_usec);
-		op = random() % 2;
-
-		data->id = index+1;//检测器编号1 ~ DETMAX
-		data->stat = op;
-		printf("index:%d op:%d\n", index+1, op);
-		write(sock_fd, &head, sizeof(struct msg_head));//type=DET_EXIST_R
-		write(sock_fd, data, len);
-		sleep(1);
-	}
-
+#if 0
+	struct msg_head head = {0};   
+	head.type = TEST;
+	write(sock_fd, &head, sizeof(struct msg_head));
+#endif
 	close(sock_fd);
 
 	return 0;

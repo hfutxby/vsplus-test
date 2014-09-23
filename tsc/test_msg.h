@@ -8,7 +8,9 @@ enum msg_type{
 	DET_EXIST,//请求获得检测器配置
 	DET_EXIST_R,
 	SET_PT,//发送一个PT消息
-	SG
+	SET_PRG,
+	SG,
+	TEST
 };
 
 struct msg_head{
