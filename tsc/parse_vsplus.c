@@ -191,7 +191,7 @@ int set_sg(xmlNodeSetPtr nodes)
 				child_2 = _find_node(child, "Uebergangselement");
 				while(child_2){
 					child_3 = _find_node(child_2, "Signalbild");
-					if(child_3 && !xmlStrcmp(xmlNodeGetContent(child_3), "rotgelb")){
+					if(child_3 && (!xmlStrcmp(xmlNodeGetContent(child_3), "rotgelb") || (!xmlStrcmp(xmlNodeGetContent(child_3), "rotblk")))){
 						//printf("%s(%d)\n", __func__, __LINE__);
 						child_3 = xmlNextElementSibling(child_3);
 						//printf("amber=%d\n", atoi(xmlNodeGetContent(child)));

@@ -106,6 +106,11 @@ void handle_pack(unsigned char* buf)
 		case 0x5a:
 			printf("get a watchdog feed\n");
 			break;
+		case 0xD5:
+			printf("waiting connect\n");
+			buf[1] = 0xC4; buf[2] = 0xED;
+			write(g_fd_serial, buf, 4);
+			break;
 		default:
 			printf("unknown pack\n");
 	}
@@ -308,20 +313,20 @@ void* thr_send(void* para)
 		if(ret > 0){
 			if(FD_ISSET(g_fd_serial, &set_send)){
 				//pthread_mutex_lock(&serial_read_mutex);
-				//buf[0] = 0xD5; buf[1] = 0x00;
-				//buf[2] = 0x01; buf[3] = 0x5c;
+				buf[0] = 0xD5; buf[1] = 0x00;
+				buf[2] = 0x01; buf[3] = 0x5c;
 				ret = write(g_fd_serial, buf, sizeof(buf));
 				printf("===>send: 0x%02x 0x%02x 0x%02x 0x%02x, ret=%d\n", buf[0]&0xff, buf[1]&0xff, buf[2]&0xff, buf[3]&0xff, ret);
 				//pthread_mutex_unlock(&serial_read_mutex);
-				usleep(2000 * 1000);
+				usleep(200 * 1000);
 
 				////pthread_mutex_lock(&serial_read_mutex);
-				//buf[0] = 0xF0; buf[1] = 0x01;
-				//buf[2] = 0xE1; buf[3] = 0x5c;
-				//printf("===>send: 0x%02x 0x%02x 0x%02x 0x%02x, ret=%d\n", buf[0]&0xff, buf[1]&0xff, buf[2]&0xff, buf[3]&0xff, ret);
-				//write(g_fd_serial, buf, sizeof(buf));
+				buf[0] = 0xF0; buf[1] = 0x01;
+				buf[2] = 0xE1; buf[3] = 0x5c;
+				printf("===>send: 0x%02x 0x%02x 0x%02x 0x%02x, ret=%d\n", buf[0]&0xff, buf[1]&0xff, buf[2]&0xff, buf[3]&0xff, ret);
+				write(g_fd_serial, buf, sizeof(buf));
 				////pthread_mutex_unlock(&serial_read_mutex);
-				//usleep(2000 * 1000);
+				usleep(200 * 1000);
 				////pthread_mutex_unlock(&serial_read_mutex);
 			}
 		}
@@ -353,7 +358,7 @@ int main(int argc, char* argv[])
 	g_ring = alloc_ring(100);
 
 	pthread_create(&g_tid_read, NULL, thr_read, NULL);
-	pthread_create(&g_tid_send, NULL, thr_send, NULL);
+	//pthread_create(&g_tid_send, NULL, thr_send, NULL);
 	pthread_create(&g_tid_pop, NULL, thr_pop, NULL);
 	
 	while(1){
