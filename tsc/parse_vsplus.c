@@ -3,12 +3,16 @@
 #include <string.h>
 #include <assert.h>
 #include <errno.h>
+#include <getopt.h>
 
 #include <libxml/tree.h>
 #include <libxml/parser.h>
 #include <libxml/xpath.h>
 #include <libxml/xpathInternals.h>
 
+const char* g_version = "0.3";
+char g_outfile[128] = {0};
+int g_debug = 0x0;
 
 /* 在父节点cur下面找到第一个名字符合path的子节点 */
 xmlNodePtr _find_node(xmlNodePtr cur, char path[64])
@@ -51,7 +55,7 @@ int set_det(xmlNodeSetPtr nodes)
 	int i;
 
 	count = (nodes) ? nodes->nodeNr : 0;
-	printf("Result (%d nodes):\n", count);
+	//printf("Result (%d nodes):\n", count);
 	g_det_info.num = count;
 	size = g_det_info.num * sizeof(det_node);
 	g_det_info.node = malloc(size);
@@ -121,7 +125,8 @@ int parse_det(char* filename)
 
 	/* Print results */
 	set_det(xpathObj->nodesetval);
-	dump_det();
+	if(g_debug)
+		dump_det();
 
 	/* Cleanup */
 	xmlXPathFreeObject(xpathObj);
@@ -158,7 +163,7 @@ int set_sg(xmlNodeSetPtr nodes)
 	int i;
 
 	count = (nodes) ? nodes->nodeNr : 0;
-	printf("Result (%d nodes):\n", count);
+	//printf("Result (%d nodes):\n", count);
 	g_sg_info.num = count;
 	size = g_sg_info.num * sizeof(sg_node);
 	g_sg_info.node = malloc(size);
@@ -269,7 +274,8 @@ int parse_sg(char* filename)
 
 	/* Print results */
 	set_sg(xpathObj->nodesetval);
-	dump_sg();
+	if(g_debug)
+		dump_sg();
 
 	/* Cleanup */
 	xmlXPathFreeObject(xpathObj);
@@ -296,7 +302,7 @@ int set_id(xmlNodeSetPtr nodes)
 	int i;
 
 	count = (nodes) ? nodes->nodeNr : 0;
-	printf("Result (%d nodes):\n", count);
+	//printf("Result (%d nodes):\n", count);
 
 	for(i = 0; i < count; ++i) {
 		assert(nodes->nodeTab[i]);
@@ -363,7 +369,8 @@ int parse_id(char* filename)
 
 	/* Print results */
 	set_id(xpathObj->nodesetval);
-	dump_id();
+	if(g_debug)
+		dump_id();
 
 	/* Cleanup */
 	xmlXPathFreeObject(xpathObj);
@@ -396,7 +403,7 @@ int set_prg(xmlNodeSetPtr nodes)
 	int i;
 
 	count = (nodes) ? nodes->nodeNr : 0;
-	printf("Result (%d nodes):\n", count);
+	//printf("Result (%d nodes):\n", count);
 	g_prg_info.num = count;
 	size = g_prg_info.num * sizeof(prg_node);
 	g_prg_info.node = malloc(size);
@@ -476,7 +483,8 @@ int parse_prg(char* filename)
 
 	/* Print results */
 	set_prg(xpathObj->nodesetval);
-	dump_prg();
+	if(g_debug)
+		dump_prg();
 
 	/* Cleanup */
 	xmlXPathFreeObject(xpathObj);
@@ -523,7 +531,7 @@ int set_inter(xmlNodeSetPtr nodes)
 	int i;
 
 	count = (nodes) ? nodes->nodeNr : 0;
-	printf("Result (%d nodes):\n", count);
+	//printf("Result (%d nodes):\n", count);
 	g_inter_info.num = count;
 	size = g_inter_info.num * sizeof(inter_node);
 	g_inter_info.node = malloc(size);
@@ -600,7 +608,6 @@ int parse_inter(char* filename)
 	/* Print results */
 	int ret;
 	ret = set_inter(xpathObj->nodesetval);
-	printf("set_inter ret:%d\n", ret);
 	if(ret == 0){
 		printf("%s(%d)\n", __func__, __LINE__);
 		xmlXPathFreeObject(xpathObj);
@@ -614,7 +621,8 @@ int parse_inter(char* filename)
 		ret = set_inter(xpathObj->nodesetval);
 	}
 
-	dump_inter();
+	if(g_debug)
+		dump_inter();
 
 	/* Cleanup */
 	xmlXPathFreeObject(xpathObj);
@@ -637,12 +645,15 @@ unsigned char EncodeIndex[] = {
 int decode_vcb(char* src, int src_len)
 {
 	int dest_len = src_len * 3 / 4;
-	printf("src_len:%d dest_len:%d\n", src_len, dest_len);
 	char* dest = malloc(dest_len);
 	char* ptr = dest;
 	memset(dest, 0, dest_len);
 
-	FILE* fp = fopen(VCB_NAME, "wb");
+	char filename[128] = {0};
+	sprintf(filename, "%s.vcb", g_outfile);
+
+	//FILE* fp = fopen(VCB_NAME, "wb");
+	FILE* fp = fopen(filename, "wb");
 	if(fp == NULL){
 		printf("%s\n", strerror(errno));
 		return -1;
@@ -685,6 +696,7 @@ int decode_vcb(char* src, int src_len)
 	}
 
 	fclose(fp);
+	printf("File[%s.vcb] write success\n", g_outfile);
 
 	free(ptr);
 
@@ -700,7 +712,7 @@ int set_vcb(xmlNodeSetPtr nodes)
 	int i;
 
 	count = (nodes) ? nodes->nodeNr : 0;
-	printf("Result (%d nodes):\n", count);
+	//printf("Result (%d nodes):\n", count);
 
 	for(i = 0; i < count; ++i) {
 		assert(nodes->nodeTab[i]);
@@ -922,7 +934,10 @@ int vspconfig(void)
 	}
 	VSPSigData.MaxSigDataNum = max;
 
-	pf = fopen(VSP_PARAMFILE,"w");
+	char filename[128] = {0};
+	sprintf(filename, "%s.dat", g_outfile);
+	//pf = fopen(VSP_PARAMFILE,"w");
+	pf = fopen(filename,"w");
 	if (fwrite(&VSPSysData,sizeof(VSPSysData),1,pf) <= 0)
 	{
 		perror("fwrite[VSPSysData]");
@@ -943,7 +958,7 @@ int vspconfig(void)
 	}
 	fclose(pf);
 
-	printf("File[%s] write success\n",VSP_PARAMFILE);
+	printf("File[%s.dat] write success\n", g_outfile);
 
 	return EXIT_SUCCESS;
 }
@@ -951,10 +966,62 @@ int vspconfig(void)
 
 int main(int argc, char* argv[])
 {
-	parse_xml(argv[1]);
+	extern char* optarg;
+	extern optind, opterr, optopt;
+	opterr = 0;
+	char xmlfile[128] = {0};
+
+	char* optstring = "v";
+	struct option long_options[] = {
+		{"version", no_argument,    NULL,   'v'},
+		{"debug",   optional_argument,  NULL,   'd'},
+		{0,0,0,0}
+	};
+	int opt;
+	int option_index;
+	while((opt = getopt_long(argc, argv, optstring, long_options, &option_index)) != -1){
+		switch(opt){
+			case 'v':
+				printf("version %s, build at: %s %s\n", g_version, __DATE__, __TIME__);
+				return 0;
+				break;
+			case 'd'://输入必须是debug=val形式？
+				if(optarg){
+					printf("debug=%d\n", atoi(optarg));
+					g_debug = atoi(optarg);
+				}
+				break;
+			default:
+				printf("unknown option: %s\n", argv[optind-1]);
+				printf("usage:%s [-v] [--version] xmlfile outfile\n", argv[0]);
+				return -1;
+				break;
+		}
+	}
+	if(!argv[optind]){
+		printf("usage:%s [-v] [--version] xmlfile outfile\n", argv[0]);
+		return -1;
+	}
+	else{
+		//printf("%s\n", argv[optind]);
+		sprintf(xmlfile, "%s", argv[optind]);
+		optind++;
+	}
+
+	if(!argv[optind]){
+		printf("default outfile: vsp_param\n");
+		sprintf(g_outfile, "%s", "vsp_param");
+	}
+	else{
+		sprintf(g_outfile, "%s", argv[optind]);
+		optind++;
+	}
+
+
+	parse_xml(xmlfile);
 
 	vspconfig();
-	dump_vspconfig();
+	//dump_vspconfig();
 
 	return 0;
 }
