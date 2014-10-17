@@ -971,10 +971,10 @@ int main(int argc, char* argv[])
 	opterr = 0;
 	char xmlfile[128] = {0};
 
-	char* optstring = "v";
+	char* optstring = "vd";
 	struct option long_options[] = {
 		{"version", no_argument,    NULL,   'v'},
-		{"debug",   optional_argument,  NULL,   'd'},
+		//{"debug",   optional_argument,  NULL,   'd'},
 		{0,0,0,0}
 	};
 	int opt;
@@ -986,10 +986,11 @@ int main(int argc, char* argv[])
 				return 0;
 				break;
 			case 'd'://输入必须是debug=val形式？
-				if(optarg){
-					printf("debug=%d\n", atoi(optarg));
-					g_debug = atoi(optarg);
-				}
+				g_debug = 1;
+				//if(optarg){
+				//	printf("debug=%d\n", atoi(optarg));
+				//	g_debug = atoi(optarg);
+				//}
 				break;
 			default:
 				printf("unknown option: %s\n", argv[optind-1]);

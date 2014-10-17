@@ -66,6 +66,14 @@ int main(int argc, char* argv[])
 	struct set_det_data *data = (struct set_det_data*)malloc(len);
 	int index, op;
 	struct timeval tv;
+#if 1 //all det occpied
+	for(index = 1; index < DETMAX; ++index){
+		data->id = index;
+		data->stat = RISING;
+		write(sock_fd, &head, sizeof(struct msg_head));
+		write(sock_fd, data, len);	
+	}
+#else
 	while(1){
 		gettimeofday(&tv, NULL);
 		srandom(tv.tv_usec);
@@ -79,10 +87,11 @@ int main(int argc, char* argv[])
 		data->id = index+1;//检测器编号1 ~ DETMAX
 		data->stat = op;
 		printf("index:%d op:%d\n", index+1, op);
-		write(sock_fd, &head, sizeof(struct msg_head));//type=DET_EXIST_R
+		write(sock_fd, &head, sizeof(struct msg_head));
 		write(sock_fd, data, len);
 		sleep(1);
 	}
+#endif
 
 	close(sock_fd);
 

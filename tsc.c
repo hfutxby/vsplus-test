@@ -419,7 +419,7 @@ void tsc_stream_waiting(int index, int time)
 /*************检测器函数************************/
 static double g_f1 = 0.5;//占用率上升折算因子
 static double g_f2 = 0.125;//下降因子
-#define DET_MAXTIME 600 //等待下降沿超时
+#define DET_MAXTIME 600000 //等待下降沿超时
 
 static det_track* g_det = NULL; //检测器数据
 static det_def* g_det_def = NULL; //检测器配置

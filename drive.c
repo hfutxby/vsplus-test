@@ -326,7 +326,7 @@ int drv_read_vsp_para(void)
 	for(i = 0; i < MAX_DET_GROUP; i++){
 		vcb_det_exist[i+1] = VSPDetData.VSPDetDataList[i].det_valid;
 	}
-#if 10
+#if 0
 	printf("%3s  %5s\n", "det", "valid");
 	for(i = 0; i < MAX_DET_GROUP+1; i++){
 		if(vcb_det_exist[i])

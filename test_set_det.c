@@ -53,7 +53,7 @@ int main(int argc, char* argv[])
 	while(1){
 		printf("input det num:");
 		scanf("%d", &index);
-		printf("op: 1 = rising; 2 = falling; 3 = fault; 4 = ok");
+		printf("op: 1 = rising; 2 = falling; 3 = fault; 4 = ok ");
 		scanf("%d", &op);
 		memset(data, 0, len);
 		data->id = index;

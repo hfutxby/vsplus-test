@@ -253,7 +253,7 @@ int vs_init(void)
 	if(ret < 0)
 		return -1;
 #endif
-	prg_track_cur_set(3);
+	prg_track_cur_set(1);
 	printf("=======prg_track_cru_set(1)=====\n");
 #if 1
 	//VSP_NEU_INI
