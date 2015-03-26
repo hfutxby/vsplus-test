@@ -95,6 +95,19 @@ typedef struct{
 	int sg[SGMAX];
 }xml_para;
 
+#if 1
+typedef struct{
+	short head;
+	short MP;// (call point);
+	short Linie;// (line);
+	short Kurs;// (course);
+	short Route;// (route);
+	short Prioritaet;// (priority);
+	short Laenge;// (vehicle length);
+	short RichtungVonHand;// (direction by hand);
+	short FahrplanAbweichnung;// (difference to schedule);
+}PTMSG;
+#else
 typedef struct{
 	int MP;// (call point);
 	int Linie;// (line);
@@ -105,7 +118,7 @@ typedef struct{
 	int RichtungVonHand;// (direction by hand);
 	int FahrplanAbweichnung;// (difference to schedule);
 }PTMSG;
-
+#endif
 //xml_para* g_xml_para = NULL;
 
 #endif /*__TSC_H*/

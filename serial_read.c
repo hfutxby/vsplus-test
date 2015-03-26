@@ -109,7 +109,7 @@ void handle_pack(unsigned char* buf)
 		case 0xD5:
 			printf("waiting connect\n");
 			buf[1] = 0xC4; buf[2] = 0xED;
-			write(g_fd_serial, buf, 4);
+			//write(g_fd_serial, buf, 4);
 			break;
 		default:
 			printf("unknown pack\n");
@@ -361,10 +361,13 @@ int main(int argc, char* argv[])
 	//pthread_create(&g_tid_send, NULL, thr_send, NULL);
 	pthread_create(&g_tid_pop, NULL, thr_pop, NULL);
 	
+#if 1
+	sleep(5);
+#else	
 	while(1){
 		sleep(1);
 	}
-
+#endif
 	g_exit_read = 1;
 	if(g_tid_read)
 		pthread_join(g_tid_read, NULL);

@@ -91,7 +91,7 @@ int main(void)
 		for(i = 0; i < num; i++){
 			if(g_sg[i].fault == 2)
 				continue;
-#if 10
+#if 0
 			if((g_sg[i].stat >= 5) && (g_sg[i].stat <=7) && (tvs[i].tv_sec == 0)){//into green stat
 				//printf("=== %d ===\n", __LINE__);
 				gettimeofday(&tvs[i].tv_sec, NULL);
@@ -102,9 +102,10 @@ int main(void)
 				ts[i] = (tv.tv_sec - tvs[i].tv_sec) * 10 + (tv.tv_usec - tvs[i].tv_usec) / 100000;
 				tvs[i].tv_sec = 0;
 			}
-#endif
 			printf("[%2d:%2d]", i, ts[i]);
-
+#else
+			printf("[%d]", i);
+#endif
 			print_signal(g_sg[i].stat, g_sg[i].time);
 		}
 		printf("\033[0m\r");

@@ -864,6 +864,110 @@ int drv_add_ap(void)
 }
 #endif
 
+int drv_get_atime(void)
+{
+	char str[64][128];
+	char buf[128];
+	memset(str, 0, sizeof(str));
+
+	pd_t px;
+	unsigned short py;
+	py = 0;
+	int member = 57;
+	int number = 400;
+	int sg, nr;
+	px.id = member << 16 | number;
+	for(sg = 0; sg < 64; sg++){
+		px.inst = 1 + sg * 5;
+		vs_read_process_data(&px, &py);
+#if 0
+		if(py){
+			nr = py;
+			memset(buf, 0, sizeof(buf));
+			sprintf(buf, "sg:%2d\t", py);
+			strcat(str[nr], buf);
+
+			px.inst = 2 + sg * 5;
+			vs_read_process_data(&px, &py);
+			memset(buf, 0, sizeof(buf));
+			sprintf(buf, "min:%3d\t", py);
+			strcat(str[nr], buf);
+
+			px.inst = 3 + sg * 5;
+			vs_read_process_data(&px, &py);
+			memset(buf, 0, sizeof(buf));
+			sprintf(buf, "max:%3d\t", py);
+			strcat(str[nr], buf);
+
+			px.inst = 4 + sg * 5;
+			vs_read_process_data(&px, &py);
+			memset(buf, 0, sizeof(buf));
+			sprintf(buf, "likely:%3d\t", py);
+			strcat(str[nr], buf);
+
+			px.inst = 5 + sg * 5;
+			vs_read_process_data(&px, &py);
+			memset(buf, 0, sizeof(buf));
+			sprintf(buf, "conf:%3d\n", py);
+			strcat(str[nr], buf);
+		}
+#endif
+
+#if 10
+		if(py){
+			nr = py;
+			sprintf(str[nr] + strlen(str[nr]), "sg:%2d\t", py);
+			px.inst = 2 + sg * 5;
+			vs_read_process_data(&px, &py);
+			sprintf(str[nr] + strlen(str[nr]), "min:%3d\t", py);
+			px.inst = 3 + sg * 5;
+			vs_read_process_data(&px, &py);
+			sprintf(str[nr] + strlen(str[nr]), "max:%3d\t", py);
+			px.inst = 4 + sg * 5;
+			vs_read_process_data(&px, &py);
+			sprintf(str[nr] + strlen(str[nr]), "likely:%3d\t", py);
+			px.inst = 5 + sg * 5;
+			vs_read_process_data(&px, &py);
+			sprintf(str[nr] + strlen(str[nr]), "conf:%3d\n", py);
+		}
+#endif
+		/*if(py == 1){
+			printf("sg:%2d\t", py);
+			px.inst = 2 + sg * 5;
+			vs_read_process_data(&px, &py);
+			printf("min:%3d\t", py);
+			vs_read_process_data(&px, &py);
+			printf("max:%3d\t", py);
+			vs_read_process_data(&px, &py);
+			printf("likely:%3d\t", py);
+			vs_read_process_data(&px, &py);
+			printf("conf:%3d\n", py);
+		}*/
+	}
+
+#if 0
+	px.inst = 1;
+	vs_read_process_data(&px, &py);
+	printf("SGnr:\t%d\n", py);
+	px.inst = 2;
+	vs_read_process_data(&px, &py);
+	printf("minTimeToChange:\t%d\n", py);
+	px.inst = 3;
+	vs_read_process_data(&px, &py);
+	printf("maxTimeToChange:\t%d\n", py);
+	px.inst = 4;
+	vs_read_process_data(&px, &py);
+	printf("likelyTimeToChange:\t%d\n", py);
+	px.inst = 5;
+	vs_read_process_data(&px, &py);
+	printf("confidence:\t%d\n", py);
+#endif
+	for(sg = 0; sg < 64; sg++){
+		printf("%s", str[sg]);
+	}
+	printf("\n");
+}
+
 int drv_add_message(char* str)
 {
 	FILE *fp = fopen("message.log", "ab+");

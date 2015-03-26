@@ -77,6 +77,7 @@ int thr_vsplus(void* arg)
 			//gettimeofday(&tv2, NULL);
 			//debug(1, "drv_add_ap use: %ldus\n", (tv2.tv_sec - tv1.tv_sec)*1000*1000 + (tv2.tv_usec - tv1.tv_usec));
 #endif
+drv_get_atime();
 			//if(ret == 1){
 			//    printf("%s(%d):call VSPLUS(NEU_EIN) success, ret=%d\n", __func__, __LINE__, ret);
 			//}

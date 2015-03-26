@@ -371,7 +371,7 @@ int tsc_prog_select(void)
 {
 	int ret;
 	ret = prg_track_next();
-	debug(2, "ret:%d\n", ret);
+	debug(3, "ret:%d\n", ret);
 
 	return ret;
 }
@@ -413,7 +413,7 @@ int tsc_prog_src(void)
  */
 void tsc_stream_waiting(int index, int time)
 {
-	debug(2, "stream:%d, waiting:%d\n", index, time);
+	debug(3, "stream:%d, waiting:%d\n", index, time);
 }
 
 /*************检测器函数************************/
@@ -1164,11 +1164,11 @@ int tsc_read_pt(void* arg)
 	if(g_tsc_pt_new){
 		g_tsc_pt_new = 0;
 		memcpy((char*)arg, (char*)&g_tsc_pt, sizeof(PTMSG));
-		dump_pt(arg);
+		//dump_pt(arg);
 		return 1;
 	}
 	else{
-		memset((char*)arg, 0, sizeof(PTMSG));
+		//memset((char*)arg, 0, sizeof(PTMSG));
 		return 0;
 	}
 }

@@ -651,14 +651,71 @@ void U_Kontrolle(short int vs, short int zeit)
 	tsc_stream_waiting(vs, zeit);
 }
 
+#include <string.h>
 /* FIXME:VS-PLUS reads the serial PT telegrams that have been
  * received by the controller.
  * oev_tele_poi:   pointe on a telegram
  */
 short TelegrammVomGeraet(void* oev_tele_poi)
 {
+
+#if 0
+	typedef struct{
+		int MP;// (call point);
+		int Linie;// (line);
+		int Kurs;// (course);
+		int Route;// (route);
+		int Prioritaet;// (priority);
+		int Laenge;// (vehicle length);
+		int RichtungVonHand;// (direction by hand);
+		int FahrplanAbweichnung;// (difference to schedule);
+	}PTMSG;
+#endif
+#if 0
+	PTMSG pt = {0};
+	short int ret = tsc_read_pt(&pt);
+	memcpy(oev_tele_poi, &pt, sizeof(PTMSG));
+	if(ret){
+		debug(2, "call point:%d\n", pt.MP);
+		debug(2, "line:%d\n", pt.Linie);
+		debug(2, "course:%d\n", pt.Kurs);
+		debug(2, "route:%d\n", pt.Route);
+		debug(2, "priority:%d\n", pt.Prioritaet);
+		debug(2, "vehicle length:%d\n", pt.Laenge);
+		debug(2, "direction by hand:%d\n", pt.RichtungVonHand);
+		debug(2, "difference to schedule:%d\n", pt.FahrplanAbweichnung);
+		int i;
+		for(i = 0; i < sizeof(PTMSG); ++i){
+			printf("0x%02X ", *((char*)oev_tele_poi+i));
+		}
+		printf("\n");
+	}
+
+#endif
+#if 10
 	short int ret = tsc_read_pt(oev_tele_poi);
-	debug(3, "ptr:%p, ret:%d\n", oev_tele_poi, ret);
+	//debug(2, "ptr:%p, ret:%d\n", oev_tele_poi, ret);
+
+	PTMSG *ptr = (PTMSG*)oev_tele_poi;
+
+	if(ret){
+		debug(2, "call point:%d\n", ptr->MP);
+		debug(2, "line:%d\n", ptr->Linie);
+		debug(2, "course:%d\n", ptr->Kurs);
+		debug(2, "route:%d\n", ptr->Route);
+		debug(2, "priority:%d\n", ptr->Prioritaet);
+		debug(2, "vehicle length:%d\n", ptr->Laenge);
+		debug(2, "direction by hand:%d\n", ptr->RichtungVonHand);
+		debug(2, "difference to schedule:%d\n", ptr->FahrplanAbweichnung);
+
+		int i;
+		for(i = 0; i < sizeof(PTMSG); ++i){
+			printf("0x%02X ", *((char*)oev_tele_poi+i));
+		}
+		printf("\n");
+	}
+#endif
+
 	return ret;
 }
 

@@ -35,15 +35,28 @@ struct det_exist_data{
 	char exist[DETMAX];
 };
 
+////PT
+//struct set_pt_data{
+//	int MP;// (call point);
+//	int Linie;// (line);
+//	int Kurs;// (course);
+//	int Route;// (route);
+//	int Prioritaet;// (priority);
+//	int Laenge;// (vehicle length);
+//	int RichtungVonHand;// (direction by hand);
+//	int FahrplanAbweichnung;// (difference to schedule);
+//};
 //PT
 struct set_pt_data{
-	int MP;// (call point);
-	int Linie;// (line);
-	int Kurs;// (course);
-	int Route;// (route);
-	int Prioritaet;// (priority);
-	int Laenge;// (vehicle length);
-	int RichtungVonHand;// (direction by hand);
-	int FahrplanAbweichnung;// (difference to schedule);
+	short head;
+	short MP;// (call point);
+	short Linie;// (line);
+	short Kurs;// (course);
+	short Route;// (route);
+	short Prioritaet;// (priority);
+	short Laenge;// (vehicle length);
+	short RichtungVonHand;// (direction by hand);
+	short FahrplanAbweichnung;// (difference to schedule);
 };
+
 #endif /*__TEST_MSG_H*/

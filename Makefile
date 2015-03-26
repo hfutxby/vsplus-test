@@ -1,21 +1,14 @@
-#ifeq ($(target),arm)
-#CC = arm-none-linux-gnueabi-gcc
-#target = arm
-#else
-#CC = gcc
-#target = x86
-#endif
 
-ARMCC = arm-none-linux-gnueabi-gcc
+ARMCC = /home/byxu/CodeSourcery/Sourcery_G++_Lite/bin/arm-none-linux-gnueabi-gcc
 CC = gcc
 
-CFLAGS += -O0 -D_PROZESSOR_INTEL_ -D_HELPER_MACROS_ -D_ADVANCED_MEMORY_ -DDEBUG=2 -DUSE_INI 
+CFLAGS += -O0 -D_PROZESSOR_INTEL_ -D_HELPER_MACROS_ -D_ADVANCED_MEMORY_ -DDEBUG=2  
 #CFLAGS += -D_PROZESSOR_INTEL_ -D_HELPER_MACROS_ -D_ADVANCED_MEMORY_ -DDEBUG=1 -DUSE_TTY -DUSE_INI -g
 
 all: main serial_test sg_view parse_xml test_client
 main: main.c tsc.c VSP_Interface.c
-	$(CC) $(CFLAGS) tsc_test_server.c VSP_Interface.c tsc.c drive.c ring_buf.c serial_pack.c prg_track.c sg_track.c vs_main.c main.c vsp_core_check.lib -pthread -lm -o main.x86.out
-	$(ARMCC) $(CFLAGS) tsc_test_server.c VSP_Interface.c tsc.c drive.c ring_buf.c serial_pack.c prg_track.c sg_track.c vs_main.c main.c vsp_core_arm_check.lib -pthread -lm -o main.arm.out
+	$(CC) $(CFLAGS) tsc_test_server.c VSP_Interface.c tsc.c drive.c ring_buf.c serial_pack.c prg_track.c sg_track.c vs_main.c main.c vsp_core.lib -pthread -lm -o main.x86.out
+	$(ARMCC) $(CFLAGS) tsc_test_server.c VSP_Interface.c tsc.c drive.c ring_buf.c serial_pack.c prg_track.c sg_track.c vs_main.c main.c vsp_core_arm.lib -pthread -lm -o main.arm.out
 
 #用来测试发送模拟的检测器数据
 serial_test: ring_buf.c serial_test.c serial_read.c
@@ -35,8 +28,11 @@ parse_xml:
 test_client:
 	$(CC) tsc_test_client.c -o tsc_test_client.x86.out
 	$(CC) test_set_det.c -o test_set_det.x86.out
+	$(ARMCC) test_set_det.c -o test_set_det.arm.out
 	$(CC) test_set_det_auto.c -o test_set_det_auto.x86.out
+	$(ARMCC) test_set_det_auto.c -o test_set_det_auto.arm.out
 	$(CC) test_set_pt.c -o test_set_pt.x86.out
+	$(ARMCC) test_set_pt.c -o test_set_pt.arm.out
 
 clean:
 	$(RM) *.x86 *.arm *.o *.out

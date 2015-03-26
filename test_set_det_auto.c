@@ -66,7 +66,7 @@ int main(int argc, char* argv[])
 	struct set_det_data *data = (struct set_det_data*)malloc(len);
 	int index, op;
 	struct timeval tv;
-#if 1 //all det occpied
+#if 0 //all det occpied
 	for(index = 1; index < DETMAX; ++index){
 		data->id = index;
 		data->stat = RISING;

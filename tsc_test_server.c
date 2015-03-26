@@ -26,7 +26,7 @@ int serve_set_det(char* data)
 	struct set_det_data* set = (struct set_det_data*)data;
 	//printf("====\n");
 	//printf("msg:SET_DET\n");
-   	//printf("id:%d stat:%d\n", set->id, set->stat);	
+   	printf("id:%d stat:%d\n", set->id, set->stat);	
 	//printf("====\n");
 	tsc_det_op(set->id, set->stat);
 
@@ -76,7 +76,7 @@ int serve_set_prg(int sock_fd, char* data)
 
 int handle_msg(enum msg_type type, char* data, int sock_fd)
 {
-	printf("recv msg type:");
+	//printf("recv msg type:");
 	switch(type){
 		case SET_DET:
 			printf("SET_DET\n");
