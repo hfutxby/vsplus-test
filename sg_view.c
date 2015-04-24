@@ -109,7 +109,7 @@ int main(void)
 			print_signal(g_sg[i].stat, g_sg[i].time);
 		}
 		printf("\033[0m\r");
-		us_sleep(100);
+		us_sleep(500);
 	}
 
 	close_sg();

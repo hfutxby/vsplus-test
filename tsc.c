@@ -413,7 +413,7 @@ int tsc_prog_src(void)
  */
 void tsc_stream_waiting(int index, int time)
 {
-	debug(3, "stream:%d, waiting:%d\n", index, time);
+	debug(2, "stream:%d, waiting:%d\n", index, time);
 }
 
 /*************检测器函数************************/

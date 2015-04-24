@@ -10,7 +10,7 @@
 #include <libxml/xpath.h>
 #include <libxml/xpathInternals.h>
 
-const char* g_version = "0.3";
+const char* g_version = "0.4";
 char g_outfile[128] = {0};
 int g_debug = 0x0;
 
@@ -196,7 +196,8 @@ int set_sg(xmlNodeSetPtr nodes)
 				child_2 = _find_node(child, "Uebergangselement");
 				while(child_2){
 					child_3 = _find_node(child_2, "Signalbild");
-					if(child_3 && (!xmlStrcmp(xmlNodeGetContent(child_3), "rotgelb") || (!xmlStrcmp(xmlNodeGetContent(child_3), "rotblk")))){
+					if(child_3 && (!xmlStrcmp(xmlNodeGetContent(child_3), "rotgelb") || (!xmlStrcmp(xmlNodeGetContent(child_3), "rotblk"))
+						|| (!xmlStrcmp(xmlNodeGetContent(child_3), "02")))){
 						//printf("%s(%d)\n", __func__, __LINE__);
 						child_3 = xmlNextElementSibling(child_3);
 						//printf("amber=%d\n", atoi(xmlNodeGetContent(child)));
@@ -209,12 +210,13 @@ int set_sg(xmlNodeSetPtr nodes)
 				child_2 = _find_node(child, "Uebergangselement");
 				while(child_2){
 					child_3 = _find_node(child_2, "Signalbild");
-					if(child_3 && !xmlStrcmp(xmlNodeGetContent(child_3), "gelb")){
+					if(child_3 && (!xmlStrcmp(xmlNodeGetContent(child_3), "gelb")) || (!xmlStrcmp(xmlNodeGetContent(child_3), "0C"))){
 						//printf("%s(%d)\n", __func__, __LINE__);
 						child_3 = xmlNextElementSibling(child_3);
 						g_sg_info.node[i].amber = atoi(xmlNodeGetContent(child_3)) * 10;
 					}
-					else if(child_3 && !xmlStrncmp(xmlNodeGetContent(child_3), "gruenblk", strlen("gruenblk"))){
+					else if(child_3 && (!xmlStrncmp(xmlNodeGetContent(child_3), "gruenblk", strlen("gruenblk")) 
+						|| (!xmlStrcmp(xmlNodeGetContent(child_3), "20")))){
 						child_3 = xmlNextElementSibling(child_3);
 						g_sg_info.node[i].green_blink = atoi(xmlNodeGetContent(child_3)) * 10;
 					}
