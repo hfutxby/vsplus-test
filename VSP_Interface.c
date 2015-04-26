@@ -692,10 +692,10 @@ short TelegrammVomGeraet(void* oev_tele_poi)
 	}
 
 #endif
-#if 10
 	short int ret = tsc_read_pt(oev_tele_poi);
 	//debug(2, "ptr:%p, ret:%d\n", oev_tele_poi, ret);
 
+#if 10
 	PTMSG *ptr = (PTMSG*)oev_tele_poi;
 
 	if(ret){
