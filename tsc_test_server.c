@@ -79,7 +79,7 @@ int handle_msg(enum msg_type type, char* data, int sock_fd)
 	//printf("recv msg type:");
 	switch(type){
 		case SET_DET:
-			printf("SET_DET\n");
+			printf("SET_DET ");
 			serve_set_det(data);
 			break;
 		case SET_PT:

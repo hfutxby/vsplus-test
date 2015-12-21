@@ -3,6 +3,7 @@
 //#include "if626max.inc"
 #include <stdio.h>
 #include "tsc.h" //debug()
+#include <time.h>
 
 #if 0
 /* API implemented by vsplus, controller can call these to get some info
@@ -363,16 +364,25 @@ short int u_gelb(short int sg)
  */
 void SG_ein(short int sg)
 {
-	debug(3, "sg:%d\n", sg);
-	tsc_sg_open(sg);
+        time_t tt = time(NULL);
+        struct tm *t = localtime(&tt);
+
+        //debug(2, "sg:%d\n", sg);
+        printf("%04d-%02d-%02d %02d:%02d:%02d\tsg:%d open\n", t->tm_year+1900,
+                        t->tm_mon+1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec,sg);
+        tsc_sg_open(sg);
 }
 
 /* switch signal group to closed
  */
 void SG_aus(short int sg)
 {
-	debug(3, "sg:%d\n", sg);
-	tsc_sg_close(sg);
+        time_t tt = time(NULL);
+        struct tm *t = localtime(&tt);
+        printf("%04d-%02d-%02d %02d:%02d:%02d\tsg:%d close\n", t->tm_year+1900,
+                        t->tm_mon+1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec,sg);
+        //debug(2, "sg:%d\n", sg);
+        tsc_sg_close(sg);
 }
 
 /* FIXME:command for switching a non-supervised output to "on"
@@ -698,7 +708,8 @@ short TelegrammVomGeraet(void* oev_tele_poi)
 #if 10
 	PTMSG *ptr = (PTMSG*)oev_tele_poi;
 
-	if(ret){
+	//if(ret){
+	if(ptr->MP){
 		debug(2, "call point:%d\n", ptr->MP);
 		debug(2, "line:%d\n", ptr->Linie);
 		debug(2, "course:%d\n", ptr->Kurs);
@@ -708,10 +719,10 @@ short TelegrammVomGeraet(void* oev_tele_poi)
 		debug(2, "direction by hand:%d\n", ptr->RichtungVonHand);
 		debug(2, "difference to schedule:%d\n", ptr->FahrplanAbweichnung);
 
-		int i;
-		for(i = 0; i < sizeof(PTMSG); ++i){
-			printf("0x%02X ", *((char*)oev_tele_poi+i));
-		}
+		//int i;
+		//for(i = 0; i < sizeof(PTMSG); ++i){
+		//	printf("0x%02X ", *((char*)oev_tele_poi+i));
+		//}
 		printf("\n");
 	}
 #endif

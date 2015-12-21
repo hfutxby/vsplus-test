@@ -75,11 +75,25 @@ void drv_sg_switch(int sg, int stat)
 	msg[2] = drv_sg_stat_code(stat);
 	serial_command(msg, 4);//通过串口切换信号灯
 	sg_track_switch(sg, stat);//记录信号灯状态信息	
+//printf("sg:%d switch to: %d\n", sg, stat);
 #if USE_INI
 	drv_add_sg(sg, stat);
 #endif/* USE_INI */
 }
-
+//切换信号灯并记录状态
+void drv_sg_switch_init(int sg, int stat)
+{
+	unsigned char msg[4];
+	msg[0] = 0x96; msg[3] = 0x69;
+	msg[1] = drv_sg_code(sg);
+	msg[2] = drv_sg_stat_code(stat);
+	serial_command(msg, 4);//通过串口切换信号灯
+	sg_track_switch_init(sg, stat);//记录信号灯状态信息	
+//printf("sg:%d switch to: %d\n", sg, stat);
+#if USE_INI
+	drv_add_sg(sg, stat);
+#endif/* USE_INI */
+}
 //只发送串口命令切换信号灯
 void drv_sg_switch2(int sg, int stat)
 {
@@ -522,6 +536,9 @@ int drv_add_sg(int sg, int stat)
 	//[5:4],green mode, 11b:green, 01:dark-green, 10:green-dark
 	//[3:2],yellow mode, [1:0],red mode
 	switch(stat){
+		case 0://FIXME:close
+			value = 0b00000000;//0
+			break;
 		case 1://amber
 			value = 0b00001100;//12
 			break;
