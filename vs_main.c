@@ -47,6 +47,8 @@ int g_wunsch_count = 1;
 
 int g_img_test[SGMAX] = {};//switch signal image
 
+int g_vsplus_stat = 0;//0-aus, 1-neu
+
 //循环调用VSPLUS()
 int thr_vsplus(void* arg)
 {
@@ -77,7 +79,7 @@ int thr_vsplus(void* arg)
 			//gettimeofday(&tv2, NULL);
 			//debug(1, "drv_add_ap use: %ldus\n", (tv2.tv_sec - tv1.tv_sec)*1000*1000 + (tv2.tv_usec - tv1.tv_usec));
 #endif
-drv_get_atime();
+//drv_get_atime();
 			//if(ret == 1){
 			//    printf("%s(%d):call VSPLUS(NEU_EIN) success, ret=%d\n", __func__, __LINE__, ret);
 			//}
@@ -291,6 +293,7 @@ int vs_init(void)
 		printf("%s(%d):call VSPLUS(VSP_AUS) fail, ret=%d\n", __func__, __LINE__, ret);
 		return -1;
 	}
+    g_vsplus_stat = 1;
 #endif
 	debug(3, "<==\n");
 
@@ -302,6 +305,7 @@ int vs_start(void)
 {
 	int i, ret;
 #if 1
+    g_vsplus_stat = 0;
 	//关闭AUS线程
 	if(g_tid_aus){
 		g_aus_exit = 1;
@@ -334,6 +338,7 @@ int vs_start(void)
 		printf("%s(%d):call VSPLUS(VSP_NEU) fail, ret=%d\n", __func__, __LINE__, ret);
 		return -1;
 	}
+    g_vsplus_stat = 1;
 #endif
 	sleep(1);
 #if 1
@@ -367,6 +372,7 @@ int vs_stop(void)
 {
 	int i, ret;
 #if 1
+    g_vsplus_stat = 0;
 	//关闭EIN线程
 	if(g_tid_ein){
 		g_ein_exit = 1;

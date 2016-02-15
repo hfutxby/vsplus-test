@@ -16,7 +16,7 @@ unsigned short portnum = 0x8888;
 
 int main(int argc, char* argv[])
 {
-	printf("usage: %s ipaddr. default ip = 127.0.0.1\n", argv[0]);
+	printf("usage: %s null,0=all det occ,1-9=random rising/falling\n", argv[0]);
 
 	int sock_fd;
 	struct sockaddr_in server_addr, client_addr;
@@ -31,10 +31,10 @@ int main(int argc, char* argv[])
 
 	bzero(&server_addr, sizeof(struct sockaddr_in));
 	server_addr.sin_family = AF_INET;
-	if(argc != 2)
+	//if(argc != 2)
 		server_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
-	else
-		server_addr.sin_addr.s_addr = inet_addr(argv[1]);
+	//else
+	//	server_addr.sin_addr.s_addr = inet_addr(argv[1]);
 	server_addr.sin_port = htons(portnum);
 
 	if(-1 == connect(sock_fd, (struct sockaddr *)(&server_addr), sizeof(struct sockaddr)))
@@ -66,32 +66,38 @@ int main(int argc, char* argv[])
 	struct set_det_data *data = (struct set_det_data*)malloc(len);
 	int index, op;
 	struct timeval tv;
-#if 0 //all det occpied
-	for(index = 1; index < DETMAX; ++index){
-		data->id = index;
-		data->stat = RISING;
-		write(sock_fd, &head, sizeof(struct msg_head));
-		write(sock_fd, data, len);	
-	}
-#else
-	while(1){
-		gettimeofday(&tv, NULL);
-		srandom(tv.tv_usec);
-		index = random() % DETMAX;
-		if(!exist[index])//没有这个检测器
-			continue;
-		gettimeofday(&tv, NULL);
-		srandom(tv.tv_usec);
-		op = random() % 2 + 1;
 
-		data->id = index+1;//检测器编号1 ~ DETMAX
-		data->stat = op;
-		printf("index:%d op:%d\n", index+1, op);
-		write(sock_fd, &head, sizeof(struct msg_head));
-		write(sock_fd, data, len);
-		sleep(1);
+	int occ = 0;
+	if(argc == 2)
+		occ = abs(atoi(argv[1]))%10;
+
+	if(!occ){ //all det occpied
+		for(index = 1; index < DETMAX; ++index){
+			data->id = index;
+			data->stat = RISING;
+			write(sock_fd, &head, sizeof(struct msg_head));
+			write(sock_fd, data, len);	
+		}
 	}
-#endif
+	else{
+		while(1){
+			gettimeofday(&tv, NULL);
+			srandom(tv.tv_usec);
+			index = random() % DETMAX;
+			if(!exist[index])//没有这个检测器
+				continue;
+			gettimeofday(&tv, NULL);
+			srandom(tv.tv_usec);
+			op = random() % 2 + 1;
+
+			data->id = index+1;//检测器编号1 ~ DETMAX
+			data->stat = op;
+			printf("index:%d op:%d\n", index+1, op);
+			write(sock_fd, &head, sizeof(struct msg_head));
+			write(sock_fd, data, len);
+			usleep(10*1000*1000/occ);
+		}
+	}
 
 	close(sock_fd);
 

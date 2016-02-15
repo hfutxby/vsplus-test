@@ -708,7 +708,21 @@ int tsc_det_gross(int index)
  */
 int tsc_ctl_active(void)
 {
-	return 0;
+#if 0
+    static int count = 0;
+    count++;
+    printf("%d ",count);
+    if(count == 10000)
+        printf("==================\n");
+    if(count > 10000)
+        return 0;
+    else
+    	return 1;
+#else
+    extern g_vsplus_stat;
+    //return 0;
+    return !g_vsplus_stat;
+#endif
 }
 
 /* 返回当前时间 */
@@ -864,7 +878,7 @@ int init_tsc_sg(void)
 	int i;
 	for(i = 0; i < SGMAX; i++){
 		if(g_sg[i].exist)
-			drv_sg_switch(i, 2);//FIXME:amber
+			drv_sg_switch_init(i, 2);//FIXME:amber
 	}
 	//pthread_create(&g_tid_sg, NULL, thr_sg, NULL);
 	debug(3, "<==\n");

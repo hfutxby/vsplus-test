@@ -68,6 +68,14 @@ void sg_track_switch(int sg, int stat)
 	pthread_mutex_unlock(&mutex_sg_track);
 }
 
+//切换信号灯状态
+void sg_track_switch_init(int sg, int stat)
+{
+	pthread_mutex_lock(&mutex_sg_track);
+	g_sg_track[sg].stat = stat;
+	g_sg_track[sg].time = 200;
+	pthread_mutex_unlock(&mutex_sg_track);
+}
 //如果sg处于stat状态，返回此状态时间，否则返回-1
 int sg_track_chk(int sg, int stat)
 {

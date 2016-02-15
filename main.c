@@ -11,6 +11,8 @@ int main(int argc, char* argv[])
 {
 	int i, ret;
 
+	setvbuf(stdout, NULL, _IONBF, 0);
+
 #if USE_TTY
 	//打开串口
 	if(argc != 2)

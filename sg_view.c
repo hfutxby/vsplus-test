@@ -106,10 +106,10 @@ int main(void)
 #else
 			printf("[%d]", i);
 #endif
-			print_signal(g_sg[i].stat, g_sg[i].time);
+			print_signal(g_sg[i].stat, g_sg[i].time/10);
 		}
 		printf("\033[0m\r");
-		us_sleep(100);
+		us_sleep(100000);
 	}
 
 	close_sg();
