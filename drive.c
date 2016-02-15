@@ -380,7 +380,7 @@ static int g_size_det = 0;
 static int g_space_det = 0;
 static struct timeval g_tv_det = {};
 static int g_dir_det = 1;
-#define LOGBAK 1
+//#define LOGBAK 1
 
 void free_det(void)
 {
