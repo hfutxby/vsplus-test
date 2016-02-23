@@ -7,6 +7,8 @@
 #include "VSP_Interface.h"
 #include "tsc.h"
 
+int vsplus_stat = 0;//0-stop,1-start
+
 int main(int argc, char* argv[])
 {
 	int i, ret;
@@ -25,12 +27,12 @@ int main(int argc, char* argv[])
 #endif/* USE_TTY */
 
 	//初始化vsplus
-	printf("\nvs_init()\n");
-	ret = vs_init();
-	if(ret < 0){
-		debug(1, "vs_init() failed\n");
-		return -1;
-	}
+//	printf("\nvs_init()\n");
+//	ret = vs_init();
+//	if(ret < 0){
+//		debug(1, "vs_init() failed\n");
+//		return -1;
+//	}
 
 #if USE_TTY
 	//开始接受串口发送的指令，在此之前发送的指令丢失
@@ -40,13 +42,13 @@ int main(int argc, char* argv[])
 #endif/* USE_TTY */
 
 	//运行vsplus
-	printf("\nvs_start()\n");
-	ret = vs_start();
-	if(ret < 0){
-		debug(1, "vs_start() failed\n");
-		return -1;
-	}
-	sleep(10);
+//	printf("\nvs_start()\n");
+//	ret = vs_start();
+//	if(ret < 0){
+//		debug(1, "vs_start() failed\n");
+//		return -1;
+//	}
+//	sleep(10);
 
 
 #if 0

@@ -9,6 +9,7 @@ enum msg_type{
 	DET_EXIST_R,
 	SET_PT,//发送一个PT消息
 	SET_PRG,
+	SET_STAT,//change vsplus run stat
 	SG,
 	TEST
 };

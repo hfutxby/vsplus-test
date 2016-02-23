@@ -11,7 +11,7 @@
 #include "test_msg.h"
 #include "tsc.h"
 
-unsigned short portnum = 12000;
+unsigned short portnum = 0x8888; 
 
 
 int main(int argc, char* argv[])
@@ -44,22 +44,24 @@ int main(int argc, char* argv[])
 	}
 	printf("connect ok !\r\n");
 
-#if 0
 	struct msg_head head = {0};   
-	head.type = SET_PRG;
+//	int len = sizeof(struct set_det_data);
+	head.type = SET_STAT;
 	head.len = 1;
-	int prg_id = 0;
-	printf("set prg: ");
-	scanf("%d", &prg_id);
-	write(sock_fd, &head, sizeof(struct msg_head));
-	write(sock_fd, &prg_id, sizeof(prg_id));
-#endif
+	struct set_det_data *data = (struct set_det_data*)malloc(len);
+	int index, op;
+	while(1){
+		printf("input det num:");
+		scanf("%d", &index);
+		printf("op: 1 = rising; 2 = falling; 3 = fault; 4 = ok ");
+		scanf("%d", &op);
+		memset(data, 0, len);
+		data->id = index;
+		data->stat = op;
+		write(sock_fd, &head, sizeof(struct msg_head));
+		write(sock_fd, data, len);
+	}
 
-#if 1
-	struct msg_head head = {0};   
-	head.type = TEST;
-	write(sock_fd, &head, sizeof(struct msg_head));
-#endif
 	close(sock_fd);
 
 	return 0;
