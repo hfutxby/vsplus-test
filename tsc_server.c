@@ -9,15 +9,16 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <netinet/tcp.h>
+#include <errno.h>
 
 #include "tsc.h"
 #include "vcb.h"
-#include "test_msg.h"
+#include "tsc_cmd_msg.h"
 #include "if626bas.h"
 
 // ============== global =================
 static int g_exit = 0;
-unsigned short portnum = 12000;
+unsigned short portnum = 12001;
 
 //struct connect_info {
 //	int fd; //connect socket fd
@@ -86,121 +87,157 @@ dump(node_t* list)
 	printf("=== total %d nodes ===\n", count);
 }
 
-broadcast(node_t* list)
+void broadcast(char* src, int len)
 {
-	char buf[1024];
-	node_t *ptr = list;
+	node_t *ptr = connect_info_list; //global
 	int count = 0;
 	while (ptr) {
 		count++;
-		memset(buf, 0, sizeof(buf));
-		sprintf(buf, "hello, %d\n", time(NULL));
-		send(ptr->fd, buf, sizeof(buf), MSG_DONTWAIT);
-//		printf("index:%d, next:%p\n", ptr->fd, ptr->next);
+		send(ptr->fd, src, len, MSG_DONTWAIT);
 		if (ptr->next) {
 			ptr = ptr->next;
 		} else {
 			break;
 		}
 	}
-	printf("=== total %d nodes ===\n", count);
-}
-// ============== vsplus setting  =================
-int serve_set_det(char* data)
-{
-	struct set_det_data* set = (struct set_det_data*) data;
-	//printf("====\n");
-	//printf("msg:SET_DET\n");
-	printf("id:%d stat:%d\n", set->id, set->stat);
-	//printf("====\n");
-	tsc_det_op(set->id, set->stat);
-
-	return 0;
 }
 
-extern PTMSG g_tsc_pt;	//在tsc.c中定义
-extern int g_tsc_pt_new;
-int serve_set_pt(char* data)
+void broadcast_sg_switch(int sg, int stat)
 {
-	memcpy((char*) &g_tsc_pt, data, sizeof(struct set_pt_data));
-	g_tsc_pt_new = 1;
-	return 0;
-}
+	ssize_t ret;
+	struct msg_head head;
+	struct sg_switch_t body;
+	head.type = SG_SWITCH;
+	head.len = sizeof(struct sg_switch_t);
+	body.sg = sg;
+	body.stat = stat;
 
-int serve_det_exist(int sock_fd)
-{
-	char buf[DETMAX] = { 0 };
-	struct msg_head head = { 0 };
-	head.type = DET_EXIST_R;
-	head.len = DETMAX;
-	int i;
-	for (i = 0; i < DETMAX; i++) {
-		if (vcb_det_exist[i + 1]) {
-			buf[i] = i + 1;
+	node_t *ptr = connect_info_list; //global
+	int count = 0;
+	while (ptr) {
+		count++;
+		send(ptr->fd, &head, sizeof(head), MSG_DONTWAIT);
+		send(ptr->fd, &body, sizeof(body), MSG_DONTWAIT);
+		if (ptr->next) {
+			ptr = ptr->next;
+		} else {
+			break;
 		}
 	}
-	write(sock_fd, &head, sizeof(struct msg_head));
-	write(sock_fd, buf, DETMAX);
-	return 0;
 }
+// ============== vsplus setting  =================
+//int serve_set_det(char* data)
+//{
+//	struct set_det_data* set = (struct set_det_data*) data;
+//	//printf("====\n");
+//	//printf("msg:SET_DET\n");
+//	printf("id:%d stat:%d\n", set->id, set->stat);
+//	//printf("====\n");
+//	tsc_det_op(set->id, set->stat);
+//
+//	return 0;
+//}
+//
+//extern PTMSG g_tsc_pt;	//在tsc.c中定义
+//extern int g_tsc_pt_new;
+//int serve_set_pt(char* data)
+//{
+//	memcpy((char*) &g_tsc_pt, data, sizeof(struct set_pt_data));
+//	g_tsc_pt_new = 1;
+//	return 0;
+//}
 
-int serve_test(int sock_fd)
+//int serve_det_exist(int sock_fd)
+//{
+//	char buf[DETMAX] = { 0 };
+//	struct msg_head head = { 0 };
+//	head.type = DET_EXIST_R;
+//	head.len = DETMAX;
+//	int i;
+//	for (i = 0; i < DETMAX; i++) {
+//		if (vcb_det_exist[i + 1]) {
+//			buf[i] = i + 1;
+//		}
+//	}
+//	write(sock_fd, &head, sizeof(struct msg_head));
+//	write(sock_fd, buf, DETMAX);
+//	return 0;
+//}
+
+int serve_test(struct msg_head *head, char* data, int sock_fd)
 {
-	printf("vs_ocit_path:%s\n", vs_ocit_path());
+//	printf("vs_ocit_path:%s\n", vs_ocit_path());
+#if 1
+	printf("serve cmd TEST\n");
+	char buf[] = "serve cmd TEST. echo >>>";
+	send(sock_fd, buf, sizeof(buf), MSG_DONTWAIT);
+	send(sock_fd, data, head->len, MSG_DONTWAIT);
+#endif
 
 	return 0;
 }
 
-int serve_set_prg(int sock_fd, char* data)
-{
-	char prg_id = *(char*) data;
-	prg_track_cur_set(prg_id);
-
-	return 0;
-}
+//int serve_set_prg(int sock_fd, char* data)
+//{
+//	char prg_id = *(char*) data;
+//	prg_track_cur_set(prg_id);
+//
+//	return 0;
+//}
 
 extern int vsplus_stat; //define in main.c
-int handle_msg(enum msg_type type, char* data, int sock_fd)
+
+int handle_msg(struct msg_head *head, char* data, int sock_fd)
 {
-	//printf("recv msg type:");
-	switch (type) {
-	case SET_DET:
-		printf("SET_DET ");
-		serve_set_det(data);
-		break;
-	case SET_PT:
-		printf("SET_PT\n");
-		serve_set_pt(data);
-		break;
-	case DET_EXIST:
-		printf("DET_EXIST\n");
-		serve_det_exist(sock_fd);
-		break;
+	switch (head->type) {
+//	case SET_DET:
+//		printf("SET_DET ");
+//		serve_set_det(data);
+//		break;
+//	case SET_PT:
+//		printf("SET_PT\n");
+//		serve_set_pt(data);
+//		break;
+//	case DET_EXIST:
+//		printf("DET_EXIST\n");
+//		serve_det_exist(sock_fd);
+//		break;
 	case TEST:
-		printf("TEST\n");
-		serve_test(sock_fd);
+		printf("recv cmd TEST\n");
+//		printf("data: %s\n", data);
+		serve_test(head, data, sock_fd);
 		break;
-	case SET_PRG:
-		printf("SET_PRG\n");
-		serve_set_prg(sock_fd, data);
-		break;
-	case SET_STAT:
-		printf("SET_STAT:set vsplus run stat\n");
-		vsplus_stat = 0; //FIXME
-		break;
+//	case SET_PRG:
+//		printf("SET_PRG\n");
+//		serve_set_prg(sock_fd, data);
+//		break;
+//	case SET_STAT:
+//		printf("SET_STAT:set vsplus run stat\n");
+//		vsplus_stat = 0; //FIXME
+//		break;
 	default:
+		printf("unknown cmd type:%d\n", head->type);
 		break;
+	}
+}
+
+int check_msg(struct cmd_msg_t *msg)
+{
+	if ((msg->type >> 12 == 0xF) && (msg->len >> 12 == 0xA)) {
+		msg->len &= 0xFFF;
+		msg->type &= 0xFFF;
+		return 1;
+	} else {
+		return 0;
 	}
 }
 
 void* thr_serve(void* arg)
 {
-//	struct connect_info info;
 	node_t *info = (node_t*) arg;
 	struct msg_head head = { 0 };
 	int buf_len = 1024;
 	char* buf = malloc(buf_len); //初始存储分配
-//	memcpy(&info, arg, sizeof(struct connect_info));
 	printf("connect from %s:%d\n", inet_ntoa(info->addr.sin_addr),
 			ntohs(info->addr.sin_port));
 
@@ -208,21 +245,24 @@ void* thr_serve(void* arg)
 	while (!g_exit && !exit) {
 		memset(&head, 0, sizeof(head));
 		ssize_t ret = recv(info->fd, &head, sizeof(head), 0);
-		printf("%d - recv msg head.  cmd: %d, len: %d.  \n", __LINE__,
-				head.type, head.len);
+		printf("%d - recv msg head.  ret: %d  \n", __LINE__, ret);
 		if (ret != sizeof(head)) {
 			printf("ret:%d ", ret);
 			exit = 1;
 			break;
 		}
-		if (head.len > buf_len) {
-			buf = realloc(buf, buf_len + 1024);
-			buf_len += 1024;
+		if (!check_msg(&head)) {
+			printf("invalid msg head\n");
 		}
+
+//		if (head.len > buf_len) {
+//			buf = realloc(buf, buf_len + 1024);
+//			buf_len += 1024;
+//		}
 		memset(buf, 0, buf_len);
-		recv(info->fd, buf, head.len, 0);
+		ret = recv(info->fd, buf, head.len, 0); //TODO check buf recv completely
 		printf("%d - recv msg body ret: %d.  \n", __LINE__, ret);
-//		handle_msg(head.type, buf, info.fd);
+		handle_msg(&head, buf, info->fd);
 	}
 	printf("disconnet from %s:%d\n", inet_ntoa(info->addr.sin_addr),
 			ntohs(info->addr.sin_port));
@@ -236,7 +276,6 @@ void* thr_listen(void* arg)
 	memcpy(&server_fd, arg, sizeof(server_fd));
 	int client_fd;
 	struct sockaddr_in client_addr;
-//	struct connect_info info; //FIXME
 
 	pthread_t tid;
 	int sin_size = sizeof(struct sockaddr_in);
@@ -245,13 +284,13 @@ void* thr_listen(void* arg)
 		client_fd = accept(server_fd, (struct sockaddr *) (&client_addr),
 				&sin_size);
 		if (-1 == client_fd) {
-			printf("accept fail !\r\n");
+			printf("accept fail. %s\n", strerror(errno));
 			g_exit = 1;
 			break;
 		}
 
-		printf("accept - fd: %d,  ip: %s\n", client_fd,
-				inet_ntoa(client_addr.sin_addr));
+//		printf("accept - fd: %d,  ip: %s\n", client_fd,
+//				inet_ntoa(client_addr.sin_addr));
 
 		int keep_alive = 1; //open keepalive
 		int keep_idle = 5; //after this time, begin detect alive
@@ -278,21 +317,20 @@ void* thr_listen(void* arg)
 	return 0;
 }
 
-int init_tsc_test_server(void)
+int open_tsc_server(void)
 {
 	static int server_fd;
 	struct sockaddr_in s_addr;
 
 	int sin_size;
-	unsigned short portnum = 12000;
 
-	printf("Hello,welcome to vsplus-test server !\r\n");
+	printf("Hello,welcome to vsplus-test server \n");
 	server_fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (-1 == server_fd) {
-		printf("create socket fail ! \r\n");
+		printf("create socket fail. %s\n", strerror(errno));
 		return -1;
 	}
-	printf("create socket success !\r\n");
+	printf("create socket success\n");
 
 	int reuse = 1;
 	setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(int));
@@ -305,13 +343,13 @@ int init_tsc_test_server(void)
 	if (-1
 			== bind(server_fd, (struct sockaddr *) (&s_addr),
 					sizeof(struct sockaddr))) {
-		printf("bind fail !\r\n");
+		printf("bind fail . %s\n", strerror(errno));
 		return -1;
 	}
-	printf("bind success !\r\n");
+	printf("bind success\n");
 
 	if (-1 == listen(server_fd, 5)) {
-		printf("listen fail !\r\n");
+		printf("listen fail. %s\n", strerror(errno));
 		return -1;
 	}
 	printf("listen for connections ...\r\n");
@@ -319,20 +357,25 @@ int init_tsc_test_server(void)
 	pthread_t tid;
 	if (0 != pthread_create(&tid, NULL, thr_listen, &server_fd)) {
 		g_exit = 1;
-		printf("call pthread_create fail\n");
+		printf("call pthread_create fail. %s\n", strerror(errno));
 		return -1;
 	}
 
-	while (1) {
-		dump(connect_info_list);
-		broadcast(connect_info_list);
-		sleep(1);
-	}
+//	char buf[1024];
+//	while (1) {
+//		sprintf(buf, "hello %d\n", time(NULL));
+//		broadcast(buf, sizeof(buf));
+//		sleep(1);
+//	}
+//	while (1) {
+//		dump(connect_info_list);
+//		sleep(1);
+//	}
 
 	return 0;
 }
 
-void deinit_tsc_test_server(void)
+void close_tsc_server(void)
 {
 	g_exit = 1;
 }
