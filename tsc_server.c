@@ -105,22 +105,29 @@ void broadcast(char* src, int len)
 void broadcast_sg_switch(int sg, int stat)
 {
 	ssize_t ret;
-	struct msg_head head;
-	struct sg_switch_t body;
+	struct cmd_msg_head_t head;
+	struct sg_switch_t data;
+	head.tag = 0xF2F1;
 	head.type = SG_SWITCH;
 	head.len = sizeof(struct sg_switch_t);
-	body.sg = sg;
-	body.stat = stat;
+	data.sg = sg;
+	data.stat = stat;
+
+	int buf_len = sizeof(head) + sizeof(data);
+	unsigned char* buf = (unsigned char*) malloc(buf_len);
+	memset(buf, 0, buf_len);
+	memcpy(buf, &head, sizeof(head));
+	memcpy(buf + sizeof(head), &data, sizeof(data));
 
 	node_t *ptr = connect_info_list; //global
 	int count = 0;
 	while (ptr) {
 		count++;
-		send(ptr->fd, &head, sizeof(head), MSG_DONTWAIT);
-		send(ptr->fd, &body, sizeof(body), MSG_DONTWAIT);
+		send(ptr->fd, buf, buf_len, MSG_DONTWAIT);
 		if (ptr->next) {
 			ptr = ptr->next;
 		} else {
+			free(buf);
 			break;
 		}
 	}
@@ -164,14 +171,20 @@ void broadcast_sg_switch(int sg, int stat)
 //	return 0;
 //}
 
-int serve_test(struct msg_head *head, char* data, int sock_fd)
+int serve_test(struct cmd_msg_head_t *head, char* data, int sock_fd)
 {
 //	printf("vs_ocit_path:%s\n", vs_ocit_path());
 #if 1
 	printf("serve cmd TEST\n");
-	char buf[] = "serve cmd TEST. echo >>>";
-	send(sock_fd, buf, sizeof(buf), MSG_DONTWAIT);
-	send(sock_fd, data, head->len, MSG_DONTWAIT);
+	char str[] = "test echo";
+	head->len = sizeof(str);
+	int buf_len = sizeof(struct cmd_msg_head_t) + head->len;
+	unsigned char* buf = (unsigned char*) malloc(buf_len);
+	memset(buf, 0, buf_len);
+	memcpy(buf, head, sizeof(struct cmd_msg_head_t));
+	memcpy(buf + sizeof(struct cmd_msg_head_t), str, head->len);
+	send(sock_fd, buf, buf_len, MSG_DONTWAIT);
+	free(buf);
 #endif
 
 	return 0;
@@ -187,7 +200,7 @@ int serve_test(struct msg_head *head, char* data, int sock_fd)
 
 extern int vsplus_stat; //define in main.c
 
-int handle_msg(struct msg_head *head, char* data, int sock_fd)
+int handle_msg(struct cmd_msg_head_t *head, char* data, int sock_fd)
 {
 	switch (head->type) {
 //	case SET_DET:
@@ -221,28 +234,28 @@ int handle_msg(struct msg_head *head, char* data, int sock_fd)
 	}
 }
 
-int check_msg(struct cmd_msg_t *msg)
-{
-	if ((msg->type >> 12 == 0xF) && (msg->len >> 12 == 0xA)) {
-		msg->len &= 0xFFF;
-		msg->type &= 0xFFF;
-		return 1;
-	} else {
-		return 0;
-	}
-}
+//int check_msg(struct cmd_msg_t *msg)
+//{
+//	if ((msg->type >> 12 == 0xF) && (msg->len >> 12 == 0xA)) {
+//		msg->len &= 0xFFF;
+//		msg->type &= 0xFFF;
+//		return 1;
+//	} else {
+//		return 0;
+//	}
+//}
 
 void* thr_serve(void* arg)
 {
 	node_t *info = (node_t*) arg;
-	struct msg_head head = { 0 };
+	struct cmd_msg_head_t head = { 0 };
 	int buf_len = 1024;
-	char* buf = malloc(buf_len); //初始存储分配
+	unsigned char* buf = (unsigned char*) malloc(buf_len); //初始存储分配
 	printf("connect from %s:%d\n", inet_ntoa(info->addr.sin_addr),
 			ntohs(info->addr.sin_port));
 
 	int exit = 0;
-	while (!g_exit && !exit) {
+	while (!g_exit && !exit) { //TODO. better for packet buffering parse
 		memset(&head, 0, sizeof(head));
 		ssize_t ret = recv(info->fd, &head, sizeof(head), 0);
 		printf("%d - recv msg head.  ret: %d  \n", __LINE__, ret);
@@ -251,9 +264,12 @@ void* thr_serve(void* arg)
 			exit = 1;
 			break;
 		}
-		if (!check_msg(&head)) {
+		if (head.tag != 0xF2F1) {
 			printf("invalid msg head\n");
 		}
+//		if (!check_msg(&head)) {
+//			printf("invalid msg head\n");
+//		}
 
 //		if (head.len > buf_len) {
 //			buf = realloc(buf, buf_len + 1024);

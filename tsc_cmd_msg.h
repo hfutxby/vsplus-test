@@ -20,6 +20,10 @@
 #define TEST 99
 
 // =========== cmd body =============
+struct test_t {
+	int time;
+};
+
 struct sg_switch_t{
 	char sg;
 	char stat;
@@ -36,10 +40,11 @@ struct sg_switch_t{
 //TEST
 //};
 
-struct cmd_msg_t {
+struct cmd_msg_head_t {
+	unsigned short tag; //0xF1, 0xF2
 	unsigned short  type;//begin with b1111
 	unsigned short len;//begin with b1010, data size
-	void* data;
+//	void* data;
 };
 
 //det

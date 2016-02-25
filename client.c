@@ -56,40 +56,63 @@ int main(int argc, char* argv[])
 	write(sock_fd, &prg_id, sizeof(prg_id));
 #endif
 
-#if 0
+#if 1
 	ssize_t ret;
-	char buf[1024] = "TEST message";
-	struct msg_head head = { 0 };
-	head.type = TEST;
-	head.len = sizeof(buf);
-	head.type = (head.type & 0xFFF) | 0xF000;
-	head.len = (head.len & 0xFFF) | 0xA000;
-	printf("sizeof(struct msg_head):%d\n", sizeof(struct msg_head));
-	ret = write(sock_fd, &head, sizeof(struct msg_head));
-	ret = write(sock_fd, buf, strlen(buf));
-	memset(buf, 0, sizeof(buf));
+//	struct test_t data = { 0 };
+	char data[] = "hello test";
+	struct cmd_msg_head_t msg_head = { 0 };
+	msg_head.tag = 0xF2F1;
+	msg_head.type = TEST;
+	msg_head.len = sizeof(data);
+//	msg.data = &data;
+	int send_size = sizeof(msg_head) + msg_head.len;
+	unsigned char *send_buf = (unsigned char*) malloc(send_size);
+	memset(send_buf, 0, send_size);
+	memcpy(send_buf, &msg_head, sizeof(msg_head));
+	memcpy(send_buf + sizeof(msg_head), &data, msg_head.len);
+
+	ret = send(sock_fd, send_buf, send_size, 0);
+
+	int buf_len = 1024;
+	unsigned char *buf = (unsigned char*) malloc(buf_len);
+//	memset(buf, 0, buf_len);
 	do {
-		ret = recv(sock_fd, buf, sizeof(buf), 0);
-		if(ret <= 0) {
-			printf("recv fail. %s\n", strerror(errno));
-			break;
-		} else {
-			printf("%s\n", buf);
+		memset(&msg_head, 0, sizeof(msg_head));
+		ret = recv(sock_fd, &msg_head, sizeof(msg_head), 0);
+		if (ret <= 0 || ret != sizeof(msg_head)) {
+			printf("recv msg head error\n");
+			continue;
 		}
-	}while(1);
+		memset(buf, 0, buf_len);
+		ret = recv(sock_fd, buf, msg_head.len, 0);
+		if (ret <= 0 || ret != msg_head.len) {
+			printf("recv msg body error\n");
+			continue;
+		} else {
+			printf("recv %d bytes => ", ret);
+			int i;
+			for (i = 0; i < sizeof(msg_head); i++) {
+				printf("%#x ", *((unsigned char*) &msg_head + i));
+			}
+			for (i = 0; i < ret; i++) {
+				printf("%#x ", *(buf + i));
+			}
+			printf("\n");
+		}
+	} while (1);
 #endif
 
-	char buf[1024] = {0};
-	ssize_t ret = 0;
-	do {
-			ret = recv(sock_fd, buf, sizeof(buf), 0);
-			if(ret <= 0) {
-				printf("recv fail. %s\n", strerror(errno));
-				break;
-			} else {
-				printf("%s\n", buf);
-			}
-		}while(1);
+//	char buf[1024] = {0};
+//	ssize_t ret = 0;
+//	do {
+//			ret = recv(sock_fd, buf, sizeof(buf), 0);
+//			if(ret <= 0) {
+//				printf("recv fail. %s\n", strerror(errno));
+//				break;
+//			} else {
+//				printf("%s\n", buf);
+//			}
+//		}while(1);
 //	char buf[] = "12345678";
 //	while (1) {
 //		write(sock_fd, buf, 8);
