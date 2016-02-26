@@ -106,12 +106,7 @@ void drv_sg_switch2(int sg, int stat)
 #if USE_INI
 			drv_add_sg(sg, stat);
 #endif/* USE_INI */
-//			printf("sg:%d switch to: %d\n", sg, stat);
-//			char buf[128] = { 0 };
-//			sprintf(buf, "{\"sg\":\"%d\",\"stat\":\"%d\"}", sg, stat);
-////			printf("%s\n",buf);
-//			broadcast(buf, sizeof(buf));
-			broadcast_sg_switch(sg, stat);
+	broadcast_sg_switch(sg, stat);
 }
 
 //获取信号灯配置

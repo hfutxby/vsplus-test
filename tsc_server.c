@@ -11,6 +11,8 @@
 #include <netinet/tcp.h>
 #include <errno.h>
 
+#include <nopoll.h>
+
 #include "tsc.h"
 #include "vcb.h"
 #include "tsc_cmd_msg.h"
@@ -18,21 +20,16 @@
 
 // ============== global =================
 static int g_exit = 0;
-unsigned short portnum = 12001;
-
-//struct connect_info {
-//	int fd; //connect socket fd
-//	struct sockaddr_in addr; //client addr
-//};
+unsigned short tcp_server_port = 12000;
+unsigned short ws_server_port = 12001;
 
 // ============== list  =================
 typedef struct node {
 	int fd;
-	struct sockaddr_in addr;
+	void* data;
+//	struct sockaddr_in addr;
 	struct node* next;
 } node_t;
-
-node_t* connect_info_list = NULL;
 
 int add_node(node_t** list, node_t* node)
 {
@@ -49,26 +46,26 @@ int add_node(node_t** list, node_t* node)
 	return 0;
 }
 
-int del_node(node_t **list, int fd)
+node_t* del_node(node_t **list, int fd)
 {
 	if (*list == NULL) {
-		return 0;
+		return NULL;
 	}
 
 	node_t *ptr = *list;
 	if (ptr->fd == fd) {
 		*list = ptr->next;
-		free(ptr);
-		return 0;
+		return ptr;
 	}
 	while (ptr && ptr->next) {
 		if (ptr->next->fd == fd) {
 			node_t* tmp = ptr->next;
 			ptr->next = ptr->next->next;
-			free(tmp);
+			return tmp;
 		}
 		ptr = ptr->next;
 	}
+	return NULL;
 }
 
 dump(node_t* list)
@@ -87,9 +84,31 @@ dump(node_t* list)
 	printf("=== total %d nodes ===\n", count);
 }
 
-void broadcast(char* src, int len)
+// ============== operations on connlist  ================
+node_t* tcp_conn_list = NULL;
+node_t* ws_conn_list = NULL;
+
+void broadcast_on_ws(char* src, int len)
 {
-	node_t *ptr = connect_info_list; //global
+	node_t *ptr = ws_conn_list; //global
+	int count = 0;
+	while (ptr) {
+		count++;
+		noPollConn *conn = (noPollConn*) ptr->data;
+		int bytes_written = nopoll_conn_send_text(conn, src, len);
+		bytes_written = nopoll_conn_flush_writes(conn, 2 * 1000 * 1000,
+				bytes_written);
+		if (ptr->next) {
+			ptr = ptr->next;
+		} else {
+			break;
+		}
+	}
+}
+
+void broadcast_on_tcp(char* src, int len)
+{
+	node_t *ptr = tcp_conn_list; //global
 	int count = 0;
 	while (ptr) {
 		count++;
@@ -104,73 +123,34 @@ void broadcast(char* src, int len)
 
 void broadcast_sg_switch(int sg, int stat)
 {
+//	printf("%d - %s\n", __LINE__, __func__);
 	ssize_t ret;
+	//tcp
 	struct cmd_msg_head_t head;
-	struct sg_switch_t data;
 	head.tag = 0xF2F1;
 	head.type = SG_SWITCH;
-	head.len = sizeof(struct sg_switch_t);
+	struct sg_switch_t data;
+	head.len = sizeof(data);
 	data.sg = sg;
 	data.stat = stat;
-
 	int buf_len = sizeof(head) + sizeof(data);
 	unsigned char* buf = (unsigned char*) malloc(buf_len);
 	memset(buf, 0, buf_len);
 	memcpy(buf, &head, sizeof(head));
 	memcpy(buf + sizeof(head), &data, sizeof(data));
+	broadcast_on_tcp(buf, buf_len);
+	free(buf);
 
-	node_t *ptr = connect_info_list; //global
-	int count = 0;
-	while (ptr) {
-		count++;
-		send(ptr->fd, buf, buf_len, MSG_DONTWAIT);
-		if (ptr->next) {
-			ptr = ptr->next;
-		} else {
-			free(buf);
-			break;
-		}
-	}
+	//use websocket
+	buf_len = 128;
+	buf = (unsigned char*) malloc(buf_len);
+	memset(buf, 0, buf_len);
+	sprintf(buf, "{\"sg\":\"%d\",\"stat\":\"%d\"}", sg, stat);
+	broadcast_on_ws(buf, strlen(buf));
+	free(buf);
 }
-// ============== vsplus setting  =================
-//int serve_set_det(char* data)
-//{
-//	struct set_det_data* set = (struct set_det_data*) data;
-//	//printf("====\n");
-//	//printf("msg:SET_DET\n");
-//	printf("id:%d stat:%d\n", set->id, set->stat);
-//	//printf("====\n");
-//	tsc_det_op(set->id, set->stat);
-//
-//	return 0;
-//}
-//
-//extern PTMSG g_tsc_pt;	//在tsc.c中定义
-//extern int g_tsc_pt_new;
-//int serve_set_pt(char* data)
-//{
-//	memcpy((char*) &g_tsc_pt, data, sizeof(struct set_pt_data));
-//	g_tsc_pt_new = 1;
-//	return 0;
-//}
 
-//int serve_det_exist(int sock_fd)
-//{
-//	char buf[DETMAX] = { 0 };
-//	struct msg_head head = { 0 };
-//	head.type = DET_EXIST_R;
-//	head.len = DETMAX;
-//	int i;
-//	for (i = 0; i < DETMAX; i++) {
-//		if (vcb_det_exist[i + 1]) {
-//			buf[i] = i + 1;
-//		}
-//	}
-//	write(sock_fd, &head, sizeof(struct msg_head));
-//	write(sock_fd, buf, DETMAX);
-//	return 0;
-//}
-
+// ============== serve functions  =================
 int serve_test(struct cmd_msg_head_t *head, char* data, int sock_fd)
 {
 //	printf("vs_ocit_path:%s\n", vs_ocit_path());
@@ -189,16 +169,6 @@ int serve_test(struct cmd_msg_head_t *head, char* data, int sock_fd)
 
 	return 0;
 }
-
-//int serve_set_prg(int sock_fd, char* data)
-//{
-//	char prg_id = *(char*) data;
-//	prg_track_cur_set(prg_id);
-//
-//	return 0;
-//}
-
-extern int vsplus_stat; //define in main.c
 
 int handle_msg(struct cmd_msg_head_t *head, char* data, int sock_fd)
 {
@@ -232,28 +202,80 @@ int handle_msg(struct cmd_msg_head_t *head, char* data, int sock_fd)
 		printf("unknown cmd type:%d\n", head->type);
 		break;
 	}
+	return 0;
 }
 
-//int check_msg(struct cmd_msg_t *msg)
-//{
-//	if ((msg->type >> 12 == 0xF) && (msg->len >> 12 == 0xA)) {
-//		msg->len &= 0xFFF;
-//		msg->type &= 0xFFF;
-//		return 1;
-//	} else {
-//		return 0;
-//	}
-//}
+// ============== websocket server  =================
+void listener_on_message(noPollCtx *ctx, noPollConn *conn, noPollMsg *msg,
+		noPollPtr user_data)
+{
+	printf("recv %d bytes: %s\n", nopoll_msg_get_payload_size(msg),
+			nopoll_msg_get_payload(msg));
+	//TODO. handle message
+//	char buf[] = "Message received";
+//	int bytes_written = nopoll_conn_send_text(conn, "Message received",
+//			sizeof(buf));
+//	bytes_written = nopoll_conn_flush_writes(conn, 2 * 1000 * 1000,
+//			bytes_written);
+}
+
+void conn_on_close(noPollCtx * ctx, noPollConn * conn, noPollPtr user_data)
+{
+	node_t* tmp = del_node(&ws_conn_list, nopoll_conn_get_id(conn));
+	if (tmp) {
+		free(tmp); //tmp->data is pointer to conn
+	}
+}
+
+nopoll_bool listener_on_ready(noPollCtx * ctx, noPollConn * conn,
+		noPollPtr user_data)
+{
+//	printf("%d -\n", __LINE__);
+//	printf("new websocket connect:%s\n", nopoll_conn_get_host_header(conn));
+	node_t* info = (node_t*) malloc(sizeof(node_t));
+	memset(info, 0, sizeof(node_t));
+	info->fd = nopoll_conn_get_id(conn);
+	info->data = conn;
+	add_node(&ws_conn_list, info);
+	nopoll_conn_set_on_close(conn, conn_on_close, NULL);
+	return nopoll_true;
+}
+
+void* thr_nopoll(void* arg)
+{
+	printf("waiting for websocket connect ...\n");
+	noPollCtx *ctx = nopoll_ctx_new();
+	if (!ctx) {
+		printf("nopoll_ctx_new error\n");
+		pthread_exit(NULL);
+	}
+
+	char port[16] = { 0 };
+	sprintf(port, "%d", ws_server_port);
+	noPollConn *listener = nopoll_listener_new(ctx, "0.0.0.0", port);
+	if (!nopoll_conn_is_ok(listener)) {
+		printf("nopoll_conn_is_ok fail\n");
+		pthread_exit(NULL);
+	}
+	nopoll_ctx_set_on_msg(ctx, listener_on_message, NULL);
+	nopoll_ctx_set_on_ready(ctx, listener_on_ready, NULL);
+
+	nopoll_loop_wait(ctx, 0); //FIXME. how to exit
+	nopoll_ctx_unref(ctx);
+
+	pthread_exit(NULL);
+}
 
 void* thr_serve(void* arg)
 {
 	node_t *info = (node_t*) arg;
+	struct sockaddr_in *addr = (struct sockaddr_in*) info->data;
+	printf("connect from %s:%d\n", inet_ntoa(addr->sin_addr),
+			ntohs(addr->sin_port));
+
 	struct cmd_msg_head_t head = { 0 };
 	int buf_len = 1024;
 	unsigned char* buf = (unsigned char*) malloc(buf_len); //初始存储分配
-	printf("connect from %s:%d\n", inet_ntoa(info->addr.sin_addr),
-			ntohs(info->addr.sin_port));
-
 	int exit = 0;
 	while (!g_exit && !exit) { //TODO. better for packet buffering parse
 		memset(&head, 0, sizeof(head));
@@ -267,9 +289,6 @@ void* thr_serve(void* arg)
 		if (head.tag != 0xF2F1) {
 			printf("invalid msg head\n");
 		}
-//		if (!check_msg(&head)) {
-//			printf("invalid msg head\n");
-//		}
 
 //		if (head.len > buf_len) {
 //			buf = realloc(buf, buf_len + 1024);
@@ -280,10 +299,16 @@ void* thr_serve(void* arg)
 		printf("%d - recv msg body ret: %d.  \n", __LINE__, ret);
 		handle_msg(&head, buf, info->fd);
 	}
-	printf("disconnet from %s:%d\n", inet_ntoa(info->addr.sin_addr),
-			ntohs(info->addr.sin_port));
-	del_node(&connect_info_list, info->fd);
+
+	printf("disconnet from %s:%d\n", inet_ntoa(addr->sin_addr),
+			ntohs(addr->sin_port));
+	node_t* tmp = del_node(&tcp_conn_list, info->fd);
+	if (tmp) {
+		free(tmp->data);
+		free(tmp);
+	}
 	free(buf);
+	pthread_exit(NULL);
 }
 
 void* thr_listen(void* arg)
@@ -295,6 +320,8 @@ void* thr_listen(void* arg)
 
 	pthread_t tid;
 	int sin_size = sizeof(struct sockaddr_in);
+
+	printf("waiting for tcp connect ...\r\n");
 
 	while (!g_exit) {
 		client_fd = accept(server_fd, (struct sockaddr *) (&client_addr),
@@ -324,13 +351,14 @@ void* thr_listen(void* arg)
 		node_t* info = (node_t*) malloc(sizeof(node_t));
 		memset(info, 0, sizeof(node_t));
 		info->fd = client_fd;
-		memcpy(&info->addr, &client_addr, sizeof(client_addr));
-		add_node(&connect_info_list, info);
+		info->data = malloc(sizeof(struct sockaddr_in));
+		memcpy(info->data, &client_addr, sizeof(client_addr));
+		add_node(&tcp_conn_list, info);
 		pthread_create(&tid, NULL, thr_serve, info);
 		usleep(10 * 1000);
 	}
 
-	return 0;
+	pthread_exit(NULL);
 }
 
 int open_tsc_server(void)
@@ -346,7 +374,7 @@ int open_tsc_server(void)
 		printf("create socket fail. %s\n", strerror(errno));
 		return -1;
 	}
-	printf("create socket success\n");
+//	printf("create socket success\n");
 
 	int reuse = 1;
 	setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(int));
@@ -354,7 +382,7 @@ int open_tsc_server(void)
 	memset(&s_addr, 0, sizeof(s_addr));
 	s_addr.sin_family = AF_INET;
 	s_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-	s_addr.sin_port = htons(portnum);
+	s_addr.sin_port = htons(tcp_server_port);
 
 	if (-1
 			== bind(server_fd, (struct sockaddr *) (&s_addr),
@@ -362,31 +390,42 @@ int open_tsc_server(void)
 		printf("bind fail . %s\n", strerror(errno));
 		return -1;
 	}
-	printf("bind success\n");
+//	printf("bind success\n");
 
 	if (-1 == listen(server_fd, 5)) {
 		printf("listen fail. %s\n", strerror(errno));
 		return -1;
 	}
-	printf("listen for connections ...\r\n");
 
-	pthread_t tid;
-	if (0 != pthread_create(&tid, NULL, thr_listen, &server_fd)) {
+	pthread_t tid_tcp, tid_ws;
+	if (0 != pthread_create(&tid_tcp, NULL, thr_listen, &server_fd)) {
+		g_exit = 1;
+		printf("call pthread_create fail. %s\n", strerror(errno));
+		return -1;
+	}
+	if (0 != pthread_create(&tid_ws, NULL, thr_nopoll, NULL)) {
 		g_exit = 1;
 		printf("call pthread_create fail. %s\n", strerror(errno));
 		return -1;
 	}
 
-//	char buf[1024];
-//	while (1) {
-//		sprintf(buf, "hello %d\n", time(NULL));
-//		broadcast(buf, sizeof(buf));
-//		sleep(1);
-//	}
-//	while (1) {
-//		dump(connect_info_list);
-//		sleep(1);
-//	}
+#if 0
+	char buf[128];
+	time_t t;
+	struct tm *tmp;
+	while (1) {
+		dump(ws_conn_list);
+		dump(tcp_conn_list);
+		memset(buf, 0, sizeof(buf));
+		t = time(NULL);
+		tmp = localtime(&t);
+		strftime(buf, sizeof(buf), "%F %T", tmp);
+		printf("%s\n", buf);
+		broadcast_on_ws(buf, strlen(buf));
+		broadcast_on_tcp(buf, strlen(buf));
+		sleep(3);
+	}
+#endif
 
 	return 0;
 }

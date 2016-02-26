@@ -13,7 +13,7 @@
 #include "tsc_cmd_msg.h"
 #include "tsc.h"
 
-unsigned short portnum = 12001;
+unsigned short tcp_server_port = 12000;
 
 int main(int argc, char* argv[])
 {
@@ -35,7 +35,7 @@ int main(int argc, char* argv[])
 		server_addr.sin_addr.s_addr = inet_addr("192.168.7.98"); //TEST
 	else
 		server_addr.sin_addr.s_addr = inet_addr(argv[1]);
-	server_addr.sin_port = htons(portnum);
+	server_addr.sin_port = htons(tcp_server_port);
 
 	if (-1
 			== connect(sock_fd, (struct sockaddr *) (&server_addr),
@@ -81,13 +81,13 @@ int main(int argc, char* argv[])
 		ret = recv(sock_fd, &msg_head, sizeof(msg_head), 0);
 		if (ret <= 0 || ret != sizeof(msg_head)) {
 			printf("recv msg head error\n");
-			continue;
+			break;
 		}
 		memset(buf, 0, buf_len);
 		ret = recv(sock_fd, buf, msg_head.len, 0);
 		if (ret <= 0 || ret != msg_head.len) {
 			printf("recv msg body error\n");
-			continue;
+			break;
 		} else {
 			printf("recv %d bytes => ", ret);
 			int i;

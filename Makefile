@@ -1,18 +1,23 @@
 
-ARMCC = /home/byxu/CodeSourcery/Sourcery_G++_Lite/bin/arm-none-linux-gnueabi-gcc
+CC_ARM = /home/byxu/CodeSourcery/Sourcery_G++_Lite/bin/arm-none-linux-gnueabi-gcc
 CC = gcc
 
 CFLAGS += -O0 -D_ADVANCED_MEMORY -DDEBUG=2 
 #CFLAGS += -D_PROZESSOR_INTEL_ -D_HELPER_MACROS_ -D_ADVANCED_MEMORY_ -DDEBUG=1 -DUSE_TTY -DUSE_INI -g
 
-all: x86 arm client
+CFLAGS_ARM = -I./3rd/include/nopoll  
+LDFLAGS_ARM = -L./3rd/lib -lnopoll -pthread -ldl -lm -Wl,-rpath=.
+
+all: arm
 
 x86: main.c tsc.c VSP_Interface.c
 	$(CC) $(CFLAGS) tsc_server.c VSP_Interface.c tsc.c drive.c ring_buf.c \
 	serial_pack.c prg_track.c sg_track.c vs_main.c main.c vsp_core.lib -pthread -lm -o main.x86.out
+	
 arm:
-	$(ARMCC) $(CFLAGS) tsc_server.c VSP_Interface.c tsc.c drive.c ring_buf.c \
-	serial_pack.c prg_track.c sg_track.c vs_main.c main.c vsp_core_arm.lib -pthread -lm -o main.arm.out -ldl -rdynamic
+	$(CC_ARM) -o main.arm.out $(CFLAGS_ARM) tsc_server.c VSP_Interface.c tsc.c drive.c ring_buf.c \
+	serial_pack.c prg_track.c sg_track.c vs_main.c main.c vsp_core_arm.lib $(LDFLAGS_ARM)
+	#-pthread -lm  -ldl -rdynamic
 
 #用来测试发送模拟的检测器数据
 serial_test: ring_buf.c serial_test.c serial_read.c

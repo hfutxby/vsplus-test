@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <math.h>
 #include <stdlib.h>
 #include <errno.h>
 #include <time.h>
@@ -10,7 +11,6 @@
 #include <unistd.h>
 #include <termios.h>
 #include <pthread.h>
-#include <math.h>
 
 #include "tsc.h"
 #include "sg_track.h"
@@ -628,7 +628,7 @@ int tsc_sm_hold(int index)
 {
 	int ret;
 	pthread_mutex_lock(&mutex_det);
-	ret = (int)(round(g_det[index].occ2));
+	ret = (round(g_det[index].occ2));
 	pthread_mutex_unlock(&mutex_det);
 	return ret;
 }
