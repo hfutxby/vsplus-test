@@ -405,117 +405,64 @@ int parse_id(char* filename)
 
 /***** parse switch on/off phase *****/
 xmlChar SW_OFF_PATH[] = "//SignalprogrammListe/Ausschaltprogramm";
-typedef struct {
-	char name[64];
-	int id;
-	int stat;
-} sw_node;
-
-struct sw_info {
+typedef struct sw_prg {
 	int time;
-	sw_node* node;
-};
-struct sw_info g_sw_off = { };
+	char sg[MAX_SIG_GROUP];
+} sw_prg_t;
+typedef struct sw_prg_list {
+	int num;
+	sw_prg_t* list;
+} sw_prg_list_t;
+sw_prg_list_t g_sw_prg_list;
 
 int set_sw_off(xmlNodeSetPtr nodes)
 {
 	printf("%d - %s\n", __LINE__, __func__);
 	xmlNodePtr cur, child;
-	xmlNodePtr child_2;
-
-	int count, child_count, size, i;
-
-	child_count = xmlChildElementCount(cur);
-	child = xmlFirstElementChild(cur);
-	while (child_count) {
-		printf("%s\n", xmlNodeGetContent(child));
-		if (!xmlStrcmp(child->name, "Dauer")) {
-			printf("%s=%s\n", "Dauer", xmlNodeGetContent(child));
-			g_sw_off.time = atoi(xmlNodeGetContent(child));
-		}
-		child = xmlNextElementSibling(child);
-		child_count--;
-	}
+	int count, child_count, i;
 
 	int prg_count = (nodes) ? nodes->nodeNr : 0; //may more than one switch programs
-	int prg_id = 0;
+	if (prg_count) {
+		g_sw_prg_list.num = prg_count;
+		g_sw_prg_list.list = (sw_prg_t*) malloc(sizeof(sw_prg_t) * prg_count);
+		memset(g_sw_prg_list.list, 0, sizeof(sw_prg_t) * prg_count);
+	}
+
+	int prg_id = 0, sg_id = 0;
 	for (prg_id = 0; prg_id < prg_count; prg_id++) {
 		assert(nodes->nodeTab[prg_id]);
 		cur = nodes->nodeTab[prg_id];
-		int child_count = xmlChildElementCount(cur);
-		xmlNodePtr child = xmlFirstElementChild(cur);
-		while (child_count) {
+		child_count = xmlChildElementCount(cur);
+		child = xmlFirstElementChild(cur);
+		sw_prg_t *prg = &g_sw_prg_list.list[prg_id];
+
+		for (i = 0; i < child_count; i++) {
 			if (!xmlStrcmp(child->name, "Dauer")) {
 				printf("read: %s = %s\n", "Dauer", xmlNodeGetContent(child));
-				g_sw_off.time = atoi(xmlNodeGetContent(child));
-			} else if (!xmlStrcmp(child->name, "EAZeile")) {
-				int child_count = xmlChildElementCount(child);
-				g_sw_off.node = (sw_node*) malloc(
-						sizeof(sw_node) * child_count);
-				xmlNodePtr cur = xmlFirstElementChild(child);
-				while (cur) {
-					if (!xmlStrcmp(cur->name, "StartSignalbild")
-							&& !xmlStrcmp(xmlNodeGetContent(cur), "30")) {
-						printf("read: %s = %s\n", cur->name,
-								xmlNodeGetContent(cur));
+				prg->time = atoi(xmlNodeGetContent(child));
+			}
+			if (!xmlStrcmp(child->name, "EAZeile")) {
+				int sg_count = xmlChildElementCount(child);
+				xmlNodePtr sg_cur = xmlFirstElementChild(child);
+				while (sg_cur) {
+					if (!xmlStrcmp(sg_cur->name, "Signalgruppe")) {
+						sg_id = name2id(xmlNodeGetContent(sg_cur));
+						printf("%s = %s\n", sg_cur->name, xmlNodeGetContent(sg_cur));
 					}
-//					printf("read: %s = %s\n", cur->name, xmlNodeGetContent(cur));
-					cur = xmlNextElementSibling(cur);
+					if (!xmlStrcmp(sg_cur->name, "StartSignalbild")) {
+						printf("%s = %s\n", sg_cur->name, xmlNodeGetContent(sg_cur));
+						if (!xmlStrcmp(xmlNodeGetContent(sg_cur), "30")) {
+							prg->sg[sg_id-1] = 1;
+						}
+					}
+					sg_cur = xmlNextElementSibling(sg_cur);
 				}
 			}
 			child = xmlNextElementSibling(child);
-			child_count--;
 		}
 	}
-//	//printf("Result (%d nodes):\n", count);
-//	g_prg_info.num = count;
-//	size = g_prg_info.num * sizeof(prg_node);
-//	g_prg_info.node = malloc(size);
-//	memset(g_prg_info.node, 0, size);
-//
-//	for (i = 0; i < count; ++i) {
-//		assert(nodes->nodeTab[i]);
-//		cur = nodes->nodeTab[i];
-//
-//		child_count = xmlChildElementCount(cur);
-//		child = xmlFirstElementChild(cur);
-//		while (child_count) {
-//			if (!xmlStrcmp(child->name, "BezeichnungKurz")) {
-//				//printf("%s=%s\n", "BezeichnungKurz", xmlNodeGetContent(child));
-//				sprintf(g_prg_info.node[i].name, "%s",
-//						xmlNodeGetContent(child));
-//			} else if (!xmlStrcmp(child->name, "OCITOutstationNr")) {
-//				//printf("%s=%s\n", "OCITOutstationNr", xmlNodeGetContent(child));
-//				g_prg_info.node[i].id = atoi(xmlNodeGetContent(child));
-//			} else if (!xmlStrcmp(child->name, "SPKopfzeile")) {
-//				child_2 = xmlFirstElementChild(child);
-//				while (child_2) {
-//					if (!xmlStrcmp(child_2->name, "TU")) {
-//						//printf("%s=%s\n", "TU", xmlNodeGetContent(child));
-//						g_prg_info.node[i].tu = atoi(xmlNodeGetContent(child))
-//								* 10;
-//					}
-//					child_2 = xmlNextElementSibling(child_2);
-//				}
-//			}
-//			child = xmlNextElementSibling(child);
-//			child_count--;
-//		}
-//	}
 }
 
-//void dump_prg(void)
-//{
-//	int i;
-//	printf("=== dump_prg ===\n");
-//	printf("%20s %10s %10s\n", "name", "id", "tu");
-//	for (i = 0; i < g_prg_info.num; i++) {
-//		printf("%20s %10d %10d\n", g_prg_info.node[i].name,
-//				g_prg_info.node[i].id, g_prg_info.node[i].tu);
-//	}
-//	printf("\n");
-//}
-//
 int parse_sw(char* filename)
 {
 	xmlDocPtr doc;
@@ -972,47 +919,6 @@ int parse_xml(char* filename)
 }
 
 /******** 生成配置文件  **********/
-//#define VSP_PARAMFILE "./vsp_param.dat"
-//#define MAX_VSP_PROG 16
-//#define MAX_DET_GROUP 128
-//#define MAX_SIG_GROUP 64
-//
-//typedef struct VSPSysData_t {
-//	int area_num;  //区域编号
-//	int con_num;   //信号机控制器编号
-//	int node_num;  //节点编号
-//	short active_prog;  //当前活动方案号
-//	short vsp_cycletime[MAX_VSP_PROG];  //各方案周期值
-//	short inter_green[MAX_SIG_GROUP][MAX_SIG_GROUP];  //间隔绿
-//} VSPSysData_t;
-//
-//typedef struct VSPDetDataList_t {
-//	char det_valid;  //检测器标志(0:无效，1:有效)
-//	int smooth_occupdegree;  //平滑占用率
-//} VSPDetDataList_t;
-//
-//typedef struct VSPDetData_t {
-//	unsigned char MaxDetDataNum;
-//	VSPDetDataList_t VSPDetDataList[MAX_DET_GROUP];
-//} VSPDetData_t;
-//typedef struct VSPSigDataList_t {
-//	char sig_valid;  //信号灯组标志(0:无效，1:有效)
-//	char sig_state;  //信号灯组状态(7:绿闪，1:黄，2:最小红，3:扩展红，4:红黄，5:最小绿，6:扩展绿)
-//	short sig_count;  //信号灯组状态时间计数值，初始为0
-//	unsigned int red_sec;  //信号灯组红灯开始时间，初始为0
-//	unsigned int green_sec;  //信号灯组绿灯开始时间，初始为0
-//	short amber_time;  //amber时间
-//	short minred_time;  //minred时间
-//	short prep_time;    //prep时间
-//	short mingreen_time;  //mingreen时间
-//	short green_blink;  //greenblink时间
-//	char first_flag;  //信号灯组首次运行标志(0:未运行，1:已运行)，初始为0
-//} VSPSigDataList_t;
-//
-//typedef struct VSPSigData_t {
-//	unsigned char MaxSigDataNum;
-//	VSPSigDataList_t VSPSigDataList[MAX_SIG_GROUP];
-//} VSPSigData_t;
 VSPSysData_t VSPSysData;
 VSPDetData_t VSPDetData;
 VSPSigData_t VSPSigData;
@@ -1079,6 +985,11 @@ int vspconfig(void)
 	VSPSysData.con_num = g_id_info.FNr;
 	VSPSysData.node_num = g_id_info.Relknoten;
 	VSPSysData.active_prog = 1;
+	VSPSysData.sw_off_time = g_sw_prg_list.list[0].time;
+
+	for(i = 0; i < MAX_SIG_GROUP; i++){
+		VSPSysData.sw_off_sg[i] = g_sw_prg_list.list[0].sg[i];
+	}
 
 	for (i = 0; i < g_prg_info.num; i++) {
 		index = g_prg_info.node[i].id;
