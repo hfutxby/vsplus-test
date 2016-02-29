@@ -1,3 +1,6 @@
+/*
+ * client connect to tsc_server
+ */
 #include <unistd.h>
 #include <stdio.h>
 #include <time.h>
@@ -13,7 +16,84 @@
 #include "tsc_cmd_msg.h"
 #include "tsc.h"
 
+int g_exit = 0;
 unsigned short tcp_server_port = 12000;
+
+void handle_msg(struct cmd_msg_head_t *head, char* data)
+{
+	if (head->type == TEST) {
+		printf("recv test msg: %d - %s\n", head->type, data);
+	}
+}
+
+void* thr_recv_cmd_msg(void* arg)
+{
+	int sock_fd = *(int*) arg;
+	struct cmd_msg_head_t msg_head;
+	ssize_t ret;
+	unsigned char* buf = NULL;
+	while (!g_exit) {
+		memset(&msg_head, 0, sizeof(msg_head));
+		ret = recv(sock_fd, &msg_head, sizeof(msg_head), 0);
+		if (ret <= 0 || ret != sizeof(msg_head)) {
+			printf("recv msg head error\n");
+			g_exit = 1;
+			break;
+		}
+		if (msg_head.tag != 0xF2F1) {
+			printf("recv invalid head\n");
+			g_exit = 1;
+			break;
+		}
+		buf = (unsigned char*) malloc(msg_head.len);
+		memset(buf, 0, msg_head.len);
+		ret = recv(sock_fd, buf, msg_head.len, 0);
+		if (ret <= 0 || ret != msg_head.len) {
+			printf("recv msg body error\n");
+			g_exit = 1;
+			break;
+		}
+		handle_msg(&msg_head, buf);
+		free(buf);
+	}
+
+	pthread_exit(NULL);
+}
+
+void client_set_vsplus_stat(int sock_fd)
+{
+	printf("input stat, 0-stop, 1-start\n");
+	char msg[8] = { 0 };
+	fgets(msg, sizeof(msg), stdin);
+	char stat = atoi(msg);
+	struct cmd_msg_head_t msg_head;
+	msg_head.tag = 0xF2F1;
+	msg_head.type = SET_VSPLUS_STAT;
+	msg_head.len = 1;
+	unsigned char *buf = malloc(sizeof(msg_head) + msg_head.len);
+	memset(buf, 0, sizeof(msg_head) + msg_head.len);
+	memcpy(buf, &msg_head, sizeof(msg_head));
+	memcpy(buf + sizeof(msg_head), &stat, msg_head.len);
+	send(sock_fd, buf, sizeof(msg_head) + msg_head.len, 0);
+	free(buf);
+}
+
+void client_test(int sock_fd)
+{
+	printf("input send message string\n");
+	char msg[128] = { 0 };
+	fgets(msg, sizeof(msg), stdin);
+	struct cmd_msg_head_t msg_head;
+	msg_head.tag = 0xF2F1;
+	msg_head.type = TEST;
+	msg_head.len = strlen(msg);
+	unsigned char *buf = malloc(sizeof(msg_head) + msg_head.len);
+	memset(buf, 0, sizeof(msg_head) + msg_head.len);
+	memcpy(buf, &msg_head, sizeof(msg_head));
+	memcpy(buf + sizeof(msg_head), msg, msg_head.len);
+	send(sock_fd, buf, sizeof(msg_head) + msg_head.len, 0);
+	free(buf);
+}
 
 int main(int argc, char* argv[])
 {
@@ -32,7 +112,7 @@ int main(int argc, char* argv[])
 	memset(&server_addr, 0, sizeof(struct sockaddr_in));
 	server_addr.sin_family = AF_INET;
 	if (argc != 2)
-		server_addr.sin_addr.s_addr = inet_addr("192.168.7.98"); //TEST
+		server_addr.sin_addr.s_addr = inet_addr("192.168.7.1"); //TEST
 	else
 		server_addr.sin_addr.s_addr = inet_addr(argv[1]);
 	server_addr.sin_port = htons(tcp_server_port);
@@ -45,79 +125,34 @@ int main(int argc, char* argv[])
 	}
 	printf("connect to %s success\n", inet_ntoa(server_addr.sin_addr));
 
-#if 0
-	struct msg_head head = {0};
-	head.type = SET_PRG;
-	head.len = 1;
-	int prg_id = 0;
-	printf("set prg: ");
-	scanf("%d", &prg_id);
-	write(sock_fd, &head, sizeof(struct msg_head));
-	write(sock_fd, &prg_id, sizeof(prg_id));
-#endif
+	pthread_t tid;
+	pthread_create(&tid, NULL, thr_recv_cmd_msg, &sock_fd);
 
 #if 1
 	ssize_t ret;
-//	struct test_t data = { 0 };
-	char data[] = "hello test";
 	struct cmd_msg_head_t msg_head = { 0 };
-	msg_head.tag = 0xF2F1;
-	msg_head.type = TEST;
-	msg_head.len = sizeof(data);
-//	msg.data = &data;
-	int send_size = sizeof(msg_head) + msg_head.len;
-	unsigned char *send_buf = (unsigned char*) malloc(send_size);
-	memset(send_buf, 0, send_size);
-	memcpy(send_buf, &msg_head, sizeof(msg_head));
-	memcpy(send_buf + sizeof(msg_head), &data, msg_head.len);
-
-	ret = send(sock_fd, send_buf, send_size, 0);
-
-	int buf_len = 1024;
-	unsigned char *buf = (unsigned char*) malloc(buf_len);
-//	memset(buf, 0, buf_len);
-	do {
-		memset(&msg_head, 0, sizeof(msg_head));
-		ret = recv(sock_fd, &msg_head, sizeof(msg_head), 0);
-		if (ret <= 0 || ret != sizeof(msg_head)) {
-			printf("recv msg head error\n");
+	char inputs[128];
+	while (!g_exit) {
+		printf("\nselect a function:\n"
+				"7\t SET_VSPLUS_STAT\n"
+				"99\t TEST\n");
+		fgets(inputs, sizeof(inputs), stdin);
+		int type = atoi(inputs);
+		printf("selected -> %d\n", type);
+		switch (type) {
+		case SET_VSPLUS_STAT:
+			client_set_vsplus_stat(sock_fd);
+			break;
+		case TEST:
+			client_test(sock_fd);
+			break;
+		default:
+			printf("wrong select\n");
 			break;
 		}
-		memset(buf, 0, buf_len);
-		ret = recv(sock_fd, buf, msg_head.len, 0);
-		if (ret <= 0 || ret != msg_head.len) {
-			printf("recv msg body error\n");
-			break;
-		} else {
-			printf("recv %d bytes => ", ret);
-			int i;
-			for (i = 0; i < sizeof(msg_head); i++) {
-				printf("%#x ", *((unsigned char*) &msg_head + i));
-			}
-			for (i = 0; i < ret; i++) {
-				printf("%#x ", *(buf + i));
-			}
-			printf("\n");
-		}
-	} while (1);
+		sleep(1);
+	}
 #endif
-
-//	char buf[1024] = {0};
-//	ssize_t ret = 0;
-//	do {
-//			ret = recv(sock_fd, buf, sizeof(buf), 0);
-//			if(ret <= 0) {
-//				printf("recv fail. %s\n", strerror(errno));
-//				break;
-//			} else {
-//				printf("%s\n", buf);
-//			}
-//		}while(1);
-//	char buf[] = "12345678";
-//	while (1) {
-//		write(sock_fd, buf, 8);
-//		sleep(1);
-//	}
 
 	close(sock_fd);
 

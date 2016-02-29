@@ -719,9 +719,9 @@ int tsc_ctl_active(void)
     else
     	return 1;
 #else
-    extern g_vsplus_stat;
+    extern g_vsplus_ctl_active;
     //return 0;
-    return !g_vsplus_stat;
+    return g_vsplus_ctl_active;
 #endif
 }
 

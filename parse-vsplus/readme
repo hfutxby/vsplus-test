@@ -1,0 +1,23 @@
+parse-dat生成XML文件格式说明
+
+area_num:区域编号
+con_num:信号机编号
+node_num:路口编号（同一信号机可控制多个路口）
+
+vsp_cycletime:方案周期，数量不定，最多MAX_VSP_PROG=16
+	id:方案编号，tu：方案周期，单位秒
+	
+inter_green:绿间隔矩阵，信号灯sgr到信号灯sge必须满足绿间隔时间T。
+数量不定，未列出组合表示无绿间隔限制。sgr，sge最多MAX_SIG_GROUP=64。
+	sgr:信号灯编号，sge:信号灯编号，T:绿间隔时间，单位秒
+	
+det_list：方案中存在的检测器，数量不定，最多MAX_DET_GROUP=128
+	id:检测器编号
+	
+sig_list：方案中存在的信号灯参数，数量不定，最多MAX_SIG_GROUP=64，所有时间单位秒
+	id：信号灯编号
+	amber_timer：黄灯时间
+	prep_time：红闪时间
+	minred_time：最小红时间
+	mingreen_time：最小绿时间
+	green_blink：绿闪时间

@@ -27,7 +27,6 @@ unsigned short ws_server_port = 12001;
 typedef struct node {
 	int fd;
 	void* data;
-//	struct sockaddr_in addr;
 	struct node* next;
 } node_t;
 
@@ -123,6 +122,7 @@ void broadcast_on_tcp(char* src, int len)
 
 void broadcast_sg_switch(int sg, int stat)
 {
+#if 1
 //	printf("%d - %s\n", __LINE__, __func__);
 	ssize_t ret;
 	//tcp
@@ -148,12 +148,12 @@ void broadcast_sg_switch(int sg, int stat)
 	sprintf(buf, "{\"sg\":\"%d\",\"stat\":\"%d\"}", sg, stat);
 	broadcast_on_ws(buf, strlen(buf));
 	free(buf);
+#endif
 }
 
 // ============== serve functions  =================
 int serve_test(struct cmd_msg_head_t *head, char* data, int sock_fd)
 {
-//	printf("vs_ocit_path:%s\n", vs_ocit_path());
 #if 1
 	printf("serve cmd TEST\n");
 	char str[] = "test echo";
@@ -170,7 +170,96 @@ int serve_test(struct cmd_msg_head_t *head, char* data, int sock_fd)
 	return 0;
 }
 
-int handle_msg(struct cmd_msg_head_t *head, char* data, int sock_fd)
+extern VS_PARA g_vs_para; //VSPLUS()调用参数
+extern g_vsplus_ctl_active;
+void* thr_set_vsplus_stat(void* arg)
+{
+	char stat = *(char*) arg;
+	printf("set stat to %d\n", stat);
+	if (stat) {
+		int i;
+		for (i = 0; i < GERAET_TEILKNOTEN_MAX; i++) {
+			g_vs_para.vsp_soll[i] = VSP_NEU;
+		}
+		for (i = 0; i < SGMAX; i++) {
+			g_vs_para.sg_mode[i] = 0;
+		}
+//		g_vs_para.sg_mode[1] = 1;
+//		g_vs_para.sg_mode[3] = 1; //begin phase
+		for (i = 0; i < GERAET_TEILKNOTEN_MAX; i++) {
+			g_vs_para.wb_ready[i] = 0;
+		}
+//		while (!g_vs_para.wb_ready[0]) {
+//			for (i = 0; i < GERAET_TEILKNOTEN_MAX; i++) {
+//				//						g_vs_para.wb_ready[i] = 0;
+//				printf("%d ", g_vs_para.wb_ready[i]);
+//			}
+//			printf("\n");
+//			sleep(1);
+//		}
+
+//		sleep(2);
+//
+		for (i = 0; i < GERAET_TEILKNOTEN_MAX; i++) {
+			g_vs_para.vsp_soll[i] = VSP_EIN;
+		}
+		for (i = 0; i < SGMAX; i++) {
+			g_vs_para.sg_mode[i] = 0;
+		}
+//		g_vs_para.sg_mode[1] = 1;
+//		g_vs_para.sg_mode[3] = 1; //begin phase
+		for (i = 0; i < GERAET_TEILKNOTEN_MAX; i++) {
+			g_vs_para.wb_ready[i] = 0;
+		}
+		g_vsplus_ctl_active = 0;
+//		while (!g_vs_para.wb_ready[0]) {
+//			for (i = 0; i < GERAET_TEILKNOTEN_MAX; i++) {
+//				//						g_vs_para.wb_ready[i] = 0;
+//				printf("%d ", g_vs_para.wb_ready[i]);
+//			}
+//			printf("\n");
+//			sleep(1);
+//		}
+	} else {
+		int i;
+		for (i = 0; i < GERAET_TEILKNOTEN_MAX; i++) {
+			g_vs_para.vsp_soll[i] = VSP_WUNSCH_AUS_UM;
+		}
+		for (i = 0; i < SGMAX; i++) {
+			g_vs_para.sg_mode[i] = 0;
+		}
+		g_vs_para.sg_mode[5] = 1;
+		g_vs_para.sg_mode[7] = 1; //left turn
+		for (i = 0; i < GERAET_TEILKNOTEN_MAX; i++)
+			g_vs_para.wb_ready[i] = 0;
+		g_vsplus_ctl_active = 1;
+		while (!g_vs_para.wb_ready[0]) {
+			for (i = 0; i < GERAET_TEILKNOTEN_MAX; i++) {
+				//						g_vs_para.wb_ready[i] = 0;
+				printf("%d ", g_vs_para.wb_ready[i]);
+			}
+			printf("\n");
+			sleep(1);
+		}
+		printf("get exit stage\n");
+	}
+
+	pthread_exit(NULL);
+}
+
+int serve_set_vsplus_stat(struct cmd_msg_head_t *head, char* data, int sock_fd)
+{
+#if 1
+	printf("serve cmd SET_VSPLUS_STAT\n");
+	pthread_t tid;
+	pthread_create(&tid, NULL, thr_set_vsplus_stat, data);
+	printf("%s- %d\n", __func__, __LINE__);
+#endif
+
+	return 0;
+}
+
+int handle_tcp_msg(struct cmd_msg_head_t *head, char* data, int sock_fd)
 {
 	switch (head->type) {
 //	case SET_DET:
@@ -181,10 +270,10 @@ int handle_msg(struct cmd_msg_head_t *head, char* data, int sock_fd)
 //		printf("SET_PT\n");
 //		serve_set_pt(data);
 //		break;
-//	case DET_EXIST:
-//		printf("DET_EXIST\n");
-//		serve_det_exist(sock_fd);
-//		break;
+	case SET_VSPLUS_STAT:
+		printf("recv cmd SET_VSPLUS_STAT\n");
+		serve_set_vsplus_stat(head, data, sock_fd);
+		break;
 	case TEST:
 		printf("recv cmd TEST\n");
 //		printf("data: %s\n", data);
@@ -230,8 +319,6 @@ void conn_on_close(noPollCtx * ctx, noPollConn * conn, noPollPtr user_data)
 nopoll_bool listener_on_ready(noPollCtx * ctx, noPollConn * conn,
 		noPollPtr user_data)
 {
-//	printf("%d -\n", __LINE__);
-//	printf("new websocket connect:%s\n", nopoll_conn_get_host_header(conn));
 	node_t* info = (node_t*) malloc(sizeof(node_t));
 	memset(info, 0, sizeof(node_t));
 	info->fd = nopoll_conn_get_id(conn);
@@ -290,14 +377,10 @@ void* thr_serve(void* arg)
 			printf("invalid msg head\n");
 		}
 
-//		if (head.len > buf_len) {
-//			buf = realloc(buf, buf_len + 1024);
-//			buf_len += 1024;
-//		}
 		memset(buf, 0, buf_len);
 		ret = recv(info->fd, buf, head.len, 0); //TODO check buf recv completely
 		printf("%d - recv msg body ret: %d.  \n", __LINE__, ret);
-		handle_msg(&head, buf, info->fd);
+		handle_tcp_msg(&head, buf, info->fd);
 	}
 
 	printf("disconnet from %s:%d\n", inet_ntoa(addr->sin_addr),
@@ -421,8 +504,8 @@ int open_tsc_server(void)
 		tmp = localtime(&t);
 		strftime(buf, sizeof(buf), "%F %T", tmp);
 		printf("%s\n", buf);
-		broadcast_on_ws(buf, strlen(buf));
-		broadcast_on_tcp(buf, strlen(buf));
+//		broadcast_on_ws(buf, strlen(buf));
+//		broadcast_on_tcp(buf, strlen(buf));
 		sleep(3);
 	}
 #endif

@@ -2,6 +2,8 @@
 #define __TSC_H
 
 #include "if626max.h"
+#include "if626bas.h"
+#include "vsp626ste.h"
 
 /* 出错信息 */
 #if(DEBUG>=1)
@@ -120,5 +122,11 @@ typedef struct{
 }PTMSG;
 #endif
 //xml_para* g_xml_para = NULL;
+
+typedef struct {
+	VSPSollTyp vsp_soll[GERAET_TEILKNOTEN_MAX]; // = {VSP_ND};
+	WBTyp sg_mode[SGMAX]; // = {0};
+	WBReadyTyp wb_ready[GERAET_TEILKNOTEN_MAX]; // = {0};
+} VS_PARA;
 
 #endif /*__TSC_H*/

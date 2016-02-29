@@ -16,6 +16,8 @@
 #define SET_PRG		5
 //sg switch
 #define	SG_SWITCH	6
+//set vsplus running stat
+#define	SET_VSPLUS_STAT	7
 
 #define TEST 99
 
@@ -29,6 +31,9 @@ struct sg_switch_t{
 	char stat;
 };
 
+struct set_vsplus_stat_t{
+	char stat;//0-stop, 1-start
+};
 //enum msg_type {
 //SET_DET = 1, //设置检测器状态
 //DET_EXIST,//请求获得检测器配置
