@@ -5,9 +5,9 @@
 
 typedef struct VSPSysData_t
 {
-  int area_num;  //区域编号
-  int con_num;   //信号机控制器编号
-  int node_num;  //节点编号
+  int area_num;  //区域编号, ZNr
+  int con_num;   //信号机控制器编号, FNr
+  int node_num;  //节点编号, Relknoten
   short active_prog;  //当前活动方案号
   short vsp_cycletime[MAX_VSP_PROG];  //各方案周期值
   short inter_green[MAX_SIG_GROUP][MAX_SIG_GROUP];  //间隔绿
@@ -36,11 +36,11 @@ typedef struct VSPSigDataList_t
   short sig_count;  //信号灯组状态时间计数值，初始为0
   unsigned int red_sec;  //信号灯组红灯开始时间，初始为0
   unsigned int green_sec;  //信号灯组绿灯开始时间，初始为0
-  short amber_time;  //amber时间
-  short minred_time;  //minred时间
-  short prep_time;    //prep时间
-  short mingreen_time;  //mingreen时间
-  short green_blink;  //greenblink时间
+  short amber_time;  //amber时间, sig_state=1
+  short minred_time;  //minred时间, sig_state=2
+  short prep_time;    //prep时间, sig_state=4
+  short mingreen_time;  //mingreen时间, sig_state=5
+  short green_blink;  //greenblink时间,sig_state=7
   char first_flag;  //信号灯组首次运行标志(0:未运行，1:已运行)，初始为0
 } VSPSigDataList_t;
 
